@@ -57,3 +57,6 @@ out/
 .DS_Store
 Thumbs.db
 
+frontend/.env.local
+frontend/.env.local.backup
+backend/.env.bak
