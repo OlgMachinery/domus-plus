@@ -1,0 +1,30 @@
+═══════════════════════════════════════════════════════════════
+URL DEL WEBHOOK PARA CONFIGURAR EN TWILIO
+═══════════════════════════════════════════════════════════════
+
+URL completa del webhook:
+https://reproachably-extremer-laraine.ngrok-free.dev/api/whatsapp/webhook
+
+Método: POST
+
+═══════════════════════════════════════════════════════════════
+
+INSTRUCCIONES:
+
+1. Ve a la consola de Twilio:
+   https://console.twilio.com/us1/develop/sms/settings/whatsapp-sandbox
+
+2. En la sección "A MESSAGE COMES IN":
+   - Pega la URL de arriba
+   - Selecciona método: POST
+   - Haz clic en "Save"
+
+3. ¡Listo! Ahora puedes enviar recibos por WhatsApp
+
+═══════════════════════════════════════════════════════════════
+
+NOTA: Esta URL es temporal y cambiará si reinicias ngrok.
+Si reinicias ngrok, ejecuta: python3 obtener_url_ngrok.py
+para obtener la nueva URL.
+
+═══════════════════════════════════════════════════════════════

@@ -1,0 +1,990 @@
+{
+  "fecha_extraccion": "2026-01-11T15:09:53.959206",
+  "resumen": {
+    "total_transacciones": 35,
+    "transacciones_con_recibo": 0,
+    "transacciones_sin_recibo": 35
+  },
+  "recibos": [],
+  "todas_las_transacciones": [
+    {
+      "id": 1,
+      "usuario": {
+        "id": 7,
+        "name": "Carlos Rodríguez",
+        "email": "carlos.rodriguez@test.com"
+      },
+      "fecha": "2025-12-28T23:55:18.891272",
+      "monto": 877.95,
+      "moneda": "MXN",
+      "comercio": "Telmex",
+      "categoria": "Servicios Basicos",
+      "subcategoria": "Internet",
+      "concepto": "Pago Internet - Telmex",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": {
+        "id": 3,
+        "categoria": "Servicios Basicos",
+        "subcategoria": "Internet"
+      },
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 2,
+      "usuario": {
+        "id": 6,
+        "name": "María González",
+        "email": "maria.gonzalez@test.com"
+      },
+      "fecha": "2025-11-23T08:55:18.891272",
+      "monto": 1209.62,
+      "moneda": "MXN",
+      "comercio": "Restaurante",
+      "categoria": "Vida Social",
+      "subcategoria": "Salidas Familiares",
+      "concepto": "Pago Salidas Familiares - Restaurante",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": {
+        "id": 10,
+        "categoria": "Vida Social",
+        "subcategoria": "Salidas Familiares"
+      },
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 3,
+      "usuario": {
+        "id": 5,
+        "name": "Gonzalo M",
+        "email": "procentros@gmail.com"
+      },
+      "fecha": "2025-11-21T07:55:18.891272",
+      "monto": 880.82,
+      "moneda": "MXN",
+      "comercio": "Totalplay",
+      "categoria": "Servicios Basicos",
+      "subcategoria": "Internet",
+      "concepto": "Pago Internet - Totalplay",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": {
+        "id": 3,
+        "categoria": "Servicios Basicos",
+        "subcategoria": "Internet"
+      },
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 4,
+      "usuario": {
+        "id": 6,
+        "name": "María González",
+        "email": "maria.gonzalez@test.com"
+      },
+      "fecha": "2025-10-23T02:55:18.891272",
+      "monto": 997.38,
+      "moneda": "MXN",
+      "comercio": "Telmex",
+      "categoria": "Servicios Basicos",
+      "subcategoria": "Internet",
+      "concepto": "Pago Internet - Telmex",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": {
+        "id": 3,
+        "categoria": "Servicios Basicos",
+        "subcategoria": "Internet"
+      },
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 5,
+      "usuario": {
+        "id": 6,
+        "name": "María González",
+        "email": "maria.gonzalez@test.com"
+      },
+      "fecha": "2025-11-29T23:55:18.891272",
+      "monto": 2421.9,
+      "moneda": "MXN",
+      "comercio": "Autozone",
+      "categoria": "Transporte",
+      "subcategoria": "Mantenimiento coches",
+      "concepto": "Pago Mantenimiento coches - Autozone",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": {
+        "id": 7,
+        "categoria": "Transporte",
+        "subcategoria": "Mantenimiento coches"
+      },
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 6,
+      "usuario": {
+        "id": 6,
+        "name": "María González",
+        "email": "maria.gonzalez@test.com"
+      },
+      "fecha": "2025-12-09T10:55:18.891272",
+      "monto": 806.0,
+      "moneda": "MXN",
+      "comercio": "Izzi",
+      "categoria": "Servicios Basicos",
+      "subcategoria": "Internet",
+      "concepto": "Pago Internet - Izzi",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": {
+        "id": 3,
+        "categoria": "Servicios Basicos",
+        "subcategoria": "Internet"
+      },
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 7,
+      "usuario": {
+        "id": 7,
+        "name": "Carlos Rodríguez",
+        "email": "carlos.rodriguez@test.com"
+      },
+      "fecha": "2025-11-11T22:55:18.891272",
+      "monto": 879.29,
+      "moneda": "MXN",
+      "comercio": "Walmart",
+      "categoria": "Mercado",
+      "subcategoria": "Mercado General",
+      "concepto": "Pago Mercado General - Walmart",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": {
+        "id": 4,
+        "categoria": "Mercado",
+        "subcategoria": "Mercado General"
+      },
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 8,
+      "usuario": {
+        "id": 7,
+        "name": "Carlos Rodríguez",
+        "email": "carlos.rodriguez@test.com"
+      },
+      "fecha": "2025-11-17T10:55:18.891272",
+      "monto": 1125.2,
+      "moneda": "MXN",
+      "comercio": "Restaurante",
+      "categoria": "Vida Social",
+      "subcategoria": "Salidas Familiares",
+      "concepto": "Pago Salidas Familiares - Restaurante",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": {
+        "id": 10,
+        "categoria": "Vida Social",
+        "subcategoria": "Salidas Familiares"
+      },
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 9,
+      "usuario": {
+        "id": 6,
+        "name": "María González",
+        "email": "maria.gonzalez@test.com"
+      },
+      "fecha": "2025-11-24T23:55:18.891272",
+      "monto": 360.58,
+      "moneda": "MXN",
+      "comercio": "Farmacias Guadalajara",
+      "categoria": "Salud",
+      "subcategoria": "Medicamentos",
+      "concepto": "Pago Medicamentos - Farmacias Guadalajara",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": null,
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 10,
+      "usuario": {
+        "id": 6,
+        "name": "María González",
+        "email": "maria.gonzalez@test.com"
+      },
+      "fecha": "2025-10-23T02:55:18.891272",
+      "monto": 622.23,
+      "moneda": "MXN",
+      "comercio": "Similares",
+      "categoria": "Salud",
+      "subcategoria": "Medicamentos",
+      "concepto": "Pago Medicamentos - Similares",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": null,
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 11,
+      "usuario": {
+        "id": 5,
+        "name": "Gonzalo M",
+        "email": "procentros@gmail.com"
+      },
+      "fecha": "2025-11-15T05:55:18.891272",
+      "monto": 849.16,
+      "moneda": "MXN",
+      "comercio": "Izzi",
+      "categoria": "Servicios Basicos",
+      "subcategoria": "Internet",
+      "concepto": "Pago Internet - Izzi",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": {
+        "id": 3,
+        "categoria": "Servicios Basicos",
+        "subcategoria": "Internet"
+      },
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 12,
+      "usuario": {
+        "id": 7,
+        "name": "Carlos Rodríguez",
+        "email": "carlos.rodriguez@test.com"
+      },
+      "fecha": "2025-12-27T04:55:18.891272",
+      "monto": 2420.77,
+      "moneda": "MXN",
+      "comercio": "Chedraui",
+      "categoria": "Mercado",
+      "subcategoria": "Mercado General",
+      "concepto": "Pago Mercado General - Chedraui",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": {
+        "id": 4,
+        "categoria": "Mercado",
+        "subcategoria": "Mercado General"
+      },
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 13,
+      "usuario": {
+        "id": 5,
+        "name": "Gonzalo M",
+        "email": "procentros@gmail.com"
+      },
+      "fecha": "2025-11-24T10:55:18.891272",
+      "monto": 839.68,
+      "moneda": "MXN",
+      "comercio": "Totalplay",
+      "categoria": "Servicios Basicos",
+      "subcategoria": "Internet",
+      "concepto": "Pago Internet - Totalplay",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": {
+        "id": 3,
+        "categoria": "Servicios Basicos",
+        "subcategoria": "Internet"
+      },
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 14,
+      "usuario": {
+        "id": 5,
+        "name": "Gonzalo M",
+        "email": "procentros@gmail.com"
+      },
+      "fecha": "2025-12-10T08:55:18.891272",
+      "monto": 910.98,
+      "moneda": "MXN",
+      "comercio": "La Comer",
+      "categoria": "Mercado",
+      "subcategoria": "Mercado General",
+      "concepto": "Pago Mercado General - La Comer",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": {
+        "id": 4,
+        "categoria": "Mercado",
+        "subcategoria": "Mercado General"
+      },
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 15,
+      "usuario": {
+        "id": 5,
+        "name": "Gonzalo M",
+        "email": "procentros@gmail.com"
+      },
+      "fecha": "2025-11-07T04:55:18.891272",
+      "monto": 730.29,
+      "moneda": "MXN",
+      "comercio": "Farmacias Guadalajara",
+      "categoria": "Salud",
+      "subcategoria": "Medicamentos",
+      "concepto": "Pago Medicamentos - Farmacias Guadalajara",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": null,
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 16,
+      "usuario": {
+        "id": 7,
+        "name": "Carlos Rodríguez",
+        "email": "carlos.rodriguez@test.com"
+      },
+      "fecha": "2025-10-14T06:55:18.891272",
+      "monto": 736.05,
+      "moneda": "MXN",
+      "comercio": "Cine",
+      "categoria": "Vida Social",
+      "subcategoria": "Salidas Familiares",
+      "concepto": "Pago Salidas Familiares - Cine",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": {
+        "id": 10,
+        "categoria": "Vida Social",
+        "subcategoria": "Salidas Familiares"
+      },
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 17,
+      "usuario": {
+        "id": 5,
+        "name": "Gonzalo M",
+        "email": "procentros@gmail.com"
+      },
+      "fecha": "2025-11-02T03:55:18.891272",
+      "monto": 921.93,
+      "moneda": "MXN",
+      "comercio": "Totalplay",
+      "categoria": "Servicios Basicos",
+      "subcategoria": "Internet",
+      "concepto": "Pago Internet - Totalplay",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": {
+        "id": 3,
+        "categoria": "Servicios Basicos",
+        "subcategoria": "Internet"
+      },
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 18,
+      "usuario": {
+        "id": 6,
+        "name": "María González",
+        "email": "maria.gonzalez@test.com"
+      },
+      "fecha": "2025-12-17T07:55:18.891272",
+      "monto": 919.35,
+      "moneda": "MXN",
+      "comercio": "Cine",
+      "categoria": "Vida Social",
+      "subcategoria": "Salidas Familiares",
+      "concepto": "Pago Salidas Familiares - Cine",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": {
+        "id": 10,
+        "categoria": "Vida Social",
+        "subcategoria": "Salidas Familiares"
+      },
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 19,
+      "usuario": {
+        "id": 5,
+        "name": "Gonzalo M",
+        "email": "procentros@gmail.com"
+      },
+      "fecha": "2025-11-27T07:55:18.891272",
+      "monto": 603.03,
+      "moneda": "MXN",
+      "comercio": "Similares",
+      "categoria": "Salud",
+      "subcategoria": "Medicamentos",
+      "concepto": "Pago Medicamentos - Similares",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": null,
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 20,
+      "usuario": {
+        "id": 5,
+        "name": "Gonzalo M",
+        "email": "procentros@gmail.com"
+      },
+      "fecha": "2025-11-06T05:55:18.891272",
+      "monto": 887.26,
+      "moneda": "MXN",
+      "comercio": "Soriana",
+      "categoria": "Mercado",
+      "subcategoria": "Mercado General",
+      "concepto": "Pago Mercado General - Soriana",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": {
+        "id": 4,
+        "categoria": "Mercado",
+        "subcategoria": "Mercado General"
+      },
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 21,
+      "usuario": {
+        "id": 5,
+        "name": "Gonzalo M",
+        "email": "procentros@gmail.com"
+      },
+      "fecha": "2025-10-29T05:55:18.891272",
+      "monto": 1162.85,
+      "moneda": "MXN",
+      "comercio": "Midas",
+      "categoria": "Transporte",
+      "subcategoria": "Mantenimiento coches",
+      "concepto": "Pago Mantenimiento coches - Midas",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": {
+        "id": 7,
+        "categoria": "Transporte",
+        "subcategoria": "Mantenimiento coches"
+      },
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 22,
+      "usuario": {
+        "id": 5,
+        "name": "Gonzalo M",
+        "email": "procentros@gmail.com"
+      },
+      "fecha": "2025-10-31T02:55:18.891272",
+      "monto": 1636.41,
+      "moneda": "MXN",
+      "comercio": "Chedraui",
+      "categoria": "Mercado",
+      "subcategoria": "Mercado General",
+      "concepto": "Pago Mercado General - Chedraui",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": {
+        "id": 4,
+        "categoria": "Mercado",
+        "subcategoria": "Mercado General"
+      },
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 23,
+      "usuario": {
+        "id": 5,
+        "name": "Gonzalo M",
+        "email": "procentros@gmail.com"
+      },
+      "fecha": "2025-12-06T00:55:18.891272",
+      "monto": 954.06,
+      "moneda": "MXN",
+      "comercio": "Chedraui",
+      "categoria": "Mercado",
+      "subcategoria": "Mercado General",
+      "concepto": "Pago Mercado General - Chedraui",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": {
+        "id": 4,
+        "categoria": "Mercado",
+        "subcategoria": "Mercado General"
+      },
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 24,
+      "usuario": {
+        "id": 7,
+        "name": "Carlos Rodríguez",
+        "email": "carlos.rodriguez@test.com"
+      },
+      "fecha": "2025-10-21T01:55:18.891272",
+      "monto": 566.22,
+      "moneda": "MXN",
+      "comercio": "Pemex",
+      "categoria": "Transporte",
+      "subcategoria": "Gasolina",
+      "concepto": "Pago Gasolina - Pemex",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": {
+        "id": 6,
+        "categoria": "Transporte",
+        "subcategoria": "Gasolina"
+      },
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 25,
+      "usuario": {
+        "id": 5,
+        "name": "Gonzalo M",
+        "email": "procentros@gmail.com"
+      },
+      "fecha": "2026-01-02T08:55:18.891272",
+      "monto": 565.42,
+      "moneda": "MXN",
+      "comercio": "Farmacia del Ahorro",
+      "categoria": "Salud",
+      "subcategoria": "Medicamentos",
+      "concepto": "Pago Medicamentos - Farmacia del Ahorro",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": null,
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 26,
+      "usuario": {
+        "id": 5,
+        "name": "Gonzalo M",
+        "email": "procentros@gmail.com"
+      },
+      "fecha": "2025-12-03T04:55:18.891272",
+      "monto": 751.42,
+      "moneda": "MXN",
+      "comercio": "Similares",
+      "categoria": "Salud",
+      "subcategoria": "Medicamentos",
+      "concepto": "Pago Medicamentos - Similares",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": null,
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 27,
+      "usuario": {
+        "id": 6,
+        "name": "María González",
+        "email": "maria.gonzalez@test.com"
+      },
+      "fecha": "2025-11-14T00:55:18.891272",
+      "monto": 664.07,
+      "moneda": "MXN",
+      "comercio": "Farmacia del Ahorro",
+      "categoria": "Salud",
+      "subcategoria": "Medicamentos",
+      "concepto": "Pago Medicamentos - Farmacia del Ahorro",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": null,
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 28,
+      "usuario": {
+        "id": 6,
+        "name": "María González",
+        "email": "maria.gonzalez@test.com"
+      },
+      "fecha": "2025-10-17T01:55:18.891272",
+      "monto": 520.11,
+      "moneda": "MXN",
+      "comercio": "Soriana",
+      "categoria": "Mercado",
+      "subcategoria": "Mercado General",
+      "concepto": "Pago Mercado General - Soriana",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": {
+        "id": 4,
+        "categoria": "Mercado",
+        "subcategoria": "Mercado General"
+      },
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 29,
+      "usuario": {
+        "id": 7,
+        "name": "Carlos Rodríguez",
+        "email": "carlos.rodriguez@test.com"
+      },
+      "fecha": "2025-12-10T23:55:18.891272",
+      "monto": 1271.28,
+      "moneda": "MXN",
+      "comercio": "Cine",
+      "categoria": "Vida Social",
+      "subcategoria": "Salidas Familiares",
+      "concepto": "Pago Salidas Familiares - Cine",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": {
+        "id": 10,
+        "categoria": "Vida Social",
+        "subcategoria": "Salidas Familiares"
+      },
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 30,
+      "usuario": {
+        "id": 6,
+        "name": "María González",
+        "email": "maria.gonzalez@test.com"
+      },
+      "fecha": "2025-10-31T00:55:18.891272",
+      "monto": 1819.52,
+      "moneda": "MXN",
+      "comercio": "Soriana",
+      "categoria": "Mercado",
+      "subcategoria": "Mercado General",
+      "concepto": "Pago Mercado General - Soriana",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": {
+        "id": 4,
+        "categoria": "Mercado",
+        "subcategoria": "Mercado General"
+      },
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 31,
+      "usuario": {
+        "id": 5,
+        "name": "Gonzalo M",
+        "email": "procentros@gmail.com"
+      },
+      "fecha": "2025-11-25T23:55:18.891272",
+      "monto": 371.55,
+      "moneda": "MXN",
+      "comercio": "Similares",
+      "categoria": "Salud",
+      "subcategoria": "Medicamentos",
+      "concepto": "Pago Medicamentos - Similares",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": null,
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 32,
+      "usuario": {
+        "id": 6,
+        "name": "María González",
+        "email": "maria.gonzalez@test.com"
+      },
+      "fecha": "2025-11-28T03:55:18.891272",
+      "monto": 714.18,
+      "moneda": "MXN",
+      "comercio": "BP",
+      "categoria": "Transporte",
+      "subcategoria": "Gasolina",
+      "concepto": "Pago Gasolina - BP",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": {
+        "id": 6,
+        "categoria": "Transporte",
+        "subcategoria": "Gasolina"
+      },
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 33,
+      "usuario": {
+        "id": 7,
+        "name": "Carlos Rodríguez",
+        "email": "carlos.rodriguez@test.com"
+      },
+      "fecha": "2025-11-01T23:55:18.891272",
+      "monto": 1872.74,
+      "moneda": "MXN",
+      "comercio": "Soriana",
+      "categoria": "Mercado",
+      "subcategoria": "Mercado General",
+      "concepto": "Pago Mercado General - Soriana",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": {
+        "id": 4,
+        "categoria": "Mercado",
+        "subcategoria": "Mercado General"
+      },
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 34,
+      "usuario": {
+        "id": 6,
+        "name": "María González",
+        "email": "maria.gonzalez@test.com"
+      },
+      "fecha": "2025-11-05T08:55:18.891272",
+      "monto": 289.84,
+      "moneda": "MXN",
+      "comercio": "Farmacias Guadalajara",
+      "categoria": "Salud",
+      "subcategoria": "Medicamentos",
+      "concepto": "Pago Medicamentos - Farmacias Guadalajara",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": null,
+      "created_at": "2026-01-11T20:55:18"
+    },
+    {
+      "id": 35,
+      "usuario": {
+        "id": 6,
+        "name": "María González",
+        "email": "maria.gonzalez@test.com"
+      },
+      "fecha": "2025-10-31T10:55:18.891272",
+      "monto": 153.98,
+      "moneda": "MXN",
+      "comercio": "SAPAS",
+      "categoria": "Servicios Basicos",
+      "subcategoria": "Agua Potable",
+      "concepto": "Pago Agua Potable - SAPAS",
+      "referencia": null,
+      "operation_id": null,
+      "tracking_key": null,
+      "estado": "processed",
+      "notas": null,
+      "tiene_recibo": false,
+      "receipt_image_url": null,
+      "whatsapp_message_id": null,
+      "presupuesto": {
+        "id": 2,
+        "categoria": "Servicios Basicos",
+        "subcategoria": "Agua Potable"
+      },
+      "created_at": "2026-01-11T20:55:18"
+    }
+  ]
+}

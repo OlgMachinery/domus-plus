@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOMUS+ - Abrir Aplicación</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            background: white;
+            color: #333;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #667eea;
+            margin-top: 0;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .link {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 18px;
+            font-weight: bold;
+            margin: 10px 5px;
+            transition: background 0.3s;
+        }
+        .link:hover {
+            background: #5568d3;
+        }
+        .instructions {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .instructions ol {
+            line-height: 2;
+        }
+        code {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 DOMUS+ - Sistema Listo</h1>
+        
+        <div class="status success">
+            ✅ <strong>Servidores corriendo correctamente</strong>
+        </div>
+
+        <h2>📱 Abrir la Aplicación</h2>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="http://localhost:3000" class="link" target="_blank">
+                🌐 Abrir DOMUS+ en el Navegador
+            </a>
+        </div>
+
+        <div class="instructions">
+            <h3>📋 Instrucciones Manuales:</h3>
+            <ol>
+                <li>Abre tu navegador (Safari, Chrome, Firefox, Edge)</li>
+                <li>En la barra de direcciones, escribe: <code>http://localhost:3000</code></li>
+                <li>Presiona Enter</li>
+            </ol>
+        </div>
+
+        <h3>🔗 URLs Disponibles:</h3>
+        <ul>
+            <li><strong>Frontend (Aplicación):</strong> <a href="http://localhost:3000" target="_blank">http://localhost:3000</a></li>
+            <li><strong>Backend API:</strong> <a href="http://localhost:8000" target="_blank">http://localhost:8000</a></li>
+            <li><strong>Documentación API:</strong> <a href="http://localhost:8000/docs" target="_blank">http://localhost:8000/docs</a></li>
+            <li><strong>Health Check:</strong> <a href="http://localhost:8000/health" target="_blank">http://localhost:8000/health</a></li>
+        </ul>
+
+        <h3>✅ Verificación de Estado:</h3>
+        <p>Si los servidores están corriendo, deberías poder:</p>
+        <ul>
+            <li>Ver la página de inicio en <code>http://localhost:3000</code></li>
+            <li>Registrarte en <code>http://localhost:3000/register</code></li>
+            <li>Iniciar sesión en <code>http://localhost:3000/login</code></li>
+        </ul>
+
+        <div style="margin-top: 30px; padding: 15px; background: #fff3cd; border-radius: 5px; color: #856404;">
+            <strong>⚠️ Si no puedes abrir la aplicación:</strong>
+            <ol>
+                <li>Verifica que los servidores estén corriendo (deberías ver procesos en las terminales)</li>
+                <li>Intenta cerrar y volver a abrir el navegador</li>
+                <li>Limpia la caché del navegador (Cmd+Shift+R en Mac, Ctrl+Shift+R en Windows)</li>
+                <li>Verifica que no haya un firewall bloqueando los puertos 3000 y 8000</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        // Intentar verificar el estado de los servidores
+        fetch('http://localhost:8000/health')
+            .then(response => response.json())
+            .then(data => {
+                console.log('✅ Backend OK:', data);
+            })
+            .catch(error => {
+                console.error('❌ Backend no responde:', error);
+            });
+    </script>
+</body>
+</html>

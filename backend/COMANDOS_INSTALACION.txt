@@ -1,0 +1,35 @@
+==========================================
+COMANDOS PARA INSTALAR DEPENDENCIAS
+==========================================
+
+Ejecuta estos comandos en tu terminal, uno por uno:
+
+1. Ir al directorio backend:
+   cd /Users/gonzalomontanofimbres/domus-plus/backend
+
+2. Crear entorno virtual:
+   python3 -m venv venv
+
+3. Activar entorno virtual:
+   source venv/bin/activate
+
+4. Actualizar pip:
+   pip install --upgrade pip
+
+5. Instalar dependencias:
+   pip install -r requirements.txt
+
+6. Verificar instalación:
+   python3 diagnosticar_inicio.py
+
+7. Iniciar backend:
+   ./iniciar_backend.sh
+
+==========================================
+O EJECUTA EL SCRIPT AUTOMÁTICO:
+==========================================
+
+chmod +x instalar_dependencias.sh
+./instalar_dependencias.sh
+
+==========================================
