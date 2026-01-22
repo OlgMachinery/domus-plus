@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import api from '@/lib/api'
 import { XIcon, SendIcon, HelpIcon } from '@/lib/icons'
 import { useTranslation, type Language } from '@/lib/i18n'
 
@@ -57,24 +56,32 @@ export default function AIAssistant({ language }: AIAssistantProps) {
     setLoading(true)
 
     try {
-      const response = await api.post('/api/ai-assistant/chat', {
-        message: userMessage,
-        conversation_id: conversationId
+      const response = await fetch('/api/ai-assistant/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: userMessage,
+          conversation_id: conversationId
+        })
       })
 
-      // Actualizar conversation_id si es nuevo
-      if (response.data.conversation_id && !conversationId) {
-        setConversationId(response.data.conversation_id)
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Request failed')
       }
 
-      // Agregar respuesta del asistente
+      if (data.conversation_id && !conversationId) {
+        setConversationId(data.conversation_id)
+      }
+
       const assistantMessage: Message = {
         role: 'assistant',
-        content: response.data.response,
+        content: data.response,
         timestamp: new Date()
       }
       setMessages(prev => [...prev, assistantMessage])
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error al enviar mensaje:', error)
       const errorMessage: Message = {
         role: 'assistant',
