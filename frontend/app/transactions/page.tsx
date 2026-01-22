@@ -7,7 +7,7 @@ import { format } from 'date-fns'
 import { es, enUS } from 'date-fns/locale'
 import type { Transaction, User } from '@/lib/types'
 import { XIcon, PlusIcon } from '@/lib/icons'
-import SAPLayout from '@/components/SAPLayout'
+import AppLayout from "@/components/AppLayout"
 import { useTranslation, getLanguage, setLanguage, type Language } from '@/lib/i18n'
 import { formatCurrency } from '@/lib/currency'
 
@@ -426,11 +426,11 @@ export default function TransactionsPage() {
   // Renderizar siempre SAPLayout para mantener consistencia de hooks
   if (loading) {
     return (
-      <SAPLayout user={user} title={t.nav.transactions} subtitle={t.nav.transactions}>
+      <AppLayout user={user} title={t.nav.transactions} subtitle={t.nav.transactions}>
         <div className="flex items-center justify-center py-12">
           <div className="text-sap-text-secondary">{language === 'es' ? 'Cargando...' : 'Loading...'}</div>
         </div>
-      </SAPLayout>
+      </AppLayout>
     )
   }
 
@@ -521,7 +521,7 @@ export default function TransactionsPage() {
   )
 
   return (
-    <SAPLayout
+    <AppLayout
       user={user}
       title={t.transactions.title}
       subtitle={t.transactions.subtitle}
@@ -1209,6 +1209,6 @@ export default function TransactionsPage() {
       )}
         </>
       )}
-    </SAPLayout>
+    </AppLayout>
   )
 }

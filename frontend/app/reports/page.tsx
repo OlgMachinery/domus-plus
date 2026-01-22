@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase/client'
 import { format } from 'date-fns'
 import { es, enUS } from 'date-fns/locale'
 import type { User, Transaction, UserBudget } from '@/lib/types'
-import SAPLayout from '@/components/SAPLayout'
+import AppLayout from "@/components/AppLayout"
 import { formatCurrency } from '@/lib/currency'
 import { getLanguage, setLanguage, useTranslation, type Language } from '@/lib/i18n'
 
@@ -602,16 +602,16 @@ export default function ReportsPage() {
 
   if (loading) {
     return (
-      <SAPLayout user={user} title={language === 'es' ? 'Reportes' : 'Reports'} toolbar={null}>
+      <AppLayout user={user} title={language === 'es' ? 'Reportes' : 'Reports'} toolbar={null}>
         <div className="flex items-center justify-center py-12">
           <div className="text-sap-text-secondary">{language === 'es' ? 'Cargando...' : 'Loading...'}</div>
         </div>
-      </SAPLayout>
+      </AppLayout>
     )
   }
 
   return (
-    <SAPLayout
+    <AppLayout
       user={user}
       title={language === 'es' ? 'Reportes' : 'Reports'}
       subtitle={language === 'es' ? 'Genera y exporta reportes financieros' : 'Generate and export financial reports'}
@@ -769,6 +769,6 @@ export default function ReportsPage() {
           </div>
         )}
       </div>
-    </SAPLayout>
+    </AppLayout>
   )
 }

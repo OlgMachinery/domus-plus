@@ -3,123 +3,144 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
-import SAPLayout from '@/components/SAPLayout'
+import AppLayout from '@/components/AppLayout'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Wallet, TrendingUp, Receipt, CreditCard } from 'lucide-react'
 
 export default function Dashboard() {
   const router = useRouter()
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<{ name?: string; email?: string } | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let mounted = true
-    let timeoutId: NodeJS.Timeout | null = null
     
     const init = async () => {
       try {
-        console.log('🔍 [DASHBOARD] Verificando sesión...')
-        
-        // Timeout más agresivo: 3 segundos
-        timeoutId = setTimeout(() => {
-          if (mounted) {
-            console.error('⏱️ [DASHBOARD] Timeout al obtener sesión (3s)')
-            setLoading(false)
-            router.push('/login')
-          }
-        }, 3000)
-
-        // Intentar obtener sesión con timeout manual
-        const sessionPromise = supabase.auth.getSession()
-        
-        let sessionResult: any
-        try {
-          sessionResult = await Promise.race([
-            sessionPromise,
-            new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Timeout después de 2.5s')), 2500)
-            )
-          ])
-        } catch (timeoutError: any) {
-          if (timeoutError.message.includes('Timeout')) {
-            console.error('⏱️ [DASHBOARD] Timeout al obtener sesión (2.5s)')
-            if (mounted) {
-              setLoading(false)
-              router.push('/login')
-            }
-            return
-          }
-          throw timeoutError
-        }
-
-        const { data: { session }, error } = sessionResult
-        
-        if (timeoutId) clearTimeout(timeoutId)
+        const { data: { session }, error } = await supabase.auth.getSession()
 
         if (!mounted) return
 
-        if (error) {
-          console.error('❌ [DASHBOARD] Error al obtener sesión:', error)
-          setLoading(false)
+        if (error || !session) {
           router.push('/login')
           return
         }
 
-        if (!session) {
-          console.log('⚠️ [DASHBOARD] No hay sesión, redirigiendo a login')
-          setLoading(false)
-          router.push('/login')
-          return
-        }
+        const { data: userData } = await supabase
+          .from('users')
+          .select('name, email')
+          .eq('id', session.user.id)
+          .single()
 
-        console.log('✅ [DASHBOARD] Sesión encontrada:', session.user.email)
         if (mounted) {
-          setUser(session.user)
+          setUser(userData || { email: session.user.email })
           setLoading(false)
         }
-      } catch (err: any) {
-        if (timeoutId) clearTimeout(timeoutId)
-        console.error('❌ [DASHBOARD] Error inesperado:', err)
+      } catch {
         if (mounted) {
-          setLoading(false)
           router.push('/login')
         }
       }
     }
     
     init()
-    
-    return () => {
-      mounted = false
-      if (timeoutId) clearTimeout(timeoutId)
-    }
+    return () => { mounted = false }
   }, [router])
 
-  // IMPORTANTE: Siempre renderizar SAPLayout para mantener el mismo número de hooks
-  // Esto evita el error "Rendered more hooks than during the previous render"
-  return (
-    <SAPLayout user={user} title="Dashboard" subtitle="Resumen General">
-      {loading ? (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="text-gray-500">Cargando dashboard...</div>
-        </div>
-      ) : user ? (
-        <div className="p-6">
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <h2 className="text-xl font-bold mb-4">Bienvenido a DOMUS+</h2>
-            <p className="text-gray-600">Has iniciado sesión correctamente como: <strong>{user.email}</strong></p>
-            
-            <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-blue-50 rounded border border-blue-100">
-                <h3 className="font-semibold text-blue-800">Conexión</h3>
-                <p className="text-sm text-blue-600">Activa</p>
-              </div>
-              <div className="p-4 bg-green-50 rounded border border-green-100">
-                <h3 className="font-semibold text-green-800">Base de Datos</h3>
-                <p className="text-sm text-green-600">Sincronizada</p>
-              </div>
-            </div>
+  if (loading) {
+    return (
+      <AppLayout user={null}>
+        <div className="space-y-6">
+          <Skeleton className="h-8 w-48" />
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} className="h-32" />
+            ))}
           </div>
         </div>
-      ) : null}
-    </SAPLayout>
+      </AppLayout>
+    )
+  }
+
+  return (
+    <AppLayout user={user}>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-muted-foreground">
+            Welcome back, {user?.name || user?.email}
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Budget</CardTitle>
+              <Wallet className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">$0.00</div>
+              <p className="text-xs text-muted-foreground">This month</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Spent</CardTitle>
+              <CreditCard className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">$0.00</div>
+              <p className="text-xs text-muted-foreground">This month</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Remaining</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">$0.00</div>
+              <p className="text-xs text-muted-foreground">Available</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Receipts</CardTitle>
+              <Receipt className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">0</div>
+              <p className="text-xs text-muted-foreground">Pending review</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Transactions</CardTitle>
+              <CardDescription>Your latest spending activity</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">No transactions yet</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Budget Overview</CardTitle>
+              <CardDescription>Monthly budget distribution</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">No budgets configured</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </AppLayout>
   )
 }

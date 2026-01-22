@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import type { User, FamilyBudget, AnnualBudgetMatrix, GlobalBudgetSummary } from '@/lib/types'
 import { PlusIcon, XIcon } from '@/lib/icons'
-import SAPLayout from '@/components/SAPLayout'
+import AppLayout from "@/components/AppLayout"
 import { useTranslation, getLanguage, setLanguage, type Language } from '@/lib/i18n'
 import { formatCurrency } from '@/lib/currency'
 
@@ -723,11 +723,11 @@ export default function BudgetsPage() {
 
   if (loading) {
   return (
-      <SAPLayout user={user} title={t.budgets.title} toolbar={null}>
+      <AppLayout user={user} title={t.budgets.title} toolbar={null}>
         <div className="flex items-center justify-center py-12">
           <div className="text-sap-text-secondary">{t.common.loading}</div>
             </div>
-      </SAPLayout>
+      </AppLayout>
     )
   }
 
@@ -768,7 +768,7 @@ export default function BudgetsPage() {
   )
 
   return (
-    <SAPLayout
+    <AppLayout
       user={user}
       title={t.budgets.title}
       subtitle={t.budgets.subtitle}
@@ -2584,6 +2584,6 @@ export default function BudgetsPage() {
           </div>
         </div>
       )}
-    </SAPLayout>
+    </AppLayout>
   )
 }

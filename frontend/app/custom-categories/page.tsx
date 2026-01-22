@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import type { User } from '@/lib/types'
 import { PlusIcon, XIcon, EditIcon, TrashIcon } from '@/lib/icons'
-import SAPLayout from '@/components/SAPLayout'
+import AppLayout from "@/components/AppLayout"
 import { getLanguage, setLanguage, useTranslation, type Language } from '@/lib/i18n'
 
 interface CustomSubcategory {
@@ -257,16 +257,16 @@ export default function CustomCategoriesPage() {
 
   if (loading) {
     return (
-      <SAPLayout user={user} title={language === 'es' ? 'Categorías Personalizadas' : 'Custom Categories'} toolbar={null}>
+      <AppLayout user={user} title={language === 'es' ? 'Categorías Personalizadas' : 'Custom Categories'} toolbar={null}>
         <div className="flex items-center justify-center py-12">
           <div className="text-sap-text-secondary">{language === 'es' ? 'Cargando...' : 'Loading...'}</div>
         </div>
-      </SAPLayout>
+      </AppLayout>
     )
   }
 
   return (
-    <SAPLayout
+    <AppLayout
       user={user}
       title={language === 'es' ? 'Categorías Personalizadas' : 'Custom Categories'}
       subtitle={language === 'es' ? 'Crea y gestiona tus propias categorías y subcategorías para presupuestos' : 'Create and manage your own categories and subcategories for budgets'}
@@ -470,6 +470,6 @@ export default function CustomCategoriesPage() {
           </div>
         )}
       </div>
-    </SAPLayout>
+    </AppLayout>
   )
 }

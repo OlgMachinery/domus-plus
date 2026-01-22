@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import type { User } from '@/lib/types'
-import SAPLayout from '@/components/SAPLayout'
+import AppLayout from "@/components/AppLayout"
 
 interface ActivityLog {
   id: number
@@ -161,7 +161,7 @@ export default function LogsPage() {
   )
 
   return (
-    <SAPLayout
+    <AppLayout
       user={user}
       title="Log de Actividad"
       subtitle="Registro de todos los movimientos del sistema"
@@ -310,6 +310,6 @@ export default function LogsPage() {
           </p>
         </div>
       )}
-    </SAPLayout>
+    </AppLayout>
   )
 }
