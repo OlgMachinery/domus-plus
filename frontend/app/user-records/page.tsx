@@ -139,7 +139,7 @@ export default function UserRecordsPage() {
     return (
       <AppLayout user={user} title={language === 'es' ? 'Registros de Usuario' : 'User Records'} toolbar={null}>
         <div className="flex items-center justify-center py-12">
-          <div className="text-sap-text-secondary">{language === 'es' ? 'Cargando...' : 'Loading...'}</div>
+          <div className="text-muted-foreground">{language === 'es' ? 'Cargando...' : 'Loading...'}</div>
         </div>
       </AppLayout>
     )
@@ -157,7 +157,7 @@ export default function UserRecordsPage() {
         <div className="grid gap-4">
           {receipts.length === 0 ? (
             <div className="sap-card p-12 text-center">
-              <p className="text-sap-text-secondary">
+              <p className="text-muted-foreground">
                 {language === 'es' ? 'No hay recibos procesados' : 'No processed receipts'}
               </p>
             </div>
@@ -165,13 +165,13 @@ export default function UserRecordsPage() {
             receipts.map((receipt) => (
               <div
                 key={receipt.id}
-                className="sap-card p-6 cursor-pointer hover:bg-sap-bgHover transition-colors"
+                className="sap-card p-6 cursor-pointer hover:bg-backgroundHover transition-colors"
                 onClick={() => setSelectedReceipt(receipt)}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-4 mb-2">
-                      <h3 className="text-lg font-semibold text-sap-text">
+                      <h3 className="text-lg font-semibold text-foreground">
                         {receipt.merchant_or_beneficiary || (language === 'es' ? 'Recibo sin comercio' : 'Receipt without merchant')}
                       </h3>
                       <span className={`px-2 py-1 rounded text-xs ${
@@ -186,22 +186,22 @@ export default function UserRecordsPage() {
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div>
-                        <span className="text-sap-text-secondary">{language === 'es' ? 'Fecha:' : 'Date:'}</span>{' '}
+                        <span className="text-muted-foreground">{language === 'es' ? 'Fecha:' : 'Date:'}</span>{' '}
                         {receipt.date 
                           ? format(new Date(receipt.date + 'T' + (receipt.time || '00:00')), 'dd/MM/yyyy HH:mm', { locale: language === 'es' ? es : enUS })
                           : format(new Date(receipt.created_at), 'dd/MM/yyyy', { locale: language === 'es' ? es : enUS })
                         }
                       </div>
                       <div>
-                        <span className="text-sap-text-secondary">{language === 'es' ? 'Monto:' : 'Amount:'}</span>{' '}
+                        <span className="text-muted-foreground">{language === 'es' ? 'Monto:' : 'Amount:'}</span>{' '}
                         {formatCurrency(receipt.amount, language, false)}
                       </div>
                       <div>
-                        <span className="text-sap-text-secondary">{language === 'es' ? 'Categoría:' : 'Category:'}</span>{' '}
+                        <span className="text-muted-foreground">{language === 'es' ? 'Categoría:' : 'Category:'}</span>{' '}
                         {receipt.category || '-'}
                       </div>
                       <div>
-                        <span className="text-sap-text-secondary">{language === 'es' ? 'Items:' : 'Items:'}</span>{' '}
+                        <span className="text-muted-foreground">{language === 'es' ? 'Items:' : 'Items:'}</span>{' '}
                         {receipt.items?.length || 0}
                       </div>
                     </div>
@@ -217,8 +217,8 @@ export default function UserRecordsPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6">
-                <div className="flex justify-between items-center mb-6 border-b border-sap-border pb-4">
-                  <h2 className="text-xl font-semibold text-sap-text">
+                <div className="flex justify-between items-center mb-6 border-b border-border pb-4">
+                  <h2 className="text-xl font-semibold text-foreground">
                     {language === 'es' ? 'Detalle del Recibo' : 'Receipt Details'}
                   </h2>
                   <button
@@ -232,18 +232,18 @@ export default function UserRecordsPage() {
                 <div className="grid md:grid-cols-2 gap-6">
                   {/* Imagen del recibo */}
                   <div>
-                    <h3 className="text-lg font-semibold text-sap-text mb-4">
+                    <h3 className="text-lg font-semibold text-foreground mb-4">
                       {language === 'es' ? 'Imagen del Ticket' : 'Ticket Image'}
                     </h3>
                     {selectedReceipt.image_url ? (
                       <img
                         src={selectedReceipt.image_url}
                         alt={language === 'es' ? 'Recibo' : 'Receipt'}
-                        className="w-full rounded border border-sap-border"
+                        className="w-full rounded border border-border"
                       />
                     ) : (
-                      <div className="w-full h-64 bg-sap-bgSecondary rounded border border-sap-border flex items-center justify-center">
-                        <p className="text-sap-text-secondary">
+                      <div className="w-full h-64 bg-backgroundSecondary rounded border border-border flex items-center justify-center">
+                        <p className="text-muted-foreground">
                           {language === 'es' ? 'No hay imagen disponible' : 'No image available'}
                         </p>
                       </div>
@@ -252,19 +252,19 @@ export default function UserRecordsPage() {
 
                   {/* Tabla de datos */}
                   <div>
-                    <h3 className="text-lg font-semibold text-sap-text mb-4">
+                    <h3 className="text-lg font-semibold text-foreground mb-4">
                       {language === 'es' ? 'Datos Extraídos' : 'Extracted Data'}
                     </h3>
                     <div className="sap-card overflow-hidden">
                       <table className="w-full">
-                        <thead className="bg-sap-bgSecondary">
+                        <thead className="bg-backgroundSecondary">
                           <tr>
                             <th className="sap-table-header">{language === 'es' ? 'Campo' : 'Field'}</th>
                             <th className="sap-table-header">{language === 'es' ? 'Valor' : 'Value'}</th>
                           </tr>
                         </thead>
                         <tbody>
-                          <tr className="border-b border-sap-border">
+                          <tr className="border-b border-border">
                             <td className="sap-table-cell font-medium">{language === 'es' ? 'Fecha' : 'Date'}</td>
                             <td className="sap-table-cell">
                               {selectedReceipt.date 
@@ -273,39 +273,39 @@ export default function UserRecordsPage() {
                               }
                             </td>
                           </tr>
-                          <tr className="border-b border-sap-border">
+                          <tr className="border-b border-border">
                             <td className="sap-table-cell font-medium">{language === 'es' ? 'Comercio' : 'Merchant'}</td>
                             <td className="sap-table-cell">{selectedReceipt.merchant_or_beneficiary || '-'}</td>
                           </tr>
-                          <tr className="border-b border-sap-border">
+                          <tr className="border-b border-border">
                             <td className="sap-table-cell font-medium">{language === 'es' ? 'Monto Total' : 'Total Amount'}</td>
                             <td className="sap-table-cell">{formatCurrency(selectedReceipt.amount, language, false)}</td>
                           </tr>
-                          <tr className="border-b border-sap-border">
+                          <tr className="border-b border-border">
                             <td className="sap-table-cell font-medium">{language === 'es' ? 'Categoría' : 'Category'}</td>
                             <td className="sap-table-cell">{selectedReceipt.category || '-'}</td>
                           </tr>
-                          <tr className="border-b border-sap-border">
+                          <tr className="border-b border-border">
                             <td className="sap-table-cell font-medium">{language === 'es' ? 'Subcategoría' : 'Subcategory'}</td>
                             <td className="sap-table-cell">{selectedReceipt.subcategory || '-'}</td>
                           </tr>
-                          <tr className="border-b border-sap-border">
+                          <tr className="border-b border-border">
                             <td className="sap-table-cell font-medium">{language === 'es' ? 'Concepto' : 'Concept'}</td>
                             <td className="sap-table-cell">{selectedReceipt.concept || '-'}</td>
                           </tr>
-                          <tr className="border-b border-sap-border">
+                          <tr className="border-b border-border">
                             <td className="sap-table-cell font-medium">{language === 'es' ? 'Referencia' : 'Reference'}</td>
                             <td className="sap-table-cell">{selectedReceipt.reference || '-'}</td>
                           </tr>
-                          <tr className="border-b border-sap-border">
+                          <tr className="border-b border-border">
                             <td className="sap-table-cell font-medium">{language === 'es' ? 'Operación ID' : 'Operation ID'}</td>
                             <td className="sap-table-cell">{selectedReceipt.operation_id || '-'}</td>
                           </tr>
-                          <tr className="border-b border-sap-border">
+                          <tr className="border-b border-border">
                             <td className="sap-table-cell font-medium">{language === 'es' ? 'Tracking Key' : 'Tracking Key'}</td>
                             <td className="sap-table-cell">{selectedReceipt.tracking_key || '-'}</td>
                           </tr>
-                          <tr className="border-b border-sap-border">
+                          <tr className="border-b border-border">
                             <td className="sap-table-cell font-medium">{language === 'es' ? 'Estado' : 'Status'}</td>
                             <td className="sap-table-cell">
                               <span className={`px-2 py-1 rounded text-xs ${
@@ -334,12 +334,12 @@ export default function UserRecordsPage() {
                 {/* Items del recibo */}
                 {selectedReceipt.items && selectedReceipt.items.length > 0 && (
                   <div className="mt-6">
-                    <h3 className="text-lg font-semibold text-sap-text mb-4">
+                    <h3 className="text-lg font-semibold text-foreground mb-4">
                       {language === 'es' ? 'Conceptos Extraídos' : 'Extracted Items'}
                     </h3>
                     <div className="sap-card overflow-hidden">
                       <table className="w-full">
-                        <thead className="bg-sap-bgSecondary">
+                        <thead className="bg-backgroundSecondary">
                           <tr>
                             <th className="sap-table-header">{language === 'es' ? 'Descripción' : 'Description'}</th>
                             <th className="sap-table-header">{language === 'es' ? 'Monto' : 'Amount'}</th>
@@ -350,7 +350,7 @@ export default function UserRecordsPage() {
                         </thead>
                         <tbody>
                           {selectedReceipt.items.map((item) => (
-                            <tr key={item.id} className="border-b border-sap-border">
+                            <tr key={item.id} className="border-b border-border">
                               <td className="sap-table-cell">{item.description}</td>
                               <td className="sap-table-cell">{formatCurrency(item.amount, language, false)}</td>
                               <td className="sap-table-cell">{item.category || '-'}</td>

@@ -7,6 +7,11 @@ import type { User } from '@/lib/types'
 import { PlusIcon, XIcon, EditIcon, TrashIcon } from '@/lib/icons'
 import AppLayout from "@/components/AppLayout"
 import { getLanguage, setLanguage, useTranslation, type Language } from '@/lib/i18n'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Card, CardContent } from '@/components/ui/card'
 
 interface CustomSubcategory {
   id: number
@@ -259,7 +264,7 @@ export default function CustomCategoriesPage() {
     return (
       <AppLayout user={user} title={language === 'es' ? 'Categorías Personalizadas' : 'Custom Categories'} toolbar={null}>
         <div className="flex items-center justify-center py-12">
-          <div className="text-sap-text-secondary">{language === 'es' ? 'Cargando...' : 'Loading...'}</div>
+          <div className="text-muted-foreground">{language === 'es' ? 'Cargando...' : 'Loading...'}</div>
         </div>
       </AppLayout>
     )
@@ -287,10 +292,10 @@ export default function CustomCategoriesPage() {
         {/* Lista de categorías */}
         {categories.length === 0 ? (
           <div className="sap-card p-12 text-center">
-            <p className="text-sap-text-secondary mb-4">
+            <p className="text-muted-foreground mb-4">
               {language === 'es' ? 'No hay categorías personalizadas creadas' : 'No custom categories created'}
             </p>
-            <p className="text-sm text-sap-text-secondary">
+            <p className="text-sm text-muted-foreground">
               {language === 'es' 
                 ? 'Crea tu primera categoría personalizada para organizar mejor tus presupuestos'
                 : 'Create your first custom category to better organize your budgets'}
@@ -306,11 +311,11 @@ export default function CustomCategoriesPage() {
                       <span className="text-2xl">{category.icon}</span>
                     )}
                     <div>
-                      <h3 className="text-lg font-semibold text-sap-text" style={{ color: category.color || undefined }}>
+                      <h3 className="text-lg font-semibold text-foreground" style={{ color: category.color || undefined }}>
                         {category.name}
                       </h3>
                       {category.description && (
-                        <p className="text-sm text-sap-text-secondary mt-1">{category.description}</p>
+                        <p className="text-sm text-muted-foreground mt-1">{category.description}</p>
                       )}
                     </div>
                   </div>
@@ -326,14 +331,14 @@ export default function CustomCategoriesPage() {
                 {/* Subcategorías */}
                 {category.subcategories.length > 0 && (
                   <div className="mt-4">
-                    <h4 className="text-sm font-medium text-sap-text-secondary mb-2">
+                    <h4 className="text-sm font-medium text-muted-foreground mb-2">
                       {language === 'es' ? 'Subcategorías:' : 'Subcategories:'}
                     </h4>
                     <div className="flex flex-wrap gap-2">
                       {category.subcategories.map((subcat) => (
                         <span
                           key={subcat.id}
-                          className="px-3 py-1 bg-sap-bgSecondary rounded text-sm text-sap-text"
+                          className="px-3 py-1 bg-backgroundSecondary rounded text-sm text-foreground"
                         >
                           {subcat.name}
                         </span>
@@ -347,128 +352,107 @@ export default function CustomCategoriesPage() {
         )}
 
         {/* Modal crear categoría */}
-        {showCreateModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-sap-text">
-                  {language === 'es' ? 'Crear Nueva Categoría' : 'Create New Category'}
-                </h3>
-                <button
-                  onClick={() => setShowCreateModal(false)}
-                  className="sap-button-ghost p-2"
-                >
-                  <XIcon size={18} className="text-sap-text-secondary" />
-                </button>
+        <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>
+                {language === 'es' ? 'Crear Nueva Categoría' : 'Create New Category'}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>
+                  {language === 'es' ? 'Nombre de la Categoría *' : 'Category Name *'}
+                </Label>
+                <Input
+                  value={newCategory.name}
+                  onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+                  placeholder={language === 'es' ? 'Ej: Mascotas, Hobbies, etc.' : 'E.g: Pets, Hobbies, etc.'}
+                />
               </div>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-1">
-                    {language === 'es' ? 'Nombre de la Categoría *' : 'Category Name *'}
-                  </label>
-                  <input
-                    type="text"
-                    value={newCategory.name}
-                    onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
-                    className="sap-input w-full"
-                    placeholder={language === 'es' ? 'Ej: Mascotas, Hobbies, etc.' : 'E.g: Pets, Hobbies, etc.'}
+              <div className="space-y-2">
+                <Label>
+                  {language === 'es' ? 'Descripción' : 'Description'}
+                </Label>
+                <textarea
+                  value={newCategory.description}
+                  onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  rows={3}
+                  placeholder={language === 'es' ? 'Descripción opcional...' : 'Optional description...'}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>
+                    {language === 'es' ? 'Icono (emoji)' : 'Icon (emoji)'}
+                  </Label>
+                  <Input
+                    value={newCategory.icon}
+                    onChange={(e) => setNewCategory({ ...newCategory, icon: e.target.value })}
+                    placeholder="🐾 🎨 🏠"
+                    maxLength={2}
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-1">
-                    {language === 'es' ? 'Descripción' : 'Description'}
-                  </label>
-                  <textarea
-                    value={newCategory.description}
-                    onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
-                    className="sap-input w-full"
-                    rows={3}
-                    placeholder={language === 'es' ? 'Descripción opcional...' : 'Optional description...'}
+                <div className="space-y-2">
+                  <Label>
+                    {language === 'es' ? 'Color' : 'Color'}
+                  </Label>
+                  <Input
+                    type="color"
+                    value={newCategory.color}
+                    onChange={(e) => setNewCategory({ ...newCategory, color: e.target.value })}
+                    className="h-10 p-1"
                   />
                 </div>
+              </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-sap-text-secondary mb-1">
-                      {language === 'es' ? 'Icono (emoji)' : 'Icon (emoji)'}
-                    </label>
-                    <input
-                      type="text"
-                      value={newCategory.icon}
-                      onChange={(e) => setNewCategory({ ...newCategory, icon: e.target.value })}
-                      className="sap-input w-full"
-                      placeholder="🐾 🎨 🏠"
-                      maxLength={2}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-sap-text-secondary mb-1">
-                      {language === 'es' ? 'Color' : 'Color'}
-                    </label>
-                    <input
-                      type="color"
-                      value={newCategory.color}
-                      onChange={(e) => setNewCategory({ ...newCategory, color: e.target.value })}
-                      className="sap-input w-full h-10"
-                    />
-                  </div>
+              {/* Subcategorías */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>
+                    {language === 'es' ? 'Subcategorías' : 'Subcategories'}
+                  </Label>
+                  <Button variant="outline" size="sm" onClick={handleAddSubcategory}>
+                    <PlusIcon size={14} className="mr-1" />
+                    {language === 'es' ? 'Agregar' : 'Add'}
+                  </Button>
                 </div>
 
-                {/* Subcategorías */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm font-medium text-sap-text-secondary">
-                      {language === 'es' ? 'Subcategorías' : 'Subcategories'}
-                    </label>
-                    <button
-                      onClick={handleAddSubcategory}
-                      className="sap-button-secondary text-xs flex items-center gap-1"
+                {newCategory.subcategories.map((subcat, index) => (
+                  <div key={index} className="flex gap-2">
+                    <Input
+                      value={subcat.name}
+                      onChange={(e) => handleSubcategoryChange(index, 'name', e.target.value)}
+                      placeholder={language === 'es' ? 'Nombre de subcategoría' : 'Subcategory name'}
+                      className="flex-1"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveSubcategory(index)}
                     >
-                      <PlusIcon size={14} />
-                      {language === 'es' ? 'Agregar' : 'Add'}
-                    </button>
+                      <XIcon size={16} className="text-destructive" />
+                    </Button>
                   </div>
+                ))}
+              </div>
 
-                  {newCategory.subcategories.map((subcat, index) => (
-                    <div key={index} className="flex gap-2 mb-2">
-                      <input
-                        type="text"
-                        value={subcat.name}
-                        onChange={(e) => handleSubcategoryChange(index, 'name', e.target.value)}
-                        className="sap-input flex-1"
-                        placeholder={language === 'es' ? 'Nombre de subcategoría' : 'Subcategory name'}
-                      />
-                      <button
-                        onClick={() => handleRemoveSubcategory(index)}
-                        className="sap-button-ghost text-sap-danger"
-                      >
-                        <XIcon size={16} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <button
-                    onClick={handleCreateCategory}
-                    className="sap-button-primary flex-1"
-                  >
-                    {language === 'es' ? 'Crear Categoría' : 'Create Category'}
-                  </button>
-                  <button
-                    onClick={() => setShowCreateModal(false)}
-                    className="sap-button-secondary flex-1"
-                  >
-                    {language === 'es' ? 'Cancelar' : 'Cancel'}
-                  </button>
-                </div>
+              <div className="flex gap-3 pt-4">
+                <Button onClick={handleCreateCategory} className="flex-1">
+                  {language === 'es' ? 'Crear Categoría' : 'Create Category'}
+                </Button>
+                <Button variant="outline" onClick={() => setShowCreateModal(false)} className="flex-1">
+                  {language === 'es' ? 'Cancelar' : 'Cancel'}
+                </Button>
               </div>
             </div>
-          </div>
-        )}
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   )

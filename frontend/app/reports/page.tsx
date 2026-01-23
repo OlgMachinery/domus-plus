@@ -604,7 +604,7 @@ export default function ReportsPage() {
     return (
       <AppLayout user={user} title={language === 'es' ? 'Reportes' : 'Reports'} toolbar={null}>
         <div className="flex items-center justify-center py-12">
-          <div className="text-sap-text-secondary">{language === 'es' ? 'Cargando...' : 'Loading...'}</div>
+          <div className="text-muted-foreground">{language === 'es' ? 'Cargando...' : 'Loading...'}</div>
         </div>
       </AppLayout>
     )
@@ -620,7 +620,7 @@ export default function ReportsPage() {
       <div className="space-y-6">
         {/* Selector de tipo de reporte */}
         <div className="sap-card p-6">
-          <h3 className="text-base font-semibold text-sap-text mb-4">
+          <h3 className="text-base font-semibold text-foreground mb-4">
             {language === 'es' ? 'Tipo de Reporte' : 'Report Type'}
           </h3>
           <div className="grid md:grid-cols-3 gap-3">
@@ -660,12 +660,12 @@ export default function ReportsPage() {
         {/* Filtros de fecha */}
         {(reportType === 'transactions' || reportType === 'income_expense' || reportType === 'category') && (
           <div className="sap-card p-6">
-            <h3 className="text-base font-semibold text-sap-text mb-4">
+            <h3 className="text-base font-semibold text-foreground mb-4">
               {language === 'es' ? 'Período' : 'Period'}
             </h3>
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+                <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                   {language === 'es' ? 'Desde' : 'From'}
                 </label>
                 <input
@@ -676,7 +676,7 @@ export default function ReportsPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+                <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                   {language === 'es' ? 'Hasta' : 'To'}
                 </label>
                 <input
@@ -692,11 +692,11 @@ export default function ReportsPage() {
 
         {reportType === 'annual_budget' && (
           <div className="sap-card p-6">
-            <h3 className="text-base font-semibold text-sap-text mb-4">
+            <h3 className="text-base font-semibold text-foreground mb-4">
               {language === 'es' ? 'Año' : 'Year'}
             </h3>
             <div>
-              <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+              <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                 {language === 'es' ? 'Selecciona el año' : 'Select year'}
               </label>
               <select
@@ -714,7 +714,7 @@ export default function ReportsPage() {
 
         {/* Botones de exportación */}
         <div className="sap-card p-6">
-          <h3 className="text-base font-semibold text-sap-text mb-4">
+          <h3 className="text-base font-semibold text-foreground mb-4">
             {language === 'es' ? 'Exportar Reporte' : 'Export Report'}
           </h3>
           <div className="flex flex-wrap gap-3">
@@ -753,17 +753,17 @@ export default function ReportsPage() {
         {generating ? (
           <div className="sap-card p-12 text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sap-primary mx-auto mb-4"></div>
-            <p className="text-sm text-sap-text-secondary">
+            <p className="text-sm text-muted-foreground">
               {language === 'es' ? 'Generando reporte...' : 'Generating report...'}
             </p>
           </div>
         ) : (
           <div className="sap-card p-6">
-            <h3 className="text-base font-semibold text-sap-text mb-4">
+            <h3 className="text-base font-semibold text-foreground mb-4">
               {language === 'es' ? 'Vista Previa' : 'Preview'}
             </h3>
             <div 
-              className="bg-white p-6 rounded border border-sap-border"
+              className="bg-white p-6 rounded border border-border"
               dangerouslySetInnerHTML={{ __html: generateReportContent() }}
             />
           </div>

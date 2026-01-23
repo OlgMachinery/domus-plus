@@ -619,7 +619,7 @@ export default function ReceiptsPage() {
     return (
       <AppLayout user={user} title={language === 'es' ? 'Recibos' : 'Receipts'} toolbar={null}>
         <div className="flex items-center justify-center py-12">
-          <div className="text-sap-text-secondary">{language === 'es' ? 'Cargando...' : 'Loading...'}</div>
+          <div className="text-muted-foreground">{language === 'es' ? 'Cargando...' : 'Loading...'}</div>
         </div>
       </AppLayout>
     )
@@ -644,7 +644,7 @@ export default function ReceiptsPage() {
         {/* Filtros */}
         <div className="sap-card p-4">
           <div className="flex items-center gap-4">
-            <label className="text-sm font-medium text-sap-text-secondary">
+            <label className="text-sm font-medium text-muted-foreground">
               {language === 'es' ? 'Estado:' : 'Status:'}
             </label>
             <select
@@ -664,7 +664,7 @@ export default function ReceiptsPage() {
         <div className="sap-card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-sap-bgSecondary sticky top-0 z-10">
+              <thead className="bg-backgroundSecondary sticky top-0 z-10">
                 <tr>
                   <th className="sap-table-header">{language === 'es' ? 'Fecha' : 'Date'}</th>
                   <th className="sap-table-header">{language === 'es' ? 'Comercio' : 'Merchant'}</th>
@@ -679,13 +679,13 @@ export default function ReceiptsPage() {
               <tbody>
                 {filteredReceipts.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="sap-table-cell text-center py-8 text-sap-text-secondary">
+                    <td colSpan={8} className="sap-table-cell text-center py-8 text-muted-foreground">
                       {language === 'es' ? 'No hay recibos' : 'No receipts'}
                     </td>
                   </tr>
                 ) : (
                   filteredReceipts.map((receipt) => (
-                    <tr key={receipt.id} className="border-b border-sap-border hover:bg-sap-bgHover">
+                    <tr key={receipt.id} className="border-b border-border hover:bg-backgroundHover">
                       <td className="sap-table-cell">
                         {receipt.date 
                           ? format(new Date(receipt.date + 'T' + (receipt.time || '00:00')), 'dd/MM/yyyy HH:mm', { locale: language === 'es' ? es : enUS })
@@ -733,26 +733,26 @@ export default function ReceiptsPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-sap-text">
+                <h3 className="text-lg font-semibold text-foreground">
                   {language === 'es' ? 'Asignar Recibo' : 'Assign Receipt'}
                 </h3>
                 <button
                   onClick={() => setShowAssignModal(false)}
-                  className="text-sap-text-secondary hover:text-sap-text"
+                  className="text-muted-foreground hover:text-foreground"
                 >
                   <XIcon className="w-5 h-5" />
                 </button>
               </div>
 
               {/* Información del recibo */}
-              <div className="mb-8 p-6 bg-sap-bgSecondary rounded">
-                <h4 className="font-semibold text-sap-text mb-4">
+              <div className="mb-8 p-6 bg-backgroundSecondary rounded">
+                <h4 className="font-semibold text-foreground mb-4">
                   {language === 'es' ? 'Información del Recibo' : 'Receipt Information'}
                 </h4>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="space-y-1">
-                    <span className="text-sap-text-secondary block">{language === 'es' ? 'Fecha:' : 'Date:'}</span>
-                    <span className="text-sap-text">
+                    <span className="text-muted-foreground block">{language === 'es' ? 'Fecha:' : 'Date:'}</span>
+                    <span className="text-foreground">
                       {selectedReceipt.date 
                         ? format(new Date(selectedReceipt.date + 'T' + (selectedReceipt.time || '00:00')), 'dd/MM/yyyy HH:mm', { locale: language === 'es' ? es : enUS })
                         : format(new Date(selectedReceipt.created_at), 'dd/MM/yyyy', { locale: language === 'es' ? es : enUS })
@@ -760,29 +760,29 @@ export default function ReceiptsPage() {
                     </span>
                   </div>
                   <div className="space-y-1">
-                    <span className="text-sap-text-secondary block">{language === 'es' ? 'Comercio:' : 'Merchant:'}</span>
-                    <span className="text-sap-text">{selectedReceipt.merchant_or_beneficiary || '-'}</span>
+                    <span className="text-muted-foreground block">{language === 'es' ? 'Comercio:' : 'Merchant:'}</span>
+                    <span className="text-foreground">{selectedReceipt.merchant_or_beneficiary || '-'}</span>
                   </div>
                   <div className="space-y-1">
-                    <span className="text-sap-text-secondary block">{language === 'es' ? 'Monto Total:' : 'Total Amount:'}</span>
-                    <span className="text-sap-text font-semibold">{formatCurrency(selectedReceipt.amount, language, false)}</span>
+                    <span className="text-muted-foreground block">{language === 'es' ? 'Monto Total:' : 'Total Amount:'}</span>
+                    <span className="text-foreground font-semibold">{formatCurrency(selectedReceipt.amount, language, false)}</span>
                   </div>
                   <div className="space-y-1">
-                    <span className="text-sap-text-secondary block">{language === 'es' ? 'Categoría:' : 'Category:'}</span>
-                    <span className="text-sap-text">{selectedReceipt.category || '-'}</span>
+                    <span className="text-muted-foreground block">{language === 'es' ? 'Categoría:' : 'Category:'}</span>
+                    <span className="text-foreground">{selectedReceipt.category || '-'}</span>
                   </div>
                 </div>
               </div>
 
               {/* Asignar recibo completo */}
               <div className="mb-8 space-y-6">
-                <h4 className="font-semibold text-sap-text mb-4">
+                <h4 className="font-semibold text-foreground mb-4">
                   {language === 'es' ? 'Asignar Recibo' : 'Assign Receipt'}
                 </h4>
                 
                 {/* Paso 1: Cuenta del Presupuesto (OBLIGATORIO) */}
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-sap-text-secondary">
+                  <label className="block text-sm font-medium text-muted-foreground">
                     <span className="text-red-500">*</span> {language === 'es' ? 'Cuenta del Presupuesto:' : 'Budget Account:'}
                   </label>
                   <select
@@ -813,14 +813,14 @@ export default function ReceiptsPage() {
                       })
                     )}
                   </select>
-                  <p className="text-xs text-sap-text-secondary">
+                  <p className="text-xs text-muted-foreground">
                     {language === 'es' ? 'Primero debes seleccionar una cuenta del presupuesto' : 'You must first select a budget account'}
                   </p>
                 </div>
 
                 {/* Paso 2: Usuario o Todos */}
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-sap-text-secondary">
+                  <label className="block text-sm font-medium text-muted-foreground">
                     {language === 'es' ? 'Asignar a:' : 'Assign to:'}
                   </label>
                   <select
@@ -843,14 +843,14 @@ export default function ReceiptsPage() {
                       <option key={m.id} value={m.id}>{m.name}</option>
                     ))}
                   </select>
-                  <p className="text-xs text-sap-text-secondary">
+                  <p className="text-xs text-muted-foreground">
                     {language === 'es' ? 'Selecciona un usuario específico o "Todos" para distribuir entre todos' : 'Select a specific user or "All" to distribute among all'}
                   </p>
                 </div>
 
                 {/* Modo de asignación */}
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-sap-text-secondary">
+                  <label className="block text-sm font-medium text-muted-foreground">
                     {language === 'es' ? 'Modo de Asignación:' : 'Assignment Mode:'}
                   </label>
                   <select
@@ -862,7 +862,7 @@ export default function ReceiptsPage() {
                     <option value="percentage">{language === 'es' ? 'Por Porcentaje (del monto total)' : 'By Percentage (of total amount)'}</option>
                     <option value="by_item">{language === 'es' ? 'Por Item (cada item individualmente)' : 'By Item (each item individually)'}</option>
                   </select>
-                  <p className="text-xs text-sap-text-secondary">
+                  <p className="text-xs text-muted-foreground">
                     {assignForm.assignment_mode === 'percentage' 
                       ? (language === 'es' ? 'Asigna el monto total del recibo según el porcentaje seleccionado' : 'Assigns the total receipt amount according to the selected percentage')
                       : (language === 'es' ? 'Cada item se asignará individualmente a transacciones separadas' : 'Each item will be assigned individually to separate transactions')}
@@ -872,7 +872,7 @@ export default function ReceiptsPage() {
                 {/* Porcentaje (solo si modo es porcentaje y se selecciona un usuario específico) */}
                 {assignForm.assignment_mode === 'percentage' && assignForm.target_user_id && assignForm.target_user_id !== -1 && (
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-sap-text-secondary">
+                    <label className="block text-sm font-medium text-muted-foreground">
                       {language === 'es' ? 'Porcentaje (100% = completo):' : 'Percentage (100% = full):'}
                     </label>
                     <input
@@ -907,10 +907,10 @@ export default function ReceiptsPage() {
               {/* Items del recibo */}
               <div className="mt-6">
                 <div className="sap-card p-4 mb-4">
-                  <h4 className="font-semibold text-sap-text mb-2">
+                  <h4 className="font-semibold text-foreground mb-2">
                     {language === 'es' ? 'Prueba de extracción de datos con IA' : 'AI extraction test'}
                   </h4>
-                  <p className="text-sm text-sap-text-secondary mb-2">
+                  <p className="text-sm text-muted-foreground mb-2">
                     {language === 'es'
                       ? 'Texto plano extraído (raw_line) para validar rapidez y contenido.'
                       : 'Plain extracted text (raw_line) to validate speed and content.'}
@@ -923,7 +923,7 @@ export default function ReceiptsPage() {
                   />
                 </div>
                 <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-semibold text-sap-text">
+                  <h4 className="font-semibold text-foreground">
                     {language === 'es' ? 'Items del Recibo' : 'Receipt Items'} ({selectedReceipt.items?.length || 0})
                   </h4>
                   <div className="flex gap-2">
@@ -953,10 +953,10 @@ export default function ReceiptsPage() {
                     </button>
                   </div>
                 </div>
-                <div className="border border-sap-border rounded max-h-[400px] overflow-y-auto">
+                <div className="border border-border rounded max-h-[400px] overflow-y-auto">
                   <table className="min-w-full text-sm">
-                    <thead className="bg-sap-bgSecondary sticky top-0">
-                      <tr className="text-left text-sap-text-secondary">
+                    <thead className="bg-backgroundSecondary sticky top-0">
+                      <tr className="text-left text-muted-foreground">
                         <th className="px-3 py-2 text-right" style={{width: '50px'}}>#</th>
                         <th className="px-3 py-2">{language === 'es' ? 'Descripción' : 'Description'}</th>
                         <th className="px-3 py-2 text-right" style={{width: '100px'}}>{language === 'es' ? 'Cantidad' : 'Quantity'}</th>
@@ -967,14 +967,14 @@ export default function ReceiptsPage() {
                     </thead>
                     <tbody className="divide-y divide-sap-border">
                       {selectedReceipt.items?.map((item, idx) => (
-                        <tr key={item.id ?? idx} className="hover:bg-sap-bgHover">
-                          <td className="px-3 py-2 text-right text-sap-text-tertiary">#{idx + 1}</td>
-                          <td className="px-3 py-2 text-sap-text break-words">{item.description}</td>
-                          <td className="px-3 py-2 text-right text-sap-text">{item.quantity ?? '-'}</td>
-                          <td className="px-3 py-2 text-right text-sap-text">
+                        <tr key={item.id ?? idx} className="hover:bg-backgroundHover">
+                          <td className="px-3 py-2 text-right text-muted-foreground">#{idx + 1}</td>
+                          <td className="px-3 py-2 text-foreground break-words">{item.description}</td>
+                          <td className="px-3 py-2 text-right text-foreground">{item.quantity ?? '-'}</td>
+                          <td className="px-3 py-2 text-right text-foreground">
                             {item.unit_price != null ? formatCurrency(item.unit_price, language, false) : '-'}
                           </td>
-                          <td className="px-3 py-2 text-right text-sap-text font-semibold">
+                          <td className="px-3 py-2 text-right text-foreground font-semibold">
                             {formatCurrency(item.amount || 0, language, false)}
                           </td>
                           <td className="px-3 py-2 text-right">

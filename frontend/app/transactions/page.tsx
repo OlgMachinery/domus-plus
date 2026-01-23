@@ -428,7 +428,7 @@ export default function TransactionsPage() {
     return (
       <AppLayout user={user} title={t.nav.transactions} subtitle={t.nav.transactions}>
         <div className="flex items-center justify-center py-12">
-          <div className="text-sap-text-secondary">{language === 'es' ? 'Cargando...' : 'Loading...'}</div>
+          <div className="text-muted-foreground">{language === 'es' ? 'Cargando...' : 'Loading...'}</div>
         </div>
       </AppLayout>
     )
@@ -529,7 +529,7 @@ export default function TransactionsPage() {
     >
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="text-sap-text-secondary">{language === 'es' ? 'Cargando...' : 'Loading...'}</div>
+          <div className="text-muted-foreground">{language === 'es' ? 'Cargando...' : 'Loading...'}</div>
         </div>
       ) : (
         <>
@@ -537,9 +537,9 @@ export default function TransactionsPage() {
       <div className="sap-card p-4 mb-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
-            <h3 className="text-sm font-semibold text-sap-text">{t.transactions.filters}</h3>
+            <h3 className="text-sm font-semibold text-foreground">{t.transactions.filters}</h3>
             {hasActiveFilters && (
-              <span className="sap-badge bg-sap-primary/10 text-sap-primary">
+              <span className="sap-badge bg-primary/10 text-primary">
                 {Object.values(filters).filter(v => v !== '').length} activos
               </span>
             )}
@@ -566,19 +566,19 @@ export default function TransactionsPage() {
         <div className="flex gap-2 mb-3">
           <button
             onClick={() => setFilterType('all')}
-            className={`sap-button-ghost text-xs ${filterType === 'all' ? 'bg-sap-primary text-white' : ''}`}
+            className={`sap-button-ghost text-xs ${filterType === 'all' ? 'bg-primary text-white' : ''}`}
           >
             {t.common.all}
           </button>
           <button
             onClick={() => setFilterType('income')}
-            className={`sap-button-ghost text-xs ${filterType === 'income' ? 'bg-sap-primary text-white' : ''}`}
+            className={`sap-button-ghost text-xs ${filterType === 'income' ? 'bg-primary text-white' : ''}`}
           >
             {t.transactions.income}
           </button>
           <button
             onClick={() => setFilterType('expense')}
-            className={`sap-button-ghost text-xs ${filterType === 'expense' ? 'bg-sap-primary text-white' : ''}`}
+            className={`sap-button-ghost text-xs ${filterType === 'expense' ? 'bg-primary text-white' : ''}`}
           >
             {t.transactions.expense}
           </button>
@@ -586,9 +586,9 @@ export default function TransactionsPage() {
 
         {/* Filtros avanzados */}
         {showFilters && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-sap-border">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-border">
             <div>
-              <label className="block text-xs font-medium text-sap-text-secondary mb-1">
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
                 {t.common.category}
               </label>
               <select
@@ -604,7 +604,7 @@ export default function TransactionsPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-sap-text-secondary mb-1">
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
                 {t.common.subcategory}
               </label>
               <select
@@ -621,7 +621,7 @@ export default function TransactionsPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-sap-text-secondary mb-1">
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
                 {t.common.date} {t.common.from}
               </label>
               <input
@@ -633,7 +633,7 @@ export default function TransactionsPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-sap-text-secondary mb-1">
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
                 {t.common.date} {t.common.to}
               </label>
               <input
@@ -645,7 +645,7 @@ export default function TransactionsPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-sap-text-secondary mb-1">
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
                 {t.common.amount} {t.common.min}
               </label>
               <input
@@ -659,7 +659,7 @@ export default function TransactionsPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-sap-text-secondary mb-1">
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
                 {t.common.amount} {t.common.max}
               </label>
               <input
@@ -673,7 +673,7 @@ export default function TransactionsPage() {
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-xs font-medium text-sap-text-secondary mb-1">
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
                 {t.common.merchant} / {t.transactions.beneficiary}
               </label>
               <input
@@ -691,26 +691,26 @@ export default function TransactionsPage() {
       {/* Resumen estilo SAP */}
       <div className="grid md:grid-cols-4 gap-4 mb-6">
         <div className="sap-card p-5">
-          <div className="text-xs text-sap-text-secondary mb-1">Total Ingresos</div>
+          <div className="text-xs text-muted-foreground mb-1">Total Ingresos</div>
           <div className="text-xl font-bold text-sap-success">
             {formatCurrency(totalIncome, language, false)}
           </div>
         </div>
         <div className="sap-card p-5">
-          <div className="text-xs text-sap-text-secondary mb-1">Total Egresos</div>
+          <div className="text-xs text-muted-foreground mb-1">Total Egresos</div>
           <div className="text-xl font-bold text-sap-danger">
             {formatCurrency(totalExpense, language, false)}
           </div>
         </div>
         <div className="sap-card p-5">
-          <div className="text-xs text-sap-text-secondary mb-1">Balance Neto</div>
+          <div className="text-xs text-muted-foreground mb-1">Balance Neto</div>
           <div className={`text-xl font-bold ${balance >= 0 ? 'text-sap-success' : 'text-sap-danger'}`}>
             {formatCurrency(balance, language, false)}
           </div>
         </div>
         <div className="sap-card p-5">
-          <div className="text-xs text-sap-text-secondary mb-1">Transacciones</div>
-          <div className="text-xl font-bold text-sap-text">
+          <div className="text-xs text-muted-foreground mb-1">Transacciones</div>
+          <div className="text-xl font-bold text-foreground">
             {transactions.length}
           </div>
         </div>
@@ -721,7 +721,7 @@ export default function TransactionsPage() {
         <div className="sap-card overflow-hidden">
           <div className="overflow-auto" style={{ maxHeight: 'calc(100vh - 300px)' }}>
           <table className="sap-table">
-            <thead className="bg-sap-bg-secondary" style={{ position: 'sticky', top: 0, zIndex: 10 }}>
+            <thead className="bg-card" style={{ position: 'sticky', top: 0, zIndex: 10 }}>
               <tr>
                 <th>{t.transactions.date}</th>
                 <th>{t.transactions.concept}</th>
@@ -740,18 +740,18 @@ export default function TransactionsPage() {
                     {format(new Date(transaction.date), 'dd/MM/yyyy', { locale: language === 'es' ? es : enUS })}
                   </td>
                   <td>
-                    <span className="text-sm font-medium text-sap-text">
+                    <span className="text-sm font-medium text-foreground">
                       {transaction.concept || transaction.merchant_or_beneficiary || 'Sin descripción'}
                     </span>
                   </td>
                   <td>
-                    <span className="text-xs text-sap-text-secondary">{transaction.category}</span>
+                    <span className="text-xs text-muted-foreground">{transaction.category}</span>
                   </td>
                   <td>
-                    <span className="text-xs text-sap-text-tertiary">{transaction.subcategory || '-'}</span>
+                    <span className="text-xs text-muted-foreground">{transaction.subcategory || '-'}</span>
                   </td>
                   <td>
-                    <span className="text-xs text-sap-text-secondary">{transaction.merchant_or_beneficiary || '-'}</span>
+                    <span className="text-xs text-muted-foreground">{transaction.merchant_or_beneficiary || '-'}</span>
                   </td>
                   <td className="text-right">
                     <span className={`text-sm font-semibold ${
@@ -788,7 +788,7 @@ export default function TransactionsPage() {
         </div>
       ) : (
             <div className="sap-card p-12 text-center">
-              <p className="text-sm text-sap-text-secondary mb-4">
+              <p className="text-sm text-muted-foreground mb-4">
                 No hay transacciones registradas aún
               </p>
               <div className="flex gap-2 justify-center">
@@ -814,19 +814,19 @@ export default function TransactionsPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="sap-card max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto shadow-lg">
             <div className="p-6">
-              <div className="flex justify-between items-center mb-6 border-b border-sap-border pb-4">
-                <h2 className="text-lg font-semibold text-sap-text">Nueva Transacción</h2>
+              <div className="flex justify-between items-center mb-6 border-b border-border pb-4">
+                <h2 className="text-lg font-semibold text-foreground">Nueva Transacción</h2>
                 <button
                   onClick={() => setShowCreateModal(false)}
                   className="sap-button-ghost p-2"
                 >
-                  <XIcon size={18} className="text-sap-text-secondary" />
+                  <XIcon size={18} className="text-muted-foreground" />
                 </button>
               </div>
 
               <form onSubmit={handleCreateTransaction} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                     Tipo de Transacción
                   </label>
                   <select
@@ -846,7 +846,7 @@ export default function TransactionsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                     Categoría
                   </label>
                   <select
@@ -868,7 +868,7 @@ export default function TransactionsPage() {
 
                 {newTransaction.category && (
                   <div>
-                    <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                       Subcategoría
                     </label>
                     <select
@@ -886,7 +886,7 @@ export default function TransactionsPage() {
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                     Monto
                   </label>
                   <input
@@ -901,7 +901,7 @@ export default function TransactionsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                     Fecha
                   </label>
                   <input
@@ -914,7 +914,7 @@ export default function TransactionsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                     Concepto / Descripción
                   </label>
                   <input
@@ -927,7 +927,7 @@ export default function TransactionsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                     {newTransaction.transaction_type === 'income' ? 'Origen' : 'Comercio / Beneficiario'}
                   </label>
                   <input
@@ -939,7 +939,7 @@ export default function TransactionsPage() {
                   />
                 </div>
 
-                <div className="flex gap-3 pt-4 border-t border-sap-border">
+                <div className="flex gap-3 pt-4 border-t border-border">
                   <button
                     type="submit"
                     className="sap-button-primary flex-1"
@@ -965,19 +965,19 @@ export default function TransactionsPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="sap-card max-w-md w-full mx-4 shadow-lg">
             <div className="p-6">
-              <div className="flex justify-between items-center mb-6 border-b border-sap-border pb-4">
-                <h2 className="text-lg font-semibold text-sap-text">Subir Recibo</h2>
+              <div className="flex justify-between items-center mb-6 border-b border-border pb-4">
+                <h2 className="text-lg font-semibold text-foreground">Subir Recibo</h2>
                 <button
                   onClick={() => setShowUploadModal(false)}
                   className="sap-button-ghost p-2"
                 >
-                  <XIcon size={18} className="text-sap-text-secondary" />
+                  <XIcon size={18} className="text-muted-foreground" />
                 </button>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-2">
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
                     {language === 'es' ? 'Asignar a usuario:' : 'Assign to user:'}
                   </label>
                   <select
@@ -993,7 +993,7 @@ export default function TransactionsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-2">
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
                     {language === 'es' ? 'Selecciona una imagen de recibo' : 'Select receipt image'}
                   </label>
                   <input
@@ -1005,7 +1005,7 @@ export default function TransactionsPage() {
                     className="sap-input"
                   />
                   {uploadFiles.length > 0 && (
-                    <p className="text-xs text-sap-text-tertiary mt-2">
+                    <p className="text-xs text-muted-foreground mt-2">
                       {uploadFiles.length === 1
                         ? (language === 'es'
                           ? `Archivo seleccionado: ${uploadFiles[0].name} (${(uploadFiles[0].size / 1024).toFixed(2)} KB)`
@@ -1015,7 +1015,7 @@ export default function TransactionsPage() {
                           : `${uploadFiles.length} files selected`)}
                     </p>
                   )}
-                  <p className="text-xs text-sap-text-tertiary mt-2">
+                  <p className="text-xs text-muted-foreground mt-2">
                     {language === 'es' 
                       ? 'El sistema procesará automáticamente la imagen y extraerá todos los conceptos del recibo'
                       : 'The system will automatically process the image and extract all receipt items'}
@@ -1023,25 +1023,25 @@ export default function TransactionsPage() {
                 </div>
 
                 {uploading && (
-                  <div className="p-4 bg-sap-bg rounded border border-sap-border space-y-3">
+                  <div className="p-4 bg-background rounded border border-border space-y-3">
                     <div className="flex justify-between items-center">
-                      <p className="text-sm font-medium text-sap-text">
+                      <p className="text-sm font-medium text-foreground">
                         {language === 'es' ? 'Procesando recibo...' : 'Processing receipt...'}
                       </p>
-                      <p className="text-sm font-semibold text-sap-primary">
+                      <p className="text-sm font-semibold text-primary">
                         {uploadTime > 0 ? `${uploadTime}s` : '0s'}
                       </p>
                     </div>
                     
                     {/* Barra de progreso */}
-                    <div className="w-full bg-sap-bgSecondary rounded-full h-2.5 overflow-hidden">
+                    <div className="w-full bg-backgroundSecondary rounded-full h-2.5 overflow-hidden">
                       <div 
-                        className="bg-sap-primary h-2.5 rounded-full transition-all duration-300 ease-out"
+                        className="bg-primary h-2.5 rounded-full transition-all duration-300 ease-out"
                         style={{ width: `${Math.min(uploadProgress, 100)}%` }}
                       />
                     </div>
                     
-                    <div className="flex justify-between items-center text-xs text-sap-text-secondary">
+                    <div className="flex justify-between items-center text-xs text-muted-foreground">
                       <span>{Math.round(uploadProgress)}%</span>
                       <span>
                         {language === 'es' 
@@ -1050,7 +1050,7 @@ export default function TransactionsPage() {
                       </span>
                     </div>
                     
-                    <p className="text-xs text-sap-text-tertiary">
+                    <p className="text-xs text-muted-foreground">
                       {language === 'es' 
                         ? 'Esto puede tardar entre 30 segundos y 2 minutos dependiendo del tamaño del recibo.'
                         : 'This may take between 30 seconds and 2 minutes depending on receipt size.'}
@@ -1089,8 +1089,8 @@ export default function TransactionsPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="sap-card max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto shadow-lg">
             <div className="p-6">
-              <div className="flex justify-between items-center mb-6 border-b border-sap-border pb-4">
-                <h2 className="text-lg font-semibold text-sap-text">{t.transactions.editTransaction}</h2>
+              <div className="flex justify-between items-center mb-6 border-b border-border pb-4">
+                <h2 className="text-lg font-semibold text-foreground">{t.transactions.editTransaction}</h2>
                 <button
                   onClick={() => {
                     setShowEditModal(false)
@@ -1098,13 +1098,13 @@ export default function TransactionsPage() {
                   }}
                   className="sap-button-ghost p-2"
                 >
-                  <XIcon size={18} className="text-sap-text-secondary" />
+                  <XIcon size={18} className="text-muted-foreground" />
                 </button>
               </div>
 
               <form onSubmit={handleEditTransaction} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                     {t.transactions.amount}
                   </label>
                   <input
@@ -1119,7 +1119,7 @@ export default function TransactionsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                     {t.transactions.date}
                   </label>
                   <input
@@ -1132,7 +1132,7 @@ export default function TransactionsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                     {t.transactions.concept}
                   </label>
                   <input
@@ -1146,7 +1146,7 @@ export default function TransactionsPage() {
 
                 {familyMembers.length > 0 && (
                   <div>
-                    <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                       {language === 'es' ? 'Usuario (Beneficiario)' : 'User (Beneficiary)'}
                     </label>
                     <select
@@ -1166,7 +1166,7 @@ export default function TransactionsPage() {
 
                 {budgets.length > 0 && (
                   <div>
-                    <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+                    <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                       {language === 'es' ? 'Cuenta (Presupuesto)' : 'Account (Budget)'}
                     </label>
                     <select
@@ -1184,7 +1184,7 @@ export default function TransactionsPage() {
                   </div>
                 )}
 
-                <div className="flex gap-3 pt-4 border-t border-sap-border">
+                <div className="flex gap-3 pt-4 border-t border-border">
                   <button
                     type="submit"
                     className="sap-button-primary flex-1"

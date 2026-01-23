@@ -136,7 +136,7 @@ export default function LogsPage() {
     if (actionType.includes('created')) return 'text-sap-success'
     if (actionType.includes('updated')) return 'text-sap-warning'
     if (actionType.includes('deleted')) return 'text-sap-danger'
-    return 'text-sap-text'
+    return 'text-foreground'
   }
 
   const getActionTypeLabel = (actionType: string) => {
@@ -172,7 +172,7 @@ export default function LogsPage() {
         <div className="sap-card p-4 mb-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+              <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                 Tipo de Acción
               </label>
               <select
@@ -188,7 +188,7 @@ export default function LogsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+              <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                 Tipo de Entidad
               </label>
               <select
@@ -204,7 +204,7 @@ export default function LogsPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+              <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                 Período (días)
               </label>
               <select
@@ -235,7 +235,7 @@ export default function LogsPage() {
       {loading ? (
         <div className="sap-card p-12 text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sap-primary mx-auto"></div>
-          <p className="text-sm text-sap-text-secondary mt-4">Cargando logs...</p>
+          <p className="text-sm text-muted-foreground mt-4">Cargando logs...</p>
         </div>
       ) : logs.length > 0 ? (
         <div className="sap-card overflow-hidden">
@@ -254,21 +254,21 @@ export default function LogsPage() {
               {logs.map((log) => (
                 <tr key={log.id}>
                   <td>
-                    <div className="text-xs text-sap-text-secondary">
+                    <div className="text-xs text-muted-foreground">
                       {new Date(log.created_at).toLocaleDateString('es-MX')}
                     </div>
-                    <div className="text-xs text-sap-text-tertiary">
+                    <div className="text-xs text-muted-foreground">
                       {new Date(log.created_at).toLocaleTimeString('es-MX')}
                     </div>
                   </td>
                   <td>
                     {log.user ? (
                       <div>
-                        <div className="text-sm font-medium text-sap-text">{log.user.name}</div>
-                        <div className="text-xs text-sap-text-secondary">{log.user.email}</div>
+                        <div className="text-sm font-medium text-foreground">{log.user.name}</div>
+                        <div className="text-xs text-muted-foreground">{log.user.email}</div>
                       </div>
                     ) : (
-                      <span className="text-xs text-sap-text-tertiary">Sistema</span>
+                      <span className="text-xs text-muted-foreground">Sistema</span>
                     )}
                   </td>
                   <td>
@@ -277,25 +277,25 @@ export default function LogsPage() {
                     </span>
                   </td>
                   <td>
-                    <span className="text-xs text-sap-text-secondary">{log.entity_type}</span>
+                    <span className="text-xs text-muted-foreground">{log.entity_type}</span>
                   </td>
                   <td>
-                    <div className="text-sm text-sap-text max-w-md">
+                    <div className="text-sm text-foreground max-w-md">
                       {log.description}
                     </div>
                   </td>
                   <td>
                     {log.details && Object.keys(log.details).length > 0 ? (
                       <details className="text-xs">
-                        <summary className="cursor-pointer text-sap-primary hover:underline">
+                        <summary className="cursor-pointer text-primary hover:underline">
                           Ver detalles
                         </summary>
-                        <pre className="mt-2 p-2 bg-sap-bg rounded text-xs overflow-auto max-w-xs">
+                        <pre className="mt-2 p-2 bg-background rounded text-xs overflow-auto max-w-xs">
                           {JSON.stringify(log.details, null, 2)}
                         </pre>
                       </details>
                     ) : (
-                      <span className="text-xs text-sap-text-tertiary">-</span>
+                      <span className="text-xs text-muted-foreground">-</span>
                     )}
                   </td>
                 </tr>
@@ -305,7 +305,7 @@ export default function LogsPage() {
         </div>
       ) : (
         <div className="sap-card p-12 text-center">
-          <p className="text-sm text-sap-text-secondary">
+          <p className="text-sm text-muted-foreground">
             No hay logs de actividad para el período seleccionado
           </p>
         </div>

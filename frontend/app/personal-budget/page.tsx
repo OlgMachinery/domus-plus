@@ -355,7 +355,7 @@ export default function PersonalBudgetPage() {
     return (
       <AppLayout user={user} title={language === 'es' ? 'Mi Presupuesto Personal' : 'My Personal Budget'} toolbar={null}>
         <div className="flex items-center justify-center py-12">
-          <div className="text-sap-text-secondary">{language === 'es' ? 'Cargando...' : 'Loading...'}</div>
+          <div className="text-muted-foreground">{language === 'es' ? 'Cargando...' : 'Loading...'}</div>
         </div>
       </AppLayout>
     )
@@ -386,15 +386,15 @@ export default function PersonalBudgetPage() {
         {/* Resumen */}
         <div className="grid md:grid-cols-3 gap-4">
           <div className="sap-card p-5">
-            <div className="text-xs text-sap-text-secondary mb-1">
+            <div className="text-xs text-muted-foreground mb-1">
               {language === 'es' ? 'Presupuesto Total' : 'Total Budget'}
             </div>
-            <div className="text-xl font-bold text-sap-text">
+            <div className="text-xl font-bold text-foreground">
               {formatCurrency(totalBudget, language, false)}
             </div>
           </div>
           <div className="sap-card p-5">
-            <div className="text-xs text-sap-text-secondary mb-1">
+            <div className="text-xs text-muted-foreground mb-1">
               {language === 'es' ? 'Gastado' : 'Spent'}
             </div>
             <div className="text-xl font-bold text-sap-danger">
@@ -402,7 +402,7 @@ export default function PersonalBudgetPage() {
             </div>
           </div>
           <div className="sap-card p-5">
-            <div className="text-xs text-sap-text-secondary mb-1">
+            <div className="text-xs text-muted-foreground mb-1">
               {language === 'es' ? 'Disponible' : 'Available'}
             </div>
             <div className="text-xl font-bold text-sap-success">
@@ -415,7 +415,7 @@ export default function PersonalBudgetPage() {
         <div className="sap-card p-4">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-4">
-              <label className="text-sm font-medium text-sap-text-secondary">
+              <label className="text-sm font-medium text-muted-foreground">
                 {language === 'es' ? 'Año:' : 'Year:'}
               </label>
               <select
@@ -442,7 +442,7 @@ export default function PersonalBudgetPage() {
         <div className="sap-card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-sap-bgSecondary sticky top-0 z-10">
+              <thead className="bg-backgroundSecondary sticky top-0 z-10">
                 <tr>
                   <th className="sap-table-header">{language === 'es' ? 'Categoría' : 'Category'}</th>
                   <th className="sap-table-header">{language === 'es' ? 'Subcategoría' : 'Subcategory'}</th>
@@ -462,7 +462,7 @@ export default function PersonalBudgetPage() {
               <tbody>
                 {budgets.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="sap-table-cell text-center py-8 text-sap-text-secondary">
+                    <td colSpan={7} className="sap-table-cell text-center py-8 text-muted-foreground">
                       {language === 'es' ? 'No hay presupuestos personales' : 'No personal budgets'}
                     </td>
                   </tr>
@@ -472,7 +472,7 @@ export default function PersonalBudgetPage() {
                     const spent = userBudget?.spent_amount || 0
                     const available = budget.total_amount - spent
                     return (
-                      <tr key={budget.id} className="border-b border-sap-border hover:bg-sap-bgHover">
+                      <tr key={budget.id} className="border-b border-border hover:bg-backgroundHover">
                         <td className="sap-table-cell">{budget.category}</td>
                         <td className="sap-table-cell">{budget.subcategory}</td>
                         <td className="sap-table-cell">{budget.year}</td>
@@ -509,12 +509,12 @@ export default function PersonalBudgetPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-sap-text">
+                <h3 className="text-lg font-semibold text-foreground">
                   {language === 'es' ? 'Crear Presupuesto Personal' : 'Create Personal Budget'}
                 </h3>
                 <button
                   onClick={() => setShowCreateModal(false)}
-                  className="text-sap-text-secondary hover:text-sap-text"
+                  className="text-muted-foreground hover:text-foreground"
                 >
                   <XIcon className="w-5 h-5" />
                 </button>
@@ -522,7 +522,7 @@ export default function PersonalBudgetPage() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-1">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">
                     {language === 'es' ? 'Categoría:' : 'Category:'}
                   </label>
                   <select
@@ -538,7 +538,7 @@ export default function PersonalBudgetPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-1">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">
                     {language === 'es' ? 'Subcategoría:' : 'Subcategory:'}
                   </label>
                   <select
@@ -555,7 +555,7 @@ export default function PersonalBudgetPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-1">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">
                     {language === 'es' ? 'Año:' : 'Year:'}
                   </label>
                   <select
@@ -570,7 +570,7 @@ export default function PersonalBudgetPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-1">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">
                     {language === 'es' ? 'Monto Total:' : 'Total Amount:'}
                   </label>
                   <input
@@ -608,7 +608,7 @@ export default function PersonalBudgetPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-sap-text">
+                <h3 className="text-lg font-semibold text-foreground">
                   {language === 'es' ? 'Subir Recibo' : 'Upload Receipt'}
                 </h3>
                 <button
@@ -619,22 +619,22 @@ export default function PersonalBudgetPage() {
                   }}
                   className="sap-button-ghost p-2"
                 >
-                  <XIcon size={18} className="text-sap-text-secondary" />
+                  <XIcon size={18} className="text-muted-foreground" />
                 </button>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-2">
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
                     {language === 'es' ? 'Presupuesto:' : 'Budget:'}
                   </label>
-                  <div className="sap-input bg-sap-bgSecondary">
+                  <div className="sap-input bg-backgroundSecondary">
                     {selectedBudgetForUpload.category} - {selectedBudgetForUpload.subcategory}
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-2">
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
                     {language === 'es' ? 'Archivos del recibo:' : 'Receipt files:'}
                   </label>
                   <input
@@ -646,7 +646,7 @@ export default function PersonalBudgetPage() {
                     disabled={uploading}
                   />
                   {uploadFiles.length > 0 && (
-                    <p className="text-xs text-sap-text-tertiary mt-2">
+                    <p className="text-xs text-muted-foreground mt-2">
                       {uploadFiles.length === 1
                         ? `${language === 'es' ? 'Archivo seleccionado' : 'Selected file'}: ${uploadFiles[0].name}`
                         : `${uploadFiles.length} ${language === 'es' ? 'archivos seleccionados' : 'files selected'}`}

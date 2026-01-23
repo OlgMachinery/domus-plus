@@ -725,7 +725,7 @@ export default function BudgetsPage() {
   return (
       <AppLayout user={user} title={t.budgets.title} toolbar={null}>
         <div className="flex items-center justify-center py-12">
-          <div className="text-sap-text-secondary">{t.common.loading}</div>
+          <div className="text-muted-foreground">{t.common.loading}</div>
             </div>
       </AppLayout>
     )
@@ -779,30 +779,30 @@ export default function BudgetsPage() {
         <div className="sap-card p-6 mb-4">
           <div className="flex justify-between items-center mb-4">
             <div>
-              <h3 className="text-base font-semibold text-sap-text">Resumen Global {globalSummary.year}</h3>
-              <p className="text-xs text-sap-text-secondary mt-1">
+              <h3 className="text-base font-semibold text-foreground">Resumen Global {globalSummary.year}</h3>
+              <p className="text-xs text-muted-foreground mt-1">
                 Presupuestos compartidos + individuales agrupados por categoría
               </p>
           </div>
         </div>
 
           {/* Totales */}
-          <div className="grid grid-cols-3 gap-4 mb-4 pb-4 border-b border-sap-border">
+          <div className="grid grid-cols-3 gap-4 mb-4 pb-4 border-b border-border">
             <div>
-              <div className="text-xs text-sap-text-secondary mb-1">Compartidos</div>
-              <div className="text-lg font-semibold text-sap-primary">
+              <div className="text-xs text-muted-foreground mb-1">Compartidos</div>
+              <div className="text-lg font-semibold text-primary">
                 {formatCurrency(globalSummary.totals.shared, language, false)}
               </div>
             </div>
             <div>
-              <div className="text-xs text-sap-text-secondary mb-1">Individuales</div>
+              <div className="text-xs text-muted-foreground mb-1">Individuales</div>
               <div className="text-lg font-semibold text-sap-warning">
                 {formatCurrency(globalSummary.totals.individual, language, false)}
               </div>
             </div>
             <div>
-              <div className="text-xs text-sap-text-secondary mb-1">Total Global</div>
-              <div className="text-lg font-semibold text-sap-text">
+              <div className="text-xs text-muted-foreground mb-1">Total Global</div>
+              <div className="text-lg font-semibold text-foreground">
                 {formatCurrency(globalSummary.totals.global, language, false)}
               </div>
             </div>
@@ -811,19 +811,19 @@ export default function BudgetsPage() {
           {/* Detalle por categoría */}
           <div className="space-y-3 max-h-96 overflow-y-auto">
             {globalSummary.summary.map((item, idx) => (
-              <div key={idx} className="border border-sap-border rounded p-3">
+              <div key={idx} className="border border-border rounded p-3">
                 <div className="flex justify-between items-start mb-2">
                   <div>
-                    <div className="text-sm font-semibold text-sap-text">{item.category}</div>
-                    <div className="text-xs text-sap-text-secondary">{item.subcategory}</div>
+                    <div className="text-sm font-semibold text-foreground">{item.category}</div>
+                    <div className="text-xs text-muted-foreground">{item.subcategory}</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-semibold text-sap-text">
+                    <div className="text-sm font-semibold text-foreground">
                       {formatCurrency(item.total_amount, language, false)}
                     </div>
-                    <div className="text-xs text-sap-text-secondary">
+                    <div className="text-xs text-muted-foreground">
                       {item.shared_amount > 0 && (
-                        <span className="text-sap-primary">Global: {formatCurrency(item.shared_amount, language, false)}</span>
+                        <span className="text-primary">Global: {formatCurrency(item.shared_amount, language, false)}</span>
                       )}
                       {item.shared_amount > 0 && item.individual_total > 0 && ' + '}
                       {item.individual_total > 0 && (
@@ -837,8 +837,8 @@ export default function BudgetsPage() {
 
                 {/* Desglose de presupuestos individuales */}
                 {Object.keys(item.individual_amounts).length > 0 && (
-                  <div className="mt-2 pt-2 border-t border-sap-border">
-                    <div className="text-xs text-sap-text-secondary mb-1">
+                  <div className="mt-2 pt-2 border-t border-border">
+                    <div className="text-xs text-muted-foreground mb-1">
                       {globalCategories.includes(item.category) 
                         ? 'Partidas Especiales/Incrementos:' 
                         : 'Presupuestos individuales:'}
@@ -867,9 +867,9 @@ export default function BudgetsPage() {
       <div className="sap-card p-4 mb-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
-            <h3 className="text-sm font-semibold text-sap-text">Filtros</h3>
+            <h3 className="text-sm font-semibold text-foreground">Filtros</h3>
             {hasActiveFilters && (
-              <span className="sap-badge bg-sap-primary/10 text-sap-primary">
+              <span className="sap-badge bg-primary/10 text-primary">
                 {Object.values(filters).filter((v, i) => i !== 0 && v !== '' && v !== 'all').length} activos
               </span>
             )}
@@ -894,7 +894,7 @@ export default function BudgetsPage() {
 
         {/* Filtro rápido por año */}
         <div className="flex gap-2 mb-3">
-          <label className="text-xs font-medium text-sap-text-secondary flex items-center">
+          <label className="text-xs font-medium text-muted-foreground flex items-center">
             Año:
           </label>
           <select
@@ -912,9 +912,9 @@ export default function BudgetsPage() {
 
         {/* Filtros avanzados */}
         {showFilters && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-sap-border">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-border">
                   <div>
-              <label className="block text-xs font-medium text-sap-text-secondary mb-1">
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
                 Categoría
               </label>
               <select
@@ -930,7 +930,7 @@ export default function BudgetsPage() {
                   </div>
 
                   <div>
-              <label className="block text-xs font-medium text-sap-text-secondary mb-1">
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
                 Subcategoría
               </label>
               <select
@@ -947,7 +947,7 @@ export default function BudgetsPage() {
                   </div>
 
                   <div>
-              <label className="block text-xs font-medium text-sap-text-secondary mb-1">
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
                 Tipo
               </label>
               <select
@@ -962,7 +962,7 @@ export default function BudgetsPage() {
                 </div>
 
             <div>
-              <label className="block text-xs font-medium text-sap-text-secondary mb-1">
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
                 Estado
               </label>
               <select
@@ -1015,9 +1015,9 @@ export default function BudgetsPage() {
                       >
                         <td>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-sap-text">{budget.category}</span>
+                            <span className="text-sm font-medium text-foreground">{budget.category}</span>
                             {budget.budget_type === 'shared' && (
-                              <span className="text-[10px] px-1.5 py-0.5 bg-sap-primary/10 text-sap-primary rounded font-medium">C</span>
+                              <span className="text-[10px] px-1.5 py-0.5 bg-primary/10 text-primary rounded font-medium">C</span>
                             )}
                             {budget.budget_type === 'individual' && globalCategories.includes(budget.category) && (
                               <span className="text-[10px] px-1.5 py-0.5 bg-sap-warning/10 text-sap-warning rounded font-medium" title="Partida Especial/Incremento">PE</span>
@@ -1029,7 +1029,7 @@ export default function BudgetsPage() {
                         </td>
                         <td>
                           <div className="flex flex-col">
-                            <span className="text-xs text-sap-text-secondary">{budget.subcategory}</span>
+                            <span className="text-xs text-muted-foreground">{budget.subcategory}</span>
                             {budget.budget_type === 'individual' && budget.target_user && (
                               <span className={`text-[10px] mt-0.5 ${
                                 globalCategories.includes(budget.category) 
@@ -1043,37 +1043,37 @@ export default function BudgetsPage() {
               </div>
                         </td>
                         <td className="text-right">
-                          <span className="text-sm font-medium text-sap-text">
+                          <span className="text-sm font-medium text-foreground">
                             {formatCurrency(montoMensual, language, false)}
                           </span>
                         </td>
                         <td className="text-right">
-                          <span className="text-sm font-semibold text-sap-text">
+                          <span className="text-sm font-semibold text-foreground">
                             {formatCurrency(budget.total_amount, language, false)}
                           </span>
                         </td>
                         <td className="text-right">
-                          <span className="text-xs text-sap-text-secondary">
+                          <span className="text-xs text-muted-foreground">
                             {formatCurrency(totalAllocated, language, false)}
                           </span>
                         </td>
                         <td className="text-right">
                           <span className={`text-xs font-medium ${
-                            totalSpent > 0 ? 'text-sap-danger' : 'text-sap-text-secondary'
+                            totalSpent > 0 ? 'text-sap-danger' : 'text-muted-foreground'
                           }`}>
                             {formatCurrency(totalSpent, language, false)}
                           </span>
                         </td>
                         <td className="text-right">
                           <span className={`text-xs font-semibold ${
-                            available > 0 ? 'text-sap-success' : available < 0 ? 'text-sap-danger' : 'text-sap-text-secondary'
+                            available > 0 ? 'text-sap-success' : available < 0 ? 'text-sap-danger' : 'text-muted-foreground'
                           }`}>
                             {formatCurrency(available, language, false)}
                           </span>
                         </td>
                         <td className="text-center">
                           <div className="flex items-center justify-center gap-2">
-                            <div className="w-16 h-1.5 bg-sap-bg rounded-full overflow-hidden">
+                            <div className="w-16 h-1.5 bg-background rounded-full overflow-hidden">
                               <div
                                 className={`h-full transition-all ${
                                   percentage > 80 ? 'bg-sap-danger' : 
@@ -1083,7 +1083,7 @@ export default function BudgetsPage() {
                                 style={{ width: `${Math.min(percentage, 100)}%` }}
                               />
                             </div>
-                            <span className="text-xs font-medium text-sap-text-secondary min-w-[35px]">
+                            <span className="text-xs font-medium text-muted-foreground min-w-[35px]">
                               {percentage.toFixed(0)}%
                             </span>
                           </div>
@@ -1096,7 +1096,7 @@ export default function BudgetsPage() {
             </div>
           ) : (
             <div className="sap-card p-12 text-center">
-              <p className="text-sm text-sap-text-secondary mb-4">
+              <p className="text-sm text-muted-foreground mb-4">
                 No hay presupuestos creados aún
               </p>
               <button
@@ -1114,10 +1114,10 @@ export default function BudgetsPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="sap-card max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto shadow-lg">
             <div className="p-6">
-              <div className="flex justify-between items-center mb-6 border-b border-sap-border pb-4">
+              <div className="flex justify-between items-center mb-6 border-b border-border pb-4">
               <div>
-                  <h2 className="text-lg font-semibold text-sap-text">Crear Presupuesto Anual</h2>
-                  <p className="text-xs text-sap-text-secondary mt-1">
+                  <h2 className="text-lg font-semibold text-foreground">Crear Presupuesto Anual</h2>
+                  <p className="text-xs text-muted-foreground mt-1">
                     {newBudget.step === 'account' && 'Paso 1: Selecciona la cuenta del catálogo'}
                     {newBudget.step === 'contributors' && 'Paso 2: Selecciona los integrantes que contribuyen'}
                     {newBudget.step === 'amounts' && 'Paso 3: Asigna montos a cada integrante'}
@@ -1151,7 +1151,7 @@ export default function BudgetsPage() {
                   }}
                   className="sap-button-ghost p-2"
                 >
-                  <XIcon size={18} className="text-sap-text-secondary" />
+                  <XIcon size={18} className="text-muted-foreground" />
                 </button>
               </div>
 
@@ -1160,15 +1160,15 @@ export default function BudgetsPage() {
                 {newBudget.step === 'account' && (
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-sap-text-secondary mb-3">
+                      <label className="block text-sm font-medium text-muted-foreground mb-3">
                         Selecciona la cuenta del catálogo
                       </label>
-                      <p className="text-xs text-sap-text-tertiary mb-3">
+                      <p className="text-xs text-muted-foreground mb-3">
                         Primero selecciona la categoría y subcategoría. Luego definirás qué integrantes contribuyen a esta cuenta.
                       </p>
                       
                       <div className="mb-4">
-                        <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+                        <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                           Categoría
                         </label>
                         <div className="flex gap-2">
@@ -1211,7 +1211,7 @@ export default function BudgetsPage() {
                           </button>
                         </div>
                         {newBudget.category && globalCategories.includes(newBudget.category) && (
-                          <p className="text-xs text-sap-primary mt-1.5">
+                          <p className="text-xs text-primary mt-1.5">
                             Esta categoría es siempre global (todos los integrantes contribuyen)
                           </p>
                         )}
@@ -1219,7 +1219,7 @@ export default function BudgetsPage() {
 
               {newBudget.category && (
                 <div>
-                          <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+                          <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                             Subcategoría
                           </label>
                   <select
@@ -1237,7 +1237,7 @@ export default function BudgetsPage() {
               )}
 
                       {newBudget.category && newBudget.subcategory && (
-                        <div className="mt-4 pt-4 border-t border-sap-border">
+                        <div className="mt-4 pt-4 border-t border-border">
                           <button
                             type="button"
                             onClick={() => {
@@ -1277,16 +1277,16 @@ export default function BudgetsPage() {
                 {newBudget.step === 'contributors' && (
                   <div className="space-y-4">
               <div>
-                      <label className="block text-sm font-medium text-sap-text-secondary mb-3">
+                      <label className="block text-sm font-medium text-muted-foreground mb-3">
                         ¿Qué integrantes contribuyen a esta cuenta?
                       </label>
-                      <p className="text-xs text-sap-text-tertiary mb-3">
+                      <p className="text-xs text-muted-foreground mb-3">
                         <strong>Todos los integrantes están seleccionados por defecto.</strong> Deselecciona los que no contribuyen a {newBudget.category} - {newBudget.subcategory}
                       </p>
                       
-                      <div className="mb-3 p-2 bg-sap-primary/10 border border-sap-primary/20 rounded">
+                      <div className="mb-3 p-2 bg-primary/10 border border-sap-primary/20 rounded">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-semibold text-sap-text">
+                          <span className="text-sm font-semibold text-foreground">
                             {newBudget.selected_members.length} de {familyMembers.length} integrantes seleccionados
                           </span>
                           <div className="flex gap-2">
@@ -1304,7 +1304,7 @@ export default function BudgetsPage() {
                                   member_amounts: initialAmounts
                                 })
                               }}
-                              className="text-xs text-sap-primary hover:underline"
+                              className="text-xs text-primary hover:underline"
                             >
                               Seleccionar todos
                             </button>
@@ -1318,7 +1318,7 @@ export default function BudgetsPage() {
                                   member_amounts: {}
                                 })
                               }}
-                              className="text-xs text-sap-text-secondary hover:underline"
+                              className="text-xs text-muted-foreground hover:underline"
                             >
                               Deseleccionar todos
                             </button>
@@ -1332,7 +1332,7 @@ export default function BudgetsPage() {
                             key={member.id}
                             className={`sap-card p-3 cursor-pointer hover:border-sap-primary transition-colors border-2 ${
                               newBudget.selected_members.includes(member.id) 
-                                ? 'border-sap-primary bg-sap-primary/5' 
+                                ? 'border-sap-primary bg-primary/5' 
                                 : ''
                             }`}
                           >
@@ -1361,10 +1361,10 @@ export default function BudgetsPage() {
                                 className="w-4 h-4"
                               />
                               <div className="flex-1">
-                                <div className="font-medium text-sap-text">
+                                <div className="font-medium text-foreground">
                                   {member.name} {member.id === user?.id && '(Tú)'}
                                 </div>
-                                <div className="text-xs text-sap-text-secondary">{member.email}</div>
+                                <div className="text-xs text-muted-foreground">{member.email}</div>
                               </div>
                             </div>
                           </label>
@@ -1372,7 +1372,7 @@ export default function BudgetsPage() {
                       </div>
 
                       {newBudget.selected_members.length > 0 && (
-                        <div className="mt-4 pt-4 border-t border-sap-border">
+                        <div className="mt-4 pt-4 border-t border-border">
                           <button
                             type="button"
                             onClick={() => setNewBudget({ ...newBudget, step: 'amounts' })}
@@ -1399,18 +1399,18 @@ export default function BudgetsPage() {
                 {newBudget.step === 'amounts' && (
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-sap-text-secondary mb-3">
+                      <label className="block text-sm font-medium text-muted-foreground mb-3">
                         Asigna montos a cada integrante
                       </label>
-                      <p className="text-xs text-sap-text-tertiary mb-4">
+                      <p className="text-xs text-muted-foreground mb-4">
                         Define cuánto contribuye cada integrante a {newBudget.category} - {newBudget.subcategory}
                         <br />
-                        <strong className="text-sap-primary">{newBudget.selected_members.length} integrante{newBudget.selected_members.length > 1 ? 's' : ''} seleccionado{newBudget.selected_members.length > 1 ? 's' : ''}</strong>
+                        <strong className="text-primary">{newBudget.selected_members.length} integrante{newBudget.selected_members.length > 1 ? 's' : ''} seleccionado{newBudget.selected_members.length > 1 ? 's' : ''}</strong>
                       </p>
 
                       {/* Selección de frecuencia */}
                       <div className="mb-4">
-                        <label className="block text-sm font-medium text-sap-text-secondary mb-2">
+                        <label className="block text-sm font-medium text-muted-foreground mb-2">
                           Frecuencia de asignación
                         </label>
                         <select
@@ -1436,7 +1436,7 @@ export default function BudgetsPage() {
                       {/* Si es diario: seleccionar días del mes */}
                       {newBudget.frequency === 'diario' && (
                         <div className="mb-4">
-                          <label className="block text-sm font-medium text-sap-text-secondary mb-2">
+                          <label className="block text-sm font-medium text-muted-foreground mb-2">
                             Mes para asignación diaria
                           </label>
                           <select
@@ -1456,10 +1456,10 @@ export default function BudgetsPage() {
                               <option key={index + 1} value={index + 1}>{mes}</option>
                             ))}
                           </select>
-                          <label className="block text-sm font-medium text-sap-text-secondary mb-2 mt-3">
+                          <label className="block text-sm font-medium text-muted-foreground mb-2 mt-3">
                             Días del mes ({new Date(newBudget.year, newBudget.daily_month, 0).getDate()} días disponibles)
                           </label>
-                          <div className="grid grid-cols-7 gap-2 max-h-48 overflow-y-auto p-2 border border-sap-border rounded">
+                          <div className="grid grid-cols-7 gap-2 max-h-48 overflow-y-auto p-2 border border-border rounded">
                             {Array.from({ length: new Date(newBudget.year, newBudget.daily_month, 0).getDate() }, (_, i) => i + 1).map(day => (
                               <label key={day} className="flex items-center cursor-pointer">
                                 <input
@@ -1480,7 +1480,7 @@ export default function BudgetsPage() {
                                   }}
                                   className="w-4 h-4 mr-1"
                                 />
-                                <span className="text-xs text-sap-text">{day}</span>
+                                <span className="text-xs text-foreground">{day}</span>
                               </label>
                             ))}
                           </div>
@@ -1502,7 +1502,7 @@ export default function BudgetsPage() {
                               })}
                               className="w-4 h-4 mr-2"
                             />
-                            <span className="text-sm text-sap-text">¿Es igual todos los meses?</span>
+                            <span className="text-sm text-foreground">¿Es igual todos los meses?</span>
                           </label>
                         </div>
                       )}
@@ -1510,10 +1510,10 @@ export default function BudgetsPage() {
                       {/* Si no es igual todos los meses: seleccionar meses */}
                       {!newBudget.same_all_months && newBudget.frequency !== 'anual' && (
                         <div className="mb-4">
-                          <label className="block text-sm font-medium text-sap-text-secondary mb-2">
+                          <label className="block text-sm font-medium text-muted-foreground mb-2">
                             Selecciona los meses
                           </label>
-                          <div className="grid grid-cols-3 gap-2 max-h-32 overflow-y-auto p-2 border border-sap-border rounded">
+                          <div className="grid grid-cols-3 gap-2 max-h-32 overflow-y-auto p-2 border border-border rounded">
                             {['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map((mes, index) => (
                               <label key={index + 1} className="flex items-center cursor-pointer">
                                 <input
@@ -1535,7 +1535,7 @@ export default function BudgetsPage() {
                                   }}
                                   className="w-4 h-4 mr-2"
                                 />
-                                <span className="text-xs text-sap-text">{mes}</span>
+                                <span className="text-xs text-foreground">{mes}</span>
                               </label>
                             ))}
                           </div>
@@ -1573,10 +1573,10 @@ export default function BudgetsPage() {
                               }}
                               className="w-4 h-4 mr-2"
                             />
-                            <span className="text-sm text-sap-text">Asignación variable por mes</span>
+                            <span className="text-sm text-foreground">Asignación variable por mes</span>
                           </label>
                           {Object.keys(newBudget.variable_monthly_amounts).length > 0 && (
-                            <p className="text-xs text-sap-text-tertiary mb-3">
+                            <p className="text-xs text-muted-foreground mb-3">
                               Define montos específicos para cada mes del año ({newBudget.selected_members.length} integrante{newBudget.selected_members.length > 1 ? 's' : ''} seleccionado{newBudget.selected_members.length > 1 ? 's' : ''})
                             </p>
                           )}
@@ -1593,14 +1593,14 @@ export default function BudgetsPage() {
                             {isAllMembers ? (
                               <div className="space-y-4 mb-4">
                                 <div className="sap-card p-4">
-                                  <label className="block text-sm font-medium text-sap-text-secondary mb-2">
+                                  <label className="block text-sm font-medium text-muted-foreground mb-2">
                                     Monto total del presupuesto
                                   </label>
-                                  <p className="text-xs text-sap-text-tertiary mb-3">
+                                  <p className="text-xs text-muted-foreground mb-3">
                                     Este monto se dividirá igual entre todos los integrantes ({newBudget.selected_members.length} personas)
                                   </p>
                                   <div className="flex items-center gap-2">
-                                    <span className="text-lg text-sap-text-secondary">$</span>
+                                    <span className="text-lg text-muted-foreground">$</span>
                                     <input
                                       type="number"
                                       step="0.01"
@@ -1625,9 +1625,9 @@ export default function BudgetsPage() {
                                     />
                                   </div>
                                   {newBudget.total_budget_amount > 0 && (
-                                    <div className="mt-3 pt-3 border-t border-sap-border">
-                                      <div className="text-xs text-sap-text-secondary">
-                                        Monto por integrante: <strong className="text-sap-primary">{formatCurrency(newBudget.total_budget_amount / newBudget.selected_members.length, language, true)}</strong>
+                                    <div className="mt-3 pt-3 border-t border-border">
+                                      <div className="text-xs text-muted-foreground">
+                                        Monto por integrante: <strong className="text-primary">{formatCurrency(newBudget.total_budget_amount / newBudget.selected_members.length, language, true)}</strong>
                                       </div>
                                     </div>
                                   )}
@@ -1638,7 +1638,7 @@ export default function BudgetsPage() {
                               <div className="space-y-4 mb-4">
                                 {/* Selección de modo de distribución */}
                                 <div className="mb-4">
-                                  <label className="block text-sm font-medium text-sap-text-secondary mb-2">
+                                  <label className="block text-sm font-medium text-muted-foreground mb-2">
                                     Modo de distribución
                                   </label>
                                   <div className="flex gap-4">
@@ -1655,7 +1655,7 @@ export default function BudgetsPage() {
                                         })}
                                         className="w-4 h-4 mr-2"
                                       />
-                                      <span className="text-sm text-sap-text">Monto total (dividir igual)</span>
+                                      <span className="text-sm text-foreground">Monto total (dividir igual)</span>
                                     </label>
                                     <label className="flex items-center cursor-pointer">
                                       <input
@@ -1679,11 +1679,11 @@ export default function BudgetsPage() {
                                         }}
                                         className="w-4 h-4 mr-2"
                                       />
-                                      <span className="text-sm text-sap-text">Distribución por porcentajes</span>
+                                      <span className="text-sm text-foreground">Distribución por porcentajes</span>
                                     </label>
                                   </div>
                                   {newBudget.distribution_mode === 'percentage' && (
-                                    <p className="text-xs text-sap-text-tertiary mt-2">
+                                    <p className="text-xs text-muted-foreground mt-2">
                                       💡 Al modificar un porcentaje, la diferencia se distribuye automáticamente entre los demás para mantener el 100%
                                     </p>
                                   )}
@@ -1692,14 +1692,14 @@ export default function BudgetsPage() {
                                 {newBudget.distribution_mode === 'total' ? (
                                   // Modo: Monto total
                                   <div className="sap-card p-4">
-                                    <label className="block text-sm font-medium text-sap-text-secondary mb-2">
+                                    <label className="block text-sm font-medium text-muted-foreground mb-2">
                                       Monto total del presupuesto
                                     </label>
-                                    <p className="text-xs text-sap-text-tertiary mb-3">
+                                    <p className="text-xs text-muted-foreground mb-3">
                                       Este monto se dividirá igual entre los {newBudget.selected_members.length} integrantes seleccionados
                                     </p>
                                     <div className="flex items-center gap-2">
-                                      <span className="text-lg text-sap-text-secondary">$</span>
+                                      <span className="text-lg text-muted-foreground">$</span>
                                       <input
                                         type="number"
                                         step="0.01"
@@ -1724,9 +1724,9 @@ export default function BudgetsPage() {
                                       />
                                     </div>
                                     {newBudget.total_budget_amount > 0 && (
-                                      <div className="mt-3 pt-3 border-t border-sap-border">
-                                        <div className="text-xs text-sap-text-secondary">
-                                          Monto por integrante: <strong className="text-sap-primary">{formatCurrency(newBudget.total_budget_amount / newBudget.selected_members.length, language, true)}</strong>
+                                      <div className="mt-3 pt-3 border-t border-border">
+                                        <div className="text-xs text-muted-foreground">
+                                          Monto por integrante: <strong className="text-primary">{formatCurrency(newBudget.total_budget_amount / newBudget.selected_members.length, language, true)}</strong>
                                         </div>
                                       </div>
                                     )}
@@ -1734,12 +1734,12 @@ export default function BudgetsPage() {
                                 ) : (
                                   // Modo: Porcentajes
                                   <div className="space-y-3">
-                                    <div className="sap-card p-4 bg-sap-primary/5 border border-sap-primary/20">
-                                      <label className="block text-sm font-medium text-sap-text-secondary mb-2">
+                                    <div className="sap-card p-4 bg-primary/5 border border-sap-primary/20">
+                                      <label className="block text-sm font-medium text-muted-foreground mb-2">
                                         Monto total del presupuesto
                                       </label>
                                       <div className="flex items-center gap-2">
-                                        <span className="text-lg text-sap-text-secondary">$</span>
+                                        <span className="text-lg text-muted-foreground">$</span>
                                         <input
                                           type="number"
                                           step="0.01"
@@ -1789,7 +1789,7 @@ export default function BudgetsPage() {
                                           <div key={memberId} className="sap-card p-3">
                                             <div className="flex items-center justify-between gap-3">
                                               <div className="flex-1">
-                                                <div className="font-medium text-sap-text text-sm">
+                                                <div className="font-medium text-foreground text-sm">
                                                   {member.name} {member.id === user?.id && '(Tú)'}
                                                 </div>
                                               </div>
@@ -1851,10 +1851,10 @@ export default function BudgetsPage() {
                                                     min="0"
                                                     max="100"
                                                   />
-                                                  <span className="text-xs text-sap-text-secondary">%</span>
+                                                  <span className="text-xs text-muted-foreground">%</span>
                                                 </div>
                                                 <div className="flex items-center gap-2 w-32">
-                                                  <span className="text-xs text-sap-text-secondary">$</span>
+                                                  <span className="text-xs text-muted-foreground">$</span>
                                                   <input
                                                     type="number"
                                                     step="0.01"
@@ -1919,7 +1919,7 @@ export default function BudgetsPage() {
                                     
                                     {newBudget.total_budget_amount > 0 && (
                                       <div className="p-3 bg-sap-warning/10 border border-sap-warning/20 rounded">
-                                        <div className="text-xs text-sap-text-secondary">
+                                        <div className="text-xs text-muted-foreground">
                                           Total porcentajes: <strong className={Math.abs(Object.values(newBudget.member_amounts).reduce((sum, amt) => sum + ((amt / (newBudget.total_budget_amount || 1)) * 100), 0) - 100) < 0.01 ? 'text-sap-success' : 'text-sap-error'}>
                                             {Object.values(newBudget.member_amounts).reduce((sum, amt) => sum + ((amt / (newBudget.total_budget_amount || 1)) * 100), 0).toFixed(2)}%
                                           </strong>
@@ -1937,17 +1937,17 @@ export default function BudgetsPage() {
                         )
                       })()}
 
-                      <div className="p-3 bg-sap-primary/10 border border-sap-primary/20 rounded mb-4">
+                      <div className="p-3 bg-primary/10 border border-sap-primary/20 rounded mb-4">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm font-semibold text-sap-text">Total de la cuenta:</span>
-                          <span className="text-lg font-bold text-sap-primary">
+                          <span className="text-sm font-semibold text-foreground">Total de la cuenta:</span>
+                          <span className="text-lg font-bold text-primary">
                             {formatCurrency(newBudget.total_amount, language, true)}
                           </span>
                         </div>
                       </div>
 
                       <div className="mb-4">
-                        <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+                        <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                           Año
                         </label>
                 <input
@@ -1959,7 +1959,7 @@ export default function BudgetsPage() {
                 />
               </div>
 
-                      <div className="flex gap-3 pt-4 border-t border-sap-border">
+                      <div className="flex gap-3 pt-4 border-t border-border">
                         <button
                           type="button"
                           onClick={() => {
@@ -2069,12 +2069,12 @@ export default function BudgetsPage() {
       {showBudgetDetailModal && selectedBudget && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-auto">
-            <div className="sticky top-0 bg-white border-b border-sap-border p-4 flex justify-between items-center">
+            <div className="sticky top-0 bg-white border-b border-border p-4 flex justify-between items-center">
               <div>
-                <h2 className="text-lg font-semibold text-sap-text">
+                <h2 className="text-lg font-semibold text-foreground">
                   Composición del Presupuesto
                 </h2>
-                <p className="text-xs text-sap-text-secondary mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   {selectedBudget.category} - {selectedBudget.subcategory} ({selectedBudget.year})
                 </p>
               </div>
@@ -2087,7 +2087,7 @@ export default function BudgetsPage() {
                 }}
                 className="p-2 hover:bg-sap-hover rounded transition-colors"
               >
-                <XIcon size={20} className="text-sap-text-secondary" />
+                <XIcon size={20} className="text-muted-foreground" />
               </button>
             </div>
 
@@ -2096,31 +2096,31 @@ export default function BudgetsPage() {
               <div className="sap-card p-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <div className="text-xs text-sap-text-secondary mb-1">Monto Total Anual</div>
-                    <div className="text-lg font-semibold text-sap-primary">
+                    <div className="text-xs text-muted-foreground mb-1">Monto Total Anual</div>
+                    <div className="text-lg font-semibold text-primary">
                       {formatCurrency(selectedBudget.total_amount, language, true)}
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs text-sap-text-secondary mb-1">Monto Mensual</div>
-                    <div className="text-lg font-semibold text-sap-text">
+                    <div className="text-xs text-muted-foreground mb-1">Monto Mensual</div>
+                    <div className="text-lg font-semibold text-foreground">
                       {formatCurrency(selectedBudget.total_amount / 12, language, true)}
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs text-sap-text-secondary mb-1">Tipo</div>
-                    <div className="text-sm font-medium text-sap-text">
+                    <div className="text-xs text-muted-foreground mb-1">Tipo</div>
+                    <div className="text-sm font-medium text-foreground">
                       {selectedBudget.budget_type === 'shared' ? 'Compartido' : 'Individual'}
                       {selectedBudget.budget_type === 'individual' && selectedBudget.target_user && (
-                        <span className="text-sap-text-secondary ml-2">
+                        <span className="text-muted-foreground ml-2">
                           ({selectedBudget.target_user.name})
                         </span>
                       )}
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs text-sap-text-secondary mb-1">Método de Distribución</div>
-                    <div className="text-sm font-medium text-sap-text">
+                    <div className="text-xs text-muted-foreground mb-1">Método de Distribución</div>
+                    <div className="text-sm font-medium text-foreground">
                       {selectedBudget.distribution_method === 'equal' ? 'Igual' : 
                        selectedBudget.distribution_method === 'percentage' ? 'Por Porcentaje' : 
                        'Manual'}
@@ -2131,7 +2131,7 @@ export default function BudgetsPage() {
 
               {/* Lista de integrantes que contribuyen */}
               <div>
-                <h3 className="text-sm font-semibold text-sap-text mb-3">
+                <h3 className="text-sm font-semibold text-foreground mb-3">
                   Integrantes que Contribuyen
                 </h3>
                 {selectedBudget.user_allocations && selectedBudget.user_allocations.length > 0 ? (
@@ -2144,33 +2144,33 @@ export default function BudgetsPage() {
                         <div key={allocation.id} className="sap-card p-3">
                           <div className="flex items-center justify-between">
                             <div className="flex-1">
-                              <div className="font-medium text-sap-text text-sm">
+                              <div className="font-medium text-foreground text-sm">
                                 {allocation.user?.name || 'Usuario desconocido'}
                                 {allocation.user?.id === user?.id && ' (Tú)'}
                               </div>
-                              <div className="text-xs text-sap-text-secondary mt-0.5">
+                              <div className="text-xs text-muted-foreground mt-0.5">
                                 {allocation.user?.email || ''}
                               </div>
                             </div>
                             <div className="text-right">
-                              <div className="text-sm font-semibold text-sap-text">
+                              <div className="text-sm font-semibold text-foreground">
                                 {formatCurrency(allocation.allocated_amount, language, true)}
                               </div>
-                              <div className="text-xs text-sap-text-secondary">
+                              <div className="text-xs text-muted-foreground">
                                 {percentage.toFixed(2)}%
                               </div>
                             </div>
                           </div>
                           {allocation.spent_amount > 0 && (
-                            <div className="mt-2 pt-2 border-t border-sap-border">
+                            <div className="mt-2 pt-2 border-t border-border">
                               <div className="flex justify-between text-xs">
-                                <span className="text-sap-text-secondary">Gastado:</span>
+                                <span className="text-muted-foreground">Gastado:</span>
                                 <span className="text-sap-danger font-medium">
                                   ${allocation.spent_amount.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
                               </div>
                               <div className="flex justify-between text-xs mt-1">
-                                <span className="text-sap-text-secondary">Disponible:</span>
+                                <span className="text-muted-foreground">Disponible:</span>
                                 <span className={`font-medium ${
                                   allocation.available_amount > 0 ? 'text-sap-success' : 'text-sap-danger'
                                 }`}>
@@ -2185,7 +2185,7 @@ export default function BudgetsPage() {
                   </div>
                 ) : (
                   <div className="sap-card p-4 text-center">
-                    <p className="text-sm text-sap-text-secondary">
+                    <p className="text-sm text-muted-foreground">
                       No hay asignaciones de integrantes para este presupuesto
                     </p>
                   </div>
@@ -2194,7 +2194,7 @@ export default function BudgetsPage() {
 
               {/* Botón para modificar */}
               {user?.is_family_admin && (
-                <div className="pt-4 border-t border-sap-border">
+                <div className="pt-4 border-t border-border">
                   <button
                     onClick={() => setShowPasswordModal(true)}
                     className="sap-button-primary w-full"
@@ -2213,14 +2213,14 @@ export default function BudgetsPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
             <div className="p-6">
-              <h3 className="text-lg font-semibold text-sap-text mb-2">
+              <h3 className="text-lg font-semibold text-foreground mb-2">
                 Verificación de Administrador
               </h3>
-              <p className="text-sm text-sap-text-secondary mb-4">
+              <p className="text-sm text-muted-foreground mb-4">
                 Para modificar este presupuesto, ingresa tu contraseña de administrador
               </p>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+                <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                   Contraseña
                 </label>
                 <input
@@ -2264,12 +2264,12 @@ export default function BudgetsPage() {
       {showEditModal && editingBudget && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-auto">
-            <div className="sticky top-0 bg-white border-b border-sap-border p-4 flex justify-between items-center">
+            <div className="sticky top-0 bg-white border-b border-border p-4 flex justify-between items-center">
               <div>
-                <h2 className="text-lg font-semibold text-sap-text">
+                <h2 className="text-lg font-semibold text-foreground">
                   Editar Presupuesto
                 </h2>
-                <p className="text-xs text-sap-text-secondary mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   {editingBudget.category} - {editingBudget.subcategory} ({editingBudget.year})
                 </p>
               </div>
@@ -2280,7 +2280,7 @@ export default function BudgetsPage() {
                 }}
                 className="p-2 hover:bg-sap-hover rounded transition-colors"
               >
-                <XIcon size={20} className="text-sap-text-secondary" />
+                <XIcon size={20} className="text-muted-foreground" />
               </button>
             </div>
 
@@ -2337,11 +2337,11 @@ export default function BudgetsPage() {
             >
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                     Monto Total Anual
                   </label>
                   <div className="flex items-center gap-2">
-                    <span className="text-lg text-sap-text-secondary">$</span>
+                    <span className="text-lg text-muted-foreground">$</span>
                 <input
                   type="number"
                       name="total_amount"
@@ -2354,7 +2354,7 @@ export default function BudgetsPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                     Año
                   </label>
                   <input
@@ -2369,28 +2369,28 @@ export default function BudgetsPage() {
                 </div>
               </div>
 
-              <div className="sap-card p-4 bg-sap-primary/5 border border-sap-primary/20">
-                <div className="text-xs text-sap-text-secondary mb-2">
+              <div className="sap-card p-4 bg-primary/5 border border-sap-primary/20">
+                <div className="text-xs text-muted-foreground mb-2">
                   Información del Presupuesto
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
-                    <span className="text-sap-text-secondary">Categoría:</span>
-                    <span className="ml-2 font-medium text-sap-text">{editingBudget.category}</span>
+                    <span className="text-muted-foreground">Categoría:</span>
+                    <span className="ml-2 font-medium text-foreground">{editingBudget.category}</span>
                   </div>
                   <div>
-                    <span className="text-sap-text-secondary">Subcategoría:</span>
-                    <span className="ml-2 font-medium text-sap-text">{editingBudget.subcategory}</span>
+                    <span className="text-muted-foreground">Subcategoría:</span>
+                    <span className="ml-2 font-medium text-foreground">{editingBudget.subcategory}</span>
                   </div>
                   <div>
-                    <span className="text-sap-text-secondary">Tipo:</span>
-                    <span className="ml-2 font-medium text-sap-text">
+                    <span className="text-muted-foreground">Tipo:</span>
+                    <span className="ml-2 font-medium text-foreground">
                       {editingBudget.budget_type === 'shared' ? 'Compartido' : 'Individual'}
                     </span>
                   </div>
                   <div>
-                    <span className="text-sap-text-secondary">Método:</span>
-                    <span className="ml-2 font-medium text-sap-text">
+                    <span className="text-muted-foreground">Método:</span>
+                    <span className="ml-2 font-medium text-foreground">
                       {editingBudget.distribution_method === 'equal' ? 'Igual' : 
                        editingBudget.distribution_method === 'percentage' ? 'Por Porcentaje' : 
                        'Manual'}
@@ -2401,7 +2401,7 @@ export default function BudgetsPage() {
 
               {editingBudget.user_allocations && editingBudget.user_allocations.length > 0 && (
                 <div>
-                  <div className="text-sm font-semibold text-sap-text mb-2">
+                  <div className="text-sm font-semibold text-foreground mb-2">
                     Asignaciones Actuales
                   </div>
                   <div className="space-y-2 max-h-48 overflow-y-auto">
@@ -2413,15 +2413,15 @@ export default function BudgetsPage() {
                         <div key={allocation.id} className="sap-card p-3">
                           <div className="flex items-center justify-between">
                             <div className="flex-1">
-                              <div className="font-medium text-sap-text text-sm">
+                              <div className="font-medium text-foreground text-sm">
                                 {allocation.user?.name || 'Usuario desconocido'}
                               </div>
                             </div>
                             <div className="text-right">
-                              <div className="text-sm font-semibold text-sap-text">
+                              <div className="text-sm font-semibold text-foreground">
                                 {formatCurrency(allocation.allocated_amount, language, true)}
                               </div>
-                              <div className="text-xs text-sap-text-secondary">
+                              <div className="text-xs text-muted-foreground">
                                 {percentage.toFixed(2)}%
                               </div>
                             </div>
@@ -2430,14 +2430,14 @@ export default function BudgetsPage() {
                       )
                     })}
                   </div>
-                  <p className="text-xs text-sap-text-tertiary mt-2">
+                  <p className="text-xs text-muted-foreground mt-2">
                     Nota: Las asignaciones individuales no se modifican automáticamente. 
                     Puedes redistribuir el presupuesto después de actualizar el monto total.
                   </p>
                 </div>
               )}
 
-              <div className="flex gap-3 pt-4 border-t border-sap-border">
+              <div className="flex gap-3 pt-4 border-t border-border">
                 <button
                   type="button"
                   onClick={() => {
@@ -2462,8 +2462,8 @@ export default function BudgetsPage() {
 
       {loadingMatrix && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded p-6 border border-sap-border">
-            <div className="text-sap-text">Cargando matriz...</div>
+          <div className="bg-white rounded p-6 border border-border">
+            <div className="text-foreground">Cargando matriz...</div>
     </div>
         </div>
       )}
@@ -2473,7 +2473,7 @@ export default function BudgetsPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-sap-text">
+              <h3 className="text-lg font-semibold text-foreground">
                 {language === 'es' ? 'Crear Nueva Categoría' : 'Create New Category'}
               </h3>
               <button
@@ -2486,7 +2486,7 @@ export default function BudgetsPage() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-sap-text-secondary mb-1">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   {language === 'es' ? 'Nombre *' : 'Name *'}
                 </label>
                 <input
@@ -2498,7 +2498,7 @@ export default function BudgetsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-sap-text-secondary mb-1">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   {language === 'es' ? 'Subcategoría (opcional)' : 'Subcategory (optional)'}
                 </label>
                 <input
