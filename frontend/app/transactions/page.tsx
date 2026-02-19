@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { format } from 'date-fns'
@@ -10,6 +10,32 @@ import { XIcon, PlusIcon } from '@/lib/icons'
 import SAPLayout from '@/components/SAPLayout'
 import { useTranslation, getLanguage, setLanguage, type Language } from '@/lib/i18n'
 import { formatCurrency } from '@/lib/currency'
+import { safePushLogin, setReceiptProcessing } from '@/lib/receiptProcessing'
+import { getAuthHeaders, getToken } from '@/lib/auth'
+
+// Constantes estáticas
+const INCOME_CATEGORIES = ['Salario', 'Bonos', 'Rentas', 'Reembolsos', 'Inversiones', 'Otros Ingresos']
+const EXPENSE_CATEGORIES = ['Servicios Basicos', 'Mercado', 'Vivienda', 'Transporte', 'Impuestos', 'Educacion', 'Salud', 'Vida Social']
+
+const INCOME_SUBCATEGORIES: Record<string, string[]> = {
+  'Salario': ['Salario Fijo', 'Salario Variable'],
+  'Bonos': ['Bono Anual', 'Bono Quincenal', 'Bono Extra'],
+  'Rentas': ['Renta Propiedades', 'Renta Inversiones'],
+  'Reembolsos': ['Reembolso Gastos', 'Reembolso Impuestos'],
+  'Inversiones': ['Dividendos', 'Intereses', 'Ganancias Capital'],
+  'Otros Ingresos': ['Regalos', 'Premios', 'Otros']
+}
+
+const EXPENSE_SUBCATEGORIES: Record<string, string[]> = {
+  'Servicios Basicos': ['Electricidad CFE', 'Agua Potable', 'Gas LP', 'Internet', 'Entretenimiento', 'Garrafones Agua', 'Telcel'],
+  'Mercado': ['Mercado General'],
+  'Vivienda': ['Cuotas Olinala', 'Seguro Vivienda', 'Mejoras y Remodelaciones'],
+  'Transporte': ['Gasolina', 'Mantenimiento coches', 'Seguros y Derechos', 'Lavado'],
+  'Impuestos': ['Predial'],
+  'Educacion': ['Colegiaturas'],
+  'Salud': ['Consulta', 'Medicamentos', 'Seguro Medico', 'Prevencion'],
+  'Vida Social': ['Salidas Personales', 'Salidas Familiares', 'Cumpleanos', 'Aniversarios', 'Regalos Navidad']
+}
 
 export default function TransactionsPage() {
   const router = useRouter()
@@ -31,6 +57,13 @@ export default function TransactionsPage() {
   const [uploadFiles, setUploadFiles] = useState<File[]>([])
   const [selectedUserForReceipt, setSelectedUserForReceipt] = useState<number | null>(null)
   const [uploadAbortController, setUploadAbortController] = useState<AbortController | null>(null)
+  const isProcessingReceiptRef = useRef(false)
+  const [receiptExtractMode, setReceiptExtractMode] = useState<'precise' | 'fast' | 'text'>('precise')
+  const [postScanResult, setPostScanResult] = useState<{
+    receipt: any
+    responseData: any
+  } | null>(null)
+  const postScanProductsRef = useRef<HTMLDivElement | null>(null)
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all')
   const [filters, setFilters] = useState({
     category: '',
@@ -62,71 +95,178 @@ export default function TransactionsPage() {
     }
   }, [uploadAbortController])
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    
-    // Verificar autenticación con Supabase
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        router.push('/login')
-        return
-      }
-      loadUser()
-      loadTransactions()
-    })
-  }, [router, filterType, filters])
-  
-  const loadUser = async () => {
+  const backendUrl = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_URL) || ''
+  const apiBase = backendUrl.replace(/\/$/, '')
+
+  const parseNotesSafe = (notes?: string) => {
+    if (!notes) return null as any
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      if (!authUser) return
-      
-      const { data: userData } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', authUser.id)
-        .single()
-      
-      if (userData) {
-        setUser(userData as User)
-      }
-    } catch (error) {
-      console.error('Error cargando usuario:', error)
+      return JSON.parse(notes)
+    } catch {
+      return null as any
     }
   }
 
-  const loadTransactions = async () => {
-    try {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      if (!authUser) {
-        router.push('/login')
+  const cleanItemName = (description: string) => {
+    const s = String(description || '').trim()
+    if (!s) return ''
+    const tokens = s.split(/\s+/)
+    let numericCount = 0
+    let hasDecimal = false
+    for (let i = tokens.length - 1; i >= 0 && numericCount < 5; i--) {
+      const tok = tokens[i]
+      const normalized = tok.replace(/[()]/g, '')
+      if (/^-?\d+(?:[.,]\d+)?-?$/.test(normalized)) {
+        numericCount += 1
+        if (/[.,]\d+/.test(normalized)) hasDecimal = true
+        continue
+      }
+      break
+    }
+    if (numericCount >= 2 && (hasDecimal || numericCount >= 3)) {
+      return tokens.slice(0, Math.max(1, tokens.length - numericCount)).join(' ')
+    }
+    return s
+  }
+
+  const formatQty = (q: number) => Number(q).toFixed(3).replace(/\.?0+$/, '')
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    let cancelled = false
+
+    const loadWithBackend = async (): Promise<boolean> => {
+      const headers = await getAuthHeaders()
+      const hasAuth = typeof headers === 'object' && headers !== null && 'Authorization' in (headers as Record<string, string>)
+      if (!hasAuth) return false
+      const token = getToken()
+      if (!token) return false
+      try {
+        const meRes = await fetch(`${apiBase}/api/users/me`, {
+          headers: headers as Record<string, string>,
+          credentials: 'include',
+        })
+        if (cancelled) return true
+        if (meRes.status === 401) {
+          // Token inválido/expirado: limpiar y permitir fallback
+          localStorage.removeItem('domus_token')
+          return false
+        }
+        if (!meRes.ok) {
+          // Si el backend está temporalmente inestable, NO mandar al usuario a login.
+          console.error('Backend /api/users/me falló:', meRes.status, meRes.statusText)
+          return true
+        }
+        const meData = await meRes.json()
+        setUser(meData as User)
+        const typeParam = filterType !== 'all' ? `&transaction_type=${filterType}` : ''
+        const recRes = await fetch(`${apiBase}/api/transactions/?limit=1000${typeParam}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (cancelled) return true
+        if (recRes.ok) {
+          const list = await recRes.json()
+          setTransactions((list || []) as Transaction[])
+        } else {
+          setTransactions([])
+        }
+        return true
+      } catch {
+        // Si el backend falla (red/timeout), mantener la pantalla sin forzar login.
+        console.error('Error conectando con backend (transactions):', apiBase)
+        return true
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    const loadWithSupabase = async () => {
+      const { data: { session } } = await Promise.race([
+        supabase.auth.getSession(),
+        new Promise<{ data: { session: null } }>((resolve) =>
+          setTimeout(() => resolve({ data: { session: null } }), 3000)
+        ),
+      ])
+      if (cancelled) return
+      if (!session) {
+        // Evitar redirecciones durante escaneo de recibos (procesos largos).
+        if (!isProcessingReceiptRef.current) {
+          safePushLogin(router, 'transactions: no supabase session')
+        }
+        setLoading(false)
         return
       }
-
-      let query = supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', authUser.id)
-        .order('date', { ascending: false })
-
-      if (filterType !== 'all') {
-        query = query.eq('transaction_type', filterType)
-      }
-
-      const { data: transactionsData, error: transactionsError } = await query
-
-      if (transactionsError) {
-        console.error('Error cargando transacciones:', transactionsError)
-        setTransactions([])
-      } else {
-        setTransactions((transactionsData || []) as Transaction[])
-      }
-    } catch (error: any) {
-      console.error('Error cargando transacciones:', error)
-      setTransactions([])
-    } finally {
-      setLoading(false)
+      await loadUserSupabase()
+      await loadTransactionsSupabase()
     }
+
+    const loadUserSupabase = async () => {
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser()
+        if (!authUser) return
+        const { data: userData } = await supabase.from('users').select('*').eq('id', authUser.id).single()
+        if (userData) setUser(userData as User)
+      } catch (e) {
+        console.error('Error cargando usuario:', e)
+      }
+    }
+
+    const loadTransactionsSupabase = async () => {
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser()
+        if (!authUser) {
+          // Evitar redirecciones durante escaneo de recibos (procesos largos).
+          if (!isProcessingReceiptRef.current) {
+            safePushLogin(router, 'transactions: no supabase user')
+          }
+          return
+        }
+        let query = supabase.from('transactions').select('*').eq('user_id', authUser.id).order('date', { ascending: false })
+        if (filterType !== 'all') query = query.eq('transaction_type', filterType)
+        const { data: transactionsData, error } = await query
+        if (error) setTransactions([])
+        else setTransactions((transactionsData || []) as Transaction[])
+      } catch {
+        setTransactions([])
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    ;(async () => {
+      const done = await loadWithBackend()
+      if (cancelled) return
+      if (!done) await loadWithSupabase()
+    })()
+
+    return () => { cancelled = true }
+  }, [router, filterType, filters])
+
+  const getAuthHeaders = (): HeadersInit => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('domus_token') : null
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (token) headers.Authorization = `Bearer ${token}`
+    return headers
+  }
+
+  const loadTransactions = () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('domus_token') : null
+    if (token) {
+      const typeParam = filterType !== 'all' ? `&transaction_type=${filterType}` : ''
+      fetch(`${apiBase}/api/transactions/?limit=1000${typeParam}`, { headers: { Authorization: `Bearer ${token}` } })
+        .then((r) => r.ok ? r.json() : [])
+        .then((list) => setTransactions(list || []))
+        .catch(() => setTransactions([]))
+      return
+    }
+    supabase.auth.getUser().then(({ data: { user: authUser } }) => {
+      if (!authUser) return
+      let q = supabase.from('transactions').select('*').eq('user_id', authUser.id).order('date', { ascending: false })
+      if (filterType !== 'all') q = q.eq('transaction_type', filterType)
+      q.then(({ data, error }) => {
+        if (!error) setTransactions(data || [])
+      })
+    })
   }
 
   const handleEditStart = (transaction: Transaction) => {
@@ -169,22 +309,30 @@ export default function TransactionsPage() {
         updates.family_budget_id = budgetId === 'none' ? null : parseInt(budgetId)
       }
       
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      if (!authUser) {
-        alert('No autenticado')
-        return
+      const token = typeof window !== 'undefined' ? localStorage.getItem('domus_token') : null
+      if (token) {
+        const res = await fetch(`${apiBase}/api/transactions/${editingTransaction.id}`, {
+          method: 'PUT',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(updates),
+        })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          throw new Error(err.detail || 'Error al actualizar')
+        }
+      } else {
+        const { data: { user: authUser } } = await supabase.auth.getUser()
+        if (!authUser) {
+          alert('No autenticado')
+          return
+        }
+        const { error: updateError } = await supabase
+          .from('transactions')
+          .update(updates)
+          .eq('id', editingTransaction.id)
+          .eq('user_id', authUser.id)
+        if (updateError) throw updateError
       }
-      
-      const { error: updateError } = await supabase
-        .from('transactions')
-        .update(updates)
-        .eq('id', editingTransaction.id)
-        .eq('user_id', authUser.id)
-      
-      if (updateError) {
-        throw updateError
-      }
-      
       setShowEditModal(false)
       setEditingTransaction(null)
       loadTransactions()
@@ -209,22 +357,41 @@ export default function TransactionsPage() {
     }
 
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      if (!authUser) {
-        alert('No autenticado')
-        return
-      }
-      
-      const { error: insertError } = await supabase
-        .from('transactions')
-        .insert({
-          ...newTransaction,
-          user_id: authUser.id,
-          date: new Date(newTransaction.date).toISOString()
+      const token = typeof window !== 'undefined' ? localStorage.getItem('domus_token') : null
+      if (token) {
+        const body = {
+          amount: newTransaction.amount,
+          transaction_type: newTransaction.transaction_type,
+          category: newTransaction.category,
+          subcategory: newTransaction.subcategory,
+          concept: newTransaction.concept || null,
+          date: newTransaction.date,
+          merchant_or_beneficiary: newTransaction.merchant_or_beneficiary || null,
+          family_budget_id: newTransaction.family_budget_id,
+        }
+        const res = await fetch(`${apiBase}/api/transactions/`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(body),
         })
-      
-      if (insertError) {
-        throw insertError
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          throw new Error(err.detail || 'Error al crear')
+        }
+      } else {
+        const { data: { user: authUser } } = await supabase.auth.getUser()
+        if (!authUser) {
+          alert('No autenticado')
+          return
+        }
+        const { error: insertError } = await supabase
+          .from('transactions')
+          .insert({
+            ...newTransaction,
+            user_id: authUser.id,
+            date: new Date(newTransaction.date).toISOString()
+          })
+        if (insertError) throw insertError
       }
       setShowCreateModal(false)
       setNewTransaction({
@@ -254,6 +421,9 @@ export default function TransactionsPage() {
       return
     }
 
+    // Limpiar estado de post-escaneo anterior (si existía)
+    setPostScanResult(null)
+
     // Cancelar petición anterior si existe
     if (uploadAbortController) {
       uploadAbortController.abort()
@@ -263,6 +433,8 @@ export default function TransactionsPage() {
     const abortController = new AbortController()
     setUploadAbortController(abortController)
     setUploading(true)
+    isProcessingReceiptRef.current = true
+    setReceiptProcessing(true)
     setUploadProgress(0)
     setUploadTime(0)
     const startTime = Date.now()
@@ -302,26 +474,60 @@ export default function TransactionsPage() {
     if (selectedUserForReceipt) {
       formData.append('target_user_id', selectedUserForReceipt.toString())
     }
+    formData.append('mode', receiptExtractMode)
 
     try {
-      // Obtener el token de acceso de Supabase para enviarlo como header
-      const { data: { session } } = await supabase.auth.getSession()
-      const accessToken = session?.access_token
-      
-      // Usar la API Route de Next.js en lugar del backend de FastAPI
-      const response = await fetch('/api/receipts/process', {
-        method: 'POST',
-        body: formData,
-        signal: abortController.signal,
-        credentials: 'include', // IMPORTANTE: Incluir cookies en la petición
-        headers: accessToken ? {
-          'Authorization': `Bearer ${accessToken}`
-        } : undefined,
-      })
+      // Prioridad: si hay backend real configurado, procesar recibos en FastAPI
+      const backendToken = typeof window !== 'undefined' ? localStorage.getItem('domus_token') : null
+      const isLocalhost =
+        typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname)
+      const hasBackendEnv = typeof process !== 'undefined' && !!process.env?.NEXT_PUBLIC_API_URL
+      const shouldUseBackend = !!backendToken && (hasBackendEnv || isLocalhost)
+
+      const processViaSupabase = async () => {
+        const { data: { session } } = await supabase.auth.getSession()
+        const accessToken = session?.access_token
+        return await fetch('/api/receipts/process', {
+          method: 'POST',
+          body: formData,
+          signal: abortController.signal,
+          credentials: 'include',
+          headers: accessToken
+            ? {
+                Authorization: `Bearer ${accessToken}`,
+              }
+            : undefined,
+        })
+      }
+
+      let response: Response
+      if (shouldUseBackend) {
+        try {
+          response = await fetch(`${apiBase}/api/receipts/process`, {
+            method: 'POST',
+            body: formData,
+            signal: abortController.signal,
+            headers: {
+              Authorization: `Bearer ${backendToken}`,
+            },
+          })
+        } catch (err) {
+          console.warn('Backend receipts failed, fallback to Next.js API:', err)
+          response = await processViaSupabase()
+        }
+      } else {
+        response = await processViaSupabase()
+      }
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.detail || 'Error al procesar recibo')
+        const errorData = await response.json().catch(() => ({}))
+        const detail =
+          typeof (errorData as any)?.detail === 'string'
+            ? (errorData as any).detail
+            : Array.isArray((errorData as any)?.detail)
+              ? (errorData as any).detail?.[0]?.msg || 'Error al procesar recibo'
+              : 'Error al procesar recibo'
+        throw new Error(detail)
       }
 
       const responseData = await response.json()
@@ -338,37 +544,18 @@ export default function TransactionsPage() {
       await loadTransactions()
       
       const receipt = responseData.receipt
-      const receipts = receipt ? [receipt] : []
-      const totalItems = receipts.reduce((sum: number, r: any) => sum + (r.items?.length || 0), 0)
-      const partsStatus = responseData.parts_status || []
-      const okParts = partsStatus.filter((p: any) => p.ok).length
-      const partsMsg = partsStatus.length
-        ? `Partes OK: ${okParts}/${partsStatus.length}\n${partsStatus.map((p: any) => `Parte ${p.part}: ${p.ok ? 'OK' : 'ERROR'} (${p.items || 0} items)`).join('\n')}`
-        : ''
-      alert(`✅ Recibos procesados exitosamente\n\n` +
-            `Recibos: ${receipts.length}\n` +
-            `Items extraídos: ${totalItems}\n` +
-            (partsMsg ? `\n${partsMsg}` : ''))
-      
-      // Cerrar modal y limpiar solo después de éxito
-      setShowUploadModal(false)
-      setSelectedUserForReceipt(null)
-      setUploadFiles([])
-      
-      // Resetear el input de archivo
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
-      if (fileInput) {
-        fileInput.value = ''
+      if (receipt) {
+        setPostScanResult({ receipt, responseData })
+      } else {
+        alert(language === 'es' ? 'No se recibió el recibo procesado.' : 'Processed receipt was not returned.')
       }
-      
-      // Limpiar AbortController
-      setUploadAbortController(null)
     } catch (error: any) {
       clearAllIntervals()
       // Si fue cancelado, no mostrar error
       if (error.name === 'AbortError' || error.code === 'ERR_CANCELED') {
         console.log('Petición cancelada por el usuario')
         setUploading(false)
+        isProcessingReceiptRef.current = false
         setUploadAbortController(null)
         setUploadProgress(0)
         setUploadTime(0)
@@ -402,6 +589,8 @@ export default function TransactionsPage() {
       // SIEMPRE resetear el estado de carga, incluso si hay error
       clearAllIntervals()
       setUploading(false)
+      isProcessingReceiptRef.current = false
+      setReceiptProcessing(false)
       setUploadAbortController(null)
       if (!uploading) {
         setUploadProgress(0)
@@ -418,20 +607,29 @@ export default function TransactionsPage() {
       setUploadAbortController(null)
     }
     setUploading(false)
+    isProcessingReceiptRef.current = false
+    setReceiptProcessing(false)
     setShowUploadModal(false)
     setUploadFiles([])
     setSelectedUserForReceipt(null)
+    setPostScanResult(null)
   }
 
-  // Renderizar siempre SAPLayout para mantener consistencia de hooks
-  if (loading) {
-    return (
-      <SAPLayout user={user} title={t.nav.transactions} subtitle={t.nav.transactions}>
-        <div className="flex items-center justify-center py-12">
-          <div className="text-sap-text-secondary">{language === 'es' ? 'Cargando...' : 'Loading...'}</div>
-        </div>
-      </SAPLayout>
-    )
+  const handleConfirmAndSave = () => {
+    // El recibo ya fue guardado por el backend; aquí solo confirmamos y cerramos el flujo.
+    setUploading(false)
+    isProcessingReceiptRef.current = false
+    setReceiptProcessing(false)
+    setUploadAbortController(null)
+    setUploadProgress(0)
+    setUploadTime(0)
+    setUploadStartTime(null)
+    setUploadFiles([])
+    setSelectedUserForReceipt(null)
+    setPostScanResult(null)
+    setShowUploadModal(false)
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement
+    if (fileInput) fileInput.value = ''
   }
 
   const totalIncome = transactions.filter(t => t.transaction_type === 'income').reduce((sum, t) => sum + t.amount, 0)
@@ -452,38 +650,23 @@ export default function TransactionsPage() {
 
   const hasActiveFilters = Object.values(filters).some(v => v !== '')
 
-  // Obtener categorías únicas de las transacciones
-  const allCategories = Array.from(new Set(transactions.map(t => t.category))).sort()
-  const allSubcategories = Array.from(new Set(
-    transactions
-      .filter(t => !filters.category || t.category === filters.category)
-      .map(t => t.subcategory)
-      .filter(s => s)
-  )).sort()
+  // Obtener categorías únicas de las transacciones - MEMOIZED
+  const { allCategories, allSubcategories } = useMemo(() => {
+    const cats = Array.from(new Set(transactions.map(t => t.category))).sort()
+    const subcats = Array.from(new Set(
+      transactions
+        .filter(t => !filters.category || t.category === filters.category)
+        .map(t => t.subcategory)
+        .filter(s => s)
+    )).sort()
+    return { allCategories: cats, allSubcategories: subcats }
+  }, [transactions, filters.category])
 
-  // Categorías según tipo de transacción
-  const incomeCategories = ['Salario', 'Bonos', 'Rentas', 'Reembolsos', 'Inversiones', 'Otros Ingresos']
-  const expenseCategories = ['Servicios Basicos', 'Mercado', 'Vivienda', 'Transporte', 'Impuestos', 'Educacion', 'Salud', 'Vida Social']
-  
-  const incomeSubcategories: Record<string, string[]> = {
-    'Salario': ['Salario Fijo', 'Salario Variable'],
-    'Bonos': ['Bono Anual', 'Bono Quincenal', 'Bono Extra'],
-    'Rentas': ['Renta Propiedades', 'Renta Inversiones'],
-    'Reembolsos': ['Reembolso Gastos', 'Reembolso Impuestos'],
-    'Inversiones': ['Dividendos', 'Intereses', 'Ganancias Capital'],
-    'Otros Ingresos': ['Regalos', 'Premios', 'Otros']
-  }
-
-  const expenseSubcategories: Record<string, string[]> = {
-    'Servicios Basicos': ['Electricidad CFE', 'Agua Potable', 'Gas LP', 'Internet', 'Entretenimiento', 'Garrafones Agua', 'Telcel'],
-    'Mercado': ['Mercado General'],
-    'Vivienda': ['Cuotas Olinala', 'Seguro Vivienda', 'Mejoras y Remodelaciones'],
-    'Transporte': ['Gasolina', 'Mantenimiento coches', 'Seguros y Derechos', 'Lavado'],
-    'Impuestos': ['Predial'],
-    'Educacion': ['Colegiaturas'],
-    'Salud': ['Consulta', 'Medicamentos', 'Seguro Medico', 'Prevencion'],
-    'Vida Social': ['Salidas Personales', 'Salidas Familiares', 'Cumpleanos', 'Aniversarios', 'Regalos Navidad']
-  }
+  // Categorías según tipo de transacción - Referencias a constantes
+  const incomeCategories = INCOME_CATEGORIES
+  const expenseCategories = EXPENSE_CATEGORIES
+  const incomeSubcategories = INCOME_SUBCATEGORIES
+  const expenseSubcategories = EXPENSE_SUBCATEGORIES
 
   const currentCategories = newTransaction.transaction_type === 'income' ? incomeCategories : expenseCategories
   const currentSubcategories = newTransaction.transaction_type === 'income' 
@@ -512,7 +695,10 @@ export default function TransactionsPage() {
         {t.transactions.newTransaction}
       </button>
       <button
-        onClick={() => setShowUploadModal(true)}
+        onClick={() => {
+          setPostScanResult(null)
+          setShowUploadModal(true)
+        }}
         className="sap-button-secondary"
       >
         {t.transactions.uploadReceipt}
@@ -800,7 +986,10 @@ export default function TransactionsPage() {
                   Crear Transacción
                 </button>
                 <button
-                  onClick={() => setShowUploadModal(true)}
+                  onClick={() => {
+                    setPostScanResult(null)
+                    setShowUploadModal(true)
+                  }}
                   className="sap-button-secondary"
                 >
                   Subir Recibo
@@ -963,19 +1152,215 @@ export default function TransactionsPage() {
       {/* Modal de subida estilo SAP */}
       {showUploadModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="sap-card max-w-md w-full mx-4 shadow-lg">
+          <div
+            className={`sap-card w-full mx-4 shadow-lg ${
+              postScanResult ? 'max-w-4xl max-h-[90vh] overflow-y-auto' : 'max-w-md'
+            }`}
+          >
             <div className="p-6">
               <div className="flex justify-between items-center mb-6 border-b border-sap-border pb-4">
-                <h2 className="text-lg font-semibold text-sap-text">Subir Recibo</h2>
+                <h2 className="text-lg font-semibold text-sap-text">
+                  {postScanResult
+                    ? (language === 'es' ? 'Ticket procesado' : 'Receipt processed')
+                    : (language === 'es' ? 'Subir Recibo' : 'Upload receipt')}
+                </h2>
                 <button
-                  onClick={() => setShowUploadModal(false)}
+                  onClick={handleCancelUpload}
                   className="sap-button-ghost p-2"
                 >
                   <XIcon size={18} className="text-sap-text-secondary" />
                 </button>
               </div>
 
-              <div className="space-y-4">
+              {postScanResult ? (
+                (() => {
+                  const receipt = postScanResult.receipt
+                  const itemsAll: any[] = receipt?.items || []
+                  const isAdmin = Boolean((user as any)?.is_family_admin)
+                  const totalsStatus: any[] = postScanResult.responseData?.totals_status || []
+                  const partsStatus: any[] = postScanResult.responseData?.parts_status || []
+
+                  const products = itemsAll
+                    .map((it) => ({ ...it, _n: parseNotesSafe(it?.notes) }))
+                    .filter((it) => {
+                      const n = it._n
+                      const isAdjustment = n?.is_adjustment === true || n?.line_type === 'adjustment'
+                      const lineType = String(n?.line_type || '')
+                      const isNonProduct = ['discount', 'cancellation', 'price_change', 'adjustment'].includes(lineType)
+                      return !isAdjustment && !isNonProduct
+                    })
+
+                  const hasIllegible = products.some((it) => it._n?.amount_legible === false)
+                  const sumProducts = products.reduce((sum, it) => {
+                    if (it._n?.amount_legible === false) return sum
+                    return sum + (Number(it.amount) || 0)
+                  }, 0)
+                  const diff = (Number(receipt?.amount) || 0) - sumProducts
+                  const diffAbs = Math.abs(diff)
+
+                  const totalMissing = !(Number(receipt?.amount) > 0)
+                  const totalsError = totalsStatus.some((t: any) => t && t.ok === false)
+                  const partsError = partsStatus.some((p: any) => p && p.ok === false)
+
+                  const status =
+                    totalMissing || totalsError || partsError
+                      ? 'error'
+                      : (diffAbs < 0.01 && !hasIllegible)
+                        ? 'ok'
+                        : 'review'
+
+                  const statusLabel =
+                    status === 'ok'
+                      ? (language === 'es' ? 'Todo correcto' : 'All good')
+                      : status === 'review'
+                        ? (language === 'es' ? 'Revisar algunos productos' : 'Review some items')
+                        : (language === 'es' ? 'Error en el total' : 'Total error')
+
+                  const humanMsg =
+                    status === 'ok' && diffAbs < 0.01
+                      ? (language === 'es' ? 'El total coincide con los productos.' : 'The total matches the items.')
+                      : status === 'review'
+                        ? (language === 'es' ? 'Revisa algunos productos antes de guardar.' : 'Review a few items before saving.')
+                        : (language === 'es' ? 'No pudimos confirmar el total. Revisa el ticket o intenta de nuevo.' : 'We could not confirm the total. Please review or try again.')
+
+                  const dateLabel = (() => {
+                    try {
+                      if (receipt?.date) {
+                        const dt = new Date(`${receipt.date}T${receipt.time || '00:00'}:00`)
+                        return format(dt, 'dd/MM/yyyy HH:mm', { locale: language === 'es' ? es : enUS })
+                      }
+                      return format(new Date(receipt?.created_at || Date.now()), 'dd/MM/yyyy', { locale: language === 'es' ? es : enUS })
+                    } catch {
+                      return receipt?.date || ''
+                    }
+                  })()
+
+                  return (
+                    <div className="space-y-6">
+                      {/* Resumen superior */}
+                      <div className="sap-card p-5 bg-sap-bgSecondary">
+                        <div className="flex items-start justify-between gap-6">
+                          <div className="min-w-0">
+                            <div className="text-sm text-sap-text-secondary">{language === 'es' ? 'Comercio' : 'Merchant'}</div>
+                            <div className="text-xl font-semibold text-sap-text truncate">
+                              {receipt?.merchant_or_beneficiary || (language === 'es' ? 'Recibo' : 'Receipt')}
+                            </div>
+                            <div className="text-sm text-sap-text-tertiary mt-1">{dateLabel}</div>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <div className="text-sm text-sap-text-secondary">{language === 'es' ? 'Total' : 'Total'}</div>
+                            <div className="text-3xl font-bold text-sap-text">
+                              {formatCurrency(Number(receipt?.amount) || 0, language, false)}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 flex items-start gap-3">
+                          <span
+                            className={`px-2.5 py-1 rounded-domus text-xs font-semibold ${
+                              status === 'ok'
+                                ? 'bg-green-100 text-green-800'
+                                : status === 'review'
+                                  ? 'bg-amber-100 text-amber-900'
+                                  : 'bg-red-100 text-red-800'
+                            }`}
+                          >
+                            {statusLabel}
+                          </span>
+                          <p className="text-sm text-sap-text-secondary">{humanMsg}</p>
+                        </div>
+                      </div>
+
+                      {/* Acciones */}
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <button
+                          type="button"
+                          onClick={handleConfirmAndSave}
+                          className="sap-button-primary w-full sm:flex-1 text-base py-3"
+                        >
+                          {language === 'es' ? 'Confirmar y Guardar' : 'Confirm & Save'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => postScanProductsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                          className="sap-button-secondary w-full sm:flex-1 text-base py-3"
+                        >
+                          {language === 'es' ? 'Revisar productos' : 'Review items'}
+                        </button>
+                      </div>
+
+                      {/* Productos */}
+                      <div ref={postScanProductsRef} className="sap-card overflow-hidden">
+                        <div className="px-4 py-3 border-b border-sap-border bg-white">
+                          <h3 className="text-sm font-semibold text-sap-text">
+                            {language === 'es' ? 'Productos' : 'Items'}
+                          </h3>
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead className="bg-sap-bgSecondary">
+                              <tr>
+                                <th className="sap-table-header">{language === 'es' ? 'Nombre' : 'Name'}</th>
+                                <th className="sap-table-header text-right">{language === 'es' ? 'Cantidad × Precio = Total' : 'Qty × Price = Total'}</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {products.length === 0 ? (
+                                <tr>
+                                  <td colSpan={2} className="sap-table-cell text-center text-sap-text-secondary py-6">
+                                    {language === 'es' ? 'No se encontraron productos.' : 'No items found.'}
+                                  </td>
+                                </tr>
+                              ) : (
+                                products.map((it, idx) => {
+                                  const amountLegible = it._n?.amount_legible !== false
+                                  const q = typeof it.quantity === 'number' ? it.quantity : null
+                                  const up = typeof it.unit_price === 'number' ? it.unit_price : null
+                                  const total = typeof it.amount === 'number' ? it.amount : Number(it.amount) || 0
+
+                                  const name = amountLegible
+                                    ? cleanItemName(it.description || '')
+                                    : (language === 'es' ? 'No legible' : 'Illegible')
+
+                                  const formula = !amountLegible
+                                    ? (language === 'es' ? 'No legible' : 'Illegible')
+                                    : (q != null && up != null)
+                                      ? `${formatQty(q)} × ${formatCurrency(up, language, false)} = ${formatCurrency(total, language, false)}`
+                                      : formatCurrency(total, language, false)
+
+                                  return (
+                                    <tr key={it.id ?? idx} className="border-b border-sap-border">
+                                      <td className="sap-table-cell">
+                                        <span className="text-sap-text">{name || (language === 'es' ? 'No legible' : 'Illegible')}</span>
+                                      </td>
+                                      <td className="sap-table-cell text-right font-medium text-sap-text">{formula}</td>
+                                    </tr>
+                                  )
+                                })
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      {/* Detalles técnicos (solo Admin) */}
+                      {isAdmin && (
+                        <details className="sap-card p-4">
+                          <summary className="cursor-pointer text-sm font-semibold text-sap-text">
+                            {language === 'es' ? 'Ver detalles técnicos' : 'View technical details'}
+                          </summary>
+                          <div className="mt-3 space-y-3">
+                            <pre className="sap-input font-mono text-xs whitespace-pre-wrap overflow-x-auto max-h-[360px]">
+                              {JSON.stringify(postScanResult.responseData, null, 2)}
+                            </pre>
+                          </div>
+                        </details>
+                      )}
+                    </div>
+                  )
+                })()
+              ) : (
+                <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-sap-text-secondary mb-2">
                     {language === 'es' ? 'Asignar a usuario:' : 'Assign to user:'}
@@ -991,6 +1376,32 @@ export default function TransactionsPage() {
                       <option key={member.id} value={member.id}>{member.name}</option>
                     ))}
                   </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-sap-text-secondary mb-2">
+                    {language === 'es' ? 'Modo de extracción:' : 'Extraction mode:'}
+                  </label>
+                  <select
+                    value={receiptExtractMode}
+                    onChange={(e) => setReceiptExtractMode(e.target.value as 'precise' | 'fast' | 'text')}
+                    className="sap-input"
+                    disabled={uploading}
+                  >
+                    <option value="precise">
+                      {language === 'es' ? 'Preciso (más lento, mejor total)' : 'Precise (slower, better total)'}
+                    </option>
+                    <option value="fast">
+                      {language === 'es' ? 'Rápido (puede requerir correcciones)' : 'Fast (may need corrections)'}
+                    </option>
+                    <option value="text">
+                      {language === 'es' ? 'Texto (transcribir completo, más estable)' : 'Text (full transcription, more stable)'}
+                    </option>
+                  </select>
+                  <p className="text-xs text-sap-text-tertiary mt-2">
+                    {language === 'es'
+                      ? 'Tip: usa “Preciso” para tickets largos (HEB), “Rápido” para recibos pequeños, o “Texto” si se cae la extracción/da error.'
+                      : 'Tip: use “Precise” for long receipts (HEB), “Fast” for small receipts, or “Text” if extraction fails/errors.'}
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-sap-text-secondary mb-2">
@@ -1052,8 +1463,8 @@ export default function TransactionsPage() {
                     
                     <p className="text-xs text-sap-text-tertiary">
                       {language === 'es' 
-                        ? 'Esto puede tardar entre 30 segundos y 2 minutos dependiendo del tamaño del recibo.'
-                        : 'This may take between 30 seconds and 2 minutes depending on receipt size.'}
+                        ? 'Esto puede tardar entre 30 segundos y 4 minutos dependiendo del tamaño del recibo (tickets muy largos pueden tardar más).'
+                        : 'This may take between 30 seconds and 4 minutes depending on receipt size (very long receipts may take longer).'}
                     </p>
                   </div>
                 )}
@@ -1079,6 +1490,7 @@ export default function TransactionsPage() {
                   </button>
                 </div>
               </div>
+              )}
             </div>
           </div>
         </div>

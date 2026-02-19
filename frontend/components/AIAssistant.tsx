@@ -30,8 +30,8 @@ export default function AIAssistant({ language }: AIAssistantProps) {
       setMessages([{
         role: 'assistant',
         content: language === 'es' 
-          ? '¡Hola! Soy tu asistente financiero de DOMUS+. ¿En qué puedo ayudarte hoy? Puedo ayudarte con:\n\n• Cómo usar el sistema\n• Consejos de presupuesto\n• Análisis de tus gastos\n• Categorización de transacciones'
-          : 'Hello! I\'m your DOMUS+ financial assistant. How can I help you today? I can help with:\n\n• How to use the system\n• Budget advice\n• Expense analysis\n• Transaction categorization',
+          ? '¡Hola! Soy tu asistente financiero de Domus Fam. ¿En qué puedo ayudarte hoy? Puedo ayudarte con:\n\n• Cómo usar el sistema\n• Consejos de presupuesto\n• Análisis de tus gastos\n• Categorización de transacciones'
+          : 'Hello! I\'m your Domus Fam financial assistant. How can I help you today? I can help with:\n\n• How to use the system\n• Budget advice\n• Expense analysis\n• Transaction categorization',
         timestamp: new Date()
       }])
     }

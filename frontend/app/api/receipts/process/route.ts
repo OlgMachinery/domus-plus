@@ -218,20 +218,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Importar OpenAI dinámicamente
-    let OpenAI: any
-    try {
-      OpenAI = (await import('openai')).default
-    } catch (e) {
+    // Verificar OpenAI API Key
+    if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
-        { detail: 'El paquete "openai" no está instalado. Ejecuta: npm install openai' },
+        { 
+          detail: 'OPENAI_API_KEY no está configurada. Configura esta variable en .env.local para usar el procesamiento de recibos con OCR.'
+        },
         { status: 500 }
       )
     }
-
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    })
 
     // Procesar cada archivo
     const combinedItems: any[] = []
@@ -266,9 +261,10 @@ export async function POST(request: NextRequest) {
       else if (file.type.includes('gif')) imageFormat = 'gif'
       else if (file.type.includes('webp')) imageFormat = 'webp'
 
-      // Procesar con OpenAI
+      // Procesar con OpenAI usando el servicio
       try {
-        const receiptRaw = await processReceiptImage(openai, imageBase64, imageFormat, file.name)
+        const { processReceiptImage } = await import('@/lib/services/receipt-processor')
+        const receiptRaw = await processReceiptImage(imageBase64, imageFormat)
         
         if (!receiptRaw || !receiptRaw.items || receiptRaw.items.length === 0) {
           console.warn(`⚠️ [IMAGE ${i + 1}] No se encontraron items en el recibo`)
@@ -478,118 +474,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/**
- * Procesa una imagen de recibo usando OpenAI Vision API
- */
-async function processReceiptImage(
-  openai: any, 
-  imageBase64: string, 
-  imageFormat: string,
-  filename: string = 'recibo'
-): Promise<any> {
-  const startTime = Date.now()
-  console.log(`🤖 [OPENAI] Iniciando análisis de imagen: ${filename}`)
-  
-  try {
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'system',
-          content: `Eres un experto en extraer datos de recibos y facturas. Analiza la imagen cuidadosamente y extrae TODOS los datos disponibles.
-
-Extrae:
-- Fecha en formato YYYY-MM-DD (si no está disponible, usa null)
-- Hora en formato HH:MM (si no está disponible, usa null)
-- Moneda (MXN, USD, EUR, etc.)
-- Nombre del comercio o beneficiario
-- Monto total del recibo
-- Lista COMPLETA de items con: descripción completa, cantidad, precio unitario, total por item
-
-IMPORTANTE:
-- Responde SOLO con JSON válido
-- Si un campo no está disponible, usa null
-- Para items, extrae TODOS los items visibles en el recibo
-- Usa números como strings en los campos *_raw para preservar formato original
-- La descripción del item debe ser completa y legible
-
-Formato JSON requerido:
-{
-  "date": "YYYY-MM-DD" o null,
-  "time": "HH:MM" o null,
-  "currency": "MXN",
-  "merchant_or_beneficiary": "Nombre del Comercio",
-  "amount_raw": "1234.56",
-  "items": [
-    {
-      "raw_line": "Descripción completa del item",
-      "quantity_raw": "2",
-      "unit_price_raw": "50.00",
-      "total_raw": "100.00"
-    }
-  ]
-}
-
-Si no hay items, retorna un array vacío: "items": []`
-        },
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: 'Extrae todos los datos de este recibo. Incluye TODOS los items visibles.'
-            },
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:image/${imageFormat};base64,${imageBase64}`
-              }
-            }
-          ]
-        }
-      ],
-      max_tokens: 4000,
-      temperature: 0.1,
-    })
-    
-    const elapsed = Date.now() - startTime
-    console.log(`⏱️ [OPENAI] Respuesta recibida en ${elapsed}ms`)
-
-    const content = response.choices[0]?.message?.content
-    if (!content) {
-      throw new Error('No se recibió respuesta de OpenAI')
-    }
-
-    // Parsear JSON
-    let parsed: any
-    try {
-      // Limpiar el contenido (puede tener markdown code blocks)
-      let cleanedContent = content.trim()
-      if (cleanedContent.startsWith('```json')) {
-        cleanedContent = cleanedContent.replace(/^```json\s*/, '').replace(/\s*```$/, '')
-      } else if (cleanedContent.startsWith('```')) {
-        cleanedContent = cleanedContent.replace(/^```\s*/, '').replace(/\s*```$/, '')
-      }
-      
-      parsed = JSON.parse(cleanedContent)
-      console.log(`✅ [OPENAI] JSON parseado: ${parsed.items?.length || 0} items encontrados`)
-      
-      // Validar estructura
-      if (!parsed.items || !Array.isArray(parsed.items)) {
-        parsed.items = []
-      }
-      
-      return parsed
-    } catch (parseError: any) {
-      console.error('❌ [OPENAI] Error parseando JSON:', parseError.message)
-      console.error('📄 [OPENAI] Contenido recibido (primeros 500 chars):', content.substring(0, 500))
-      throw new Error(`Respuesta de OpenAI no es JSON válido: ${parseError.message}`)
-    }
-  } catch (error: any) {
-    console.error(`❌ [OPENAI] Error en processReceiptImage:`, error.message)
-    throw error
-  }
-}
 
 /**
  * Parsea un valor a float de forma segura

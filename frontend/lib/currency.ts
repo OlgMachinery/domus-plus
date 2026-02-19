@@ -14,12 +14,16 @@ import type { Language } from './i18n'
  */
 export function formatCurrency(amount: number, language: Language = 'es', showDecimals: boolean = false): string {
   const locale = language === 'es' ? 'es-MX' : 'en-US'
+  const safeAmount = Number.isFinite(amount) ? amount : 0
+  // Mostrar decimales automáticamente si el monto tiene centavos (evita redondear 0.57 -> 1).
+  const hasCents = Math.round(Math.abs(safeAmount) * 100) % 100 !== 0
+  const useDecimals = showDecimals || hasCents
   const options: Intl.NumberFormatOptions = {
-    minimumFractionDigits: showDecimals ? 2 : 0,
-    maximumFractionDigits: showDecimals ? 2 : 0
+    minimumFractionDigits: useDecimals ? 2 : 0,
+    maximumFractionDigits: useDecimals ? 2 : 0
   }
   
-  const formatted = amount.toLocaleString(locale, options)
+  const formatted = safeAmount.toLocaleString(locale, options)
   return `$${formatted} MXN`
 }
 
@@ -33,11 +37,14 @@ export function formatCurrency(amount: number, language: Language = 'es', showDe
  */
 export function formatCurrencySimple(amount: number, language: Language = 'es', showDecimals: boolean = false): string {
   const locale = language === 'es' ? 'es-MX' : 'en-US'
+  const safeAmount = Number.isFinite(amount) ? amount : 0
+  const hasCents = Math.round(Math.abs(safeAmount) * 100) % 100 !== 0
+  const useDecimals = showDecimals || hasCents
   const options: Intl.NumberFormatOptions = {
-    minimumFractionDigits: showDecimals ? 2 : 0,
-    maximumFractionDigits: showDecimals ? 2 : 0
+    minimumFractionDigits: useDecimals ? 2 : 0,
+    maximumFractionDigits: useDecimals ? 2 : 0
   }
   
-  const formatted = amount.toLocaleString(locale, options)
+  const formatted = safeAmount.toLocaleString(locale, options)
   return `$${formatted} MXN`
 }

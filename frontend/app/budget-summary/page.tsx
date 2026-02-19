@@ -1,11 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import type { User } from '@/lib/types'
 import { useTranslation, getLanguage, setLanguage, type Language } from '@/lib/i18n'
 import { formatCurrency as formatCurrencyUtil } from '@/lib/currency'
+import { safePushLogin } from '@/lib/receiptProcessing'
+import { getAuthHeaders, getToken } from '@/lib/auth'
+import { PencilSimple } from '@phosphor-icons/react'
+import { XIcon } from '@/lib/icons'
 
 interface Movement {
   id: number
@@ -51,11 +55,14 @@ export default function BudgetSummaryPage() {
   const [language, setLanguageState] = useState<Language>('es')
   const [mounted, setMounted] = useState(false)
   const t = useTranslation(language)
+  const backendUrl = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_URL) || ''
+  const apiBase = backendUrl.replace(/\/$/, '')
   
   const [accounts, setAccounts] = useState<BudgetAccount[]>([])
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<User | null>(null)
   const [editingAccount, setEditingAccount] = useState<number | null>(null)
+  const [showEditModal, setShowEditModal] = useState(false)
   const [editForm, setEditForm] = useState<Partial<BudgetAccount>>({})
   const [year, setYear] = useState(new Date().getFullYear())
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
@@ -69,23 +76,54 @@ export default function BudgetSummaryPage() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        router.push('/login')
-        setLoading(false)
-        return
+
+    let cancelled = false
+    const init = async () => {
+      try {
+        const headers = await getAuthHeaders()
+        const hasAuth = typeof headers === 'object' && headers !== null && 'Authorization' in (headers as Record<string, string>)
+        if (hasAuth) {
+          setLoading(true)
+          const meRes = await fetch(`${apiBase}/api/users/me`, {
+            headers: headers as Record<string, string>,
+            credentials: 'include',
+          })
+          if (meRes.ok && !cancelled) {
+            const me = (await meRes.json()) as User
+            setUser(me)
+            await loadBudgetSummary(getToken() ?? undefined)
+            return
+          }
+          if (meRes.status === 401) {
+            localStorage.removeItem('domus_token')
+          }
+        }
+
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          safePushLogin(router, 'budget-summary: no supabase session')
+          return
+        }
+        loadUser()
+        loadBudgetSummary()
+      } catch (err) {
+        console.error('Error inicializando concentrado:', err)
+      } finally {
+        if (!cancelled) setLoading(false)
       }
-      loadUser()
-      loadBudgetSummary()
-    })
+    }
+
+    init()
+    return () => {
+      cancelled = true
+    }
   }, [router, year])
 
   const loadUser = async () => {
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (!authUser) {
-        router.push('/login')
+        safePushLogin(router, 'budget-summary: no supabase user')
         return
       }
       
@@ -100,13 +138,30 @@ export default function BudgetSummaryPage() {
       }
     } catch (error) {
       console.error('Error cargando usuario:', error)
-      router.push('/login')
+      const token = getToken()
+      if (!token) safePushLogin(router, 'budget-summary: loadUser error')
     }
   }
 
-  const loadBudgetSummary = async () => {
+  const loadBudgetSummary = async (tokenOverride?: string) => {
     try {
       setLoading(true)
+
+      const token = tokenOverride || getToken()
+      if (token) {
+        const res = await fetch(`${apiBase}/api/budgets/summary?year=${year}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setAccounts((data || []) as BudgetAccount[])
+        } else {
+          // Puede fallar si el usuario aún no tiene familia
+          setAccounts([])
+        }
+        return
+      }
+
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (!authUser) {
         setAccounts([])
@@ -216,11 +271,13 @@ export default function BudgetSummaryPage() {
       payment_status: account.payment_status,
       notes: account.notes || ''
     })
+    setShowEditModal(true)
   }
 
   const handleEditCancel = () => {
     setEditingAccount(null)
     setEditForm({})
+    setShowEditModal(false)
   }
 
   const handleEditSave = async (accountId: number) => {
@@ -250,18 +307,32 @@ export default function BudgetSummaryPage() {
         updates.notes = editForm.notes
       }
       
-      // Actualizar en Supabase
-      const { error } = await supabase
-        .from('family_budgets')
-        .update(updates)
-        .eq('id', editingAccount)
-      
-      if (error) {
-        throw error
+      const token = getToken()
+      if (token) {
+        const res = await fetch(`${apiBase}/api/budgets/account/${accountId}`, {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(updates),
+        })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          throw new Error(err.detail || 'Error al actualizar cuenta')
+        }
+      } else {
+        // Actualizar en Supabase
+        const { error } = await supabase
+          .from('family_budgets')
+          .update(updates)
+          .eq('id', editingAccount)
+        
+        if (error) {
+          throw error
+        }
       }
       
       setEditingAccount(null)
       setEditForm({})
+      setShowEditModal(false)
       loadBudgetSummary()
       alert(t.budgetSummary.accountUpdated)
     } catch (error: any) {
@@ -286,18 +357,42 @@ export default function BudgetSummaryPage() {
     setExpandedMovements(newExpanded)
   }
 
-  // Calcular resúmenes
-  const totalBudget = accounts.reduce((sum, acc) => sum + acc.total_amount, 0)
-  const totalPaid = accounts.reduce((sum, acc) => sum + acc.paid_amount, 0)
-  const totalRemaining = accounts.reduce((sum, acc) => sum + acc.remaining_amount, 0)
-  const totalIncome = accounts.reduce((sum, acc) => sum + acc.income_amount, 0)
-  const monthlyBudget = totalBudget / 12 // Presupuesto mensual promedio
-  const overdueCount = accounts.filter(acc => acc.is_overdue).length
-  const overdueAmount = accounts
-    .filter(acc => acc.is_overdue)
-    .reduce((sum, acc) => sum + Math.max(0, acc.remaining_amount), 0)
-  const pendingCount = accounts.filter(acc => acc.payment_status === 'pending').length
-  const paidCount = accounts.filter(acc => acc.payment_status === 'paid').length
+  // Calcular resúmenes - MEMOIZED
+  const { 
+    totalBudget, 
+    totalPaid, 
+    totalRemaining, 
+    totalIncome, 
+    monthlyBudget, 
+    overdueCount, 
+    overdueAmount, 
+    pendingCount, 
+    paidCount 
+  } = useMemo(() => {
+    const tBudget = accounts.reduce((sum, acc) => sum + acc.total_amount, 0)
+    const tPaid = accounts.reduce((sum, acc) => sum + acc.paid_amount, 0)
+    const tRemaining = accounts.reduce((sum, acc) => sum + acc.remaining_amount, 0)
+    const tIncome = accounts.reduce((sum, acc) => sum + acc.income_amount, 0)
+    const mBudget = tBudget / 12
+    const oCount = accounts.filter(acc => acc.is_overdue).length
+    const oAmount = accounts
+      .filter(acc => acc.is_overdue)
+      .reduce((sum, acc) => sum + Math.max(0, acc.remaining_amount), 0)
+    const pCount = accounts.filter(acc => acc.payment_status === 'pending').length
+    const pdCount = accounts.filter(acc => acc.payment_status === 'paid').length
+
+    return {
+      totalBudget: tBudget,
+      totalPaid: tPaid,
+      totalRemaining: tRemaining,
+      totalIncome: tIncome,
+      monthlyBudget: mBudget,
+      overdueCount: oCount,
+      overdueAmount: oAmount,
+      pendingCount: pCount,
+      paidCount: pdCount
+    }
+  }, [accounts])
 
   const formatCurrency = (amount: number) => {
     return formatCurrencyUtil(amount, language, false)
@@ -329,15 +424,15 @@ export default function BudgetSummaryPage() {
   return (
     <div className="h-screen bg-sap-bg w-full overflow-hidden">
       {/* Header fijo unificado */}
-      <header className="fixed top-0 left-0 right-0 z-30 bg-white border-b border-sap-border shadow-sm" style={{ left: sidebarCollapsed ? 0 : '192px' }}>
-        <div className={`px-6 py-2 flex items-center justify-between ${sidebarCollapsed ? 'w-full' : 'ml-48'}`}>
+      <header className="fixed top-0 left-0 right-0 z-30 bg-white border-b border-sap-border shadow-sm">
+        <div className="px-6 py-2 flex items-center justify-between w-full">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="sap-button-secondary text-sm px-3 py-1.5 min-w-[36px] h-[36px] flex items-center justify-center"
-              title={sidebarCollapsed ? 'Mostrar menú' : 'Ocultar menú'}
+              onClick={() => router.push('/dashboard')}
+              className="sap-button-ghost text-sm px-2 py-1.5 min-w-[32px] h-[32px] flex items-center justify-center text-sap-text-secondary hover:text-sap-text"
+              title={language === 'es' ? 'Cerrar' : 'Close'}
             >
-              {sidebarCollapsed ? '☰' : '✕'}
+              <XIcon size={20} />
             </button>
             <div>
               <h1 className="text-lg font-semibold text-sap-text leading-tight">{t.budgetSummary.title}</h1>
@@ -364,7 +459,7 @@ export default function BudgetSummaryPage() {
         </div>
         {/* Dashboard de resumen profesional estilo SAP */}
         {showSummary && (
-          <div className="px-6 py-3 bg-sap-bg-secondary border-t border-sap-border/30" style={{ marginLeft: sidebarCollapsed ? 0 : '192px' }}>
+          <div className="px-6 py-3 bg-sap-bg-secondary border-t border-sap-border/30">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
               {/* Annual Budget */}
               <div className="sap-card p-3 min-h-[80px] flex flex-col justify-between border-l-4 border-sap-primary">
@@ -455,7 +550,7 @@ export default function BudgetSummaryPage() {
 
       {/* Sidebar colapsable */}
       {!sidebarCollapsed && (
-        <aside className="fixed left-0 top-0 h-full w-48 bg-sap-sidebar border-r border-sap-border z-40">
+        <aside className="fixed left-0 top-0 h-full w-48 bg-sap-sidebar border-r border-sap-border z-40 hidden">
           <div className="pt-16">
             <nav className="px-2 py-4 space-y-1">
               <a href="/dashboard" className="block px-3 py-2 text-xs text-white/80 hover:bg-white/10 rounded transition-colors">Dashboard</a>
@@ -469,7 +564,7 @@ export default function BudgetSummaryPage() {
       )}
 
       {/* Contenido principal */}
-      <main className={`px-6 py-4 transition-all duration-300 ${sidebarCollapsed ? 'w-full' : 'ml-48'} ${showSummary ? 'mt-[180px]' : 'mt-[73px]'}`} style={{ height: `calc(100vh - ${showSummary ? 180 : 73}px)`, overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+      <main className={`px-6 py-4 transition-all duration-300 w-full ${showSummary ? 'mt-[180px]' : 'mt-[73px]'}`} style={{ height: `calc(100vh - ${showSummary ? 180 : 73}px)`, overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative' }}>
         {loading ? (
           <div className="sap-card p-12 text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sap-primary mx-auto"></div>
@@ -498,46 +593,17 @@ export default function BudgetSummaryPage() {
                   <>
                     <tr key={account.id} className="hover:bg-sap-bg-hover">
                       <td className="px-2 py-2 border-r border-sap-border/30">
-                        {editingAccount === account.id ? (
-                          <div className="space-y-0.5">
-                            <input
-                              type="text"
-                              value={editForm.category_display_name || ''}
-                              onChange={(e) => setEditForm({ ...editForm, category_display_name: e.target.value })}
-                              className="sap-input text-xs w-full h-[24px] px-1.5 py-0.5"
-                              placeholder={account.category}
-                            />
-                            <input
-                              type="text"
-                              value={editForm.subcategory_display_name || ''}
-                              onChange={(e) => setEditForm({ ...editForm, subcategory_display_name: e.target.value })}
-                              className="sap-input text-xs w-full h-[24px] px-1.5 py-0.5"
-                              placeholder={account.subcategory}
-                            />
+                        <div>
+                          <div className="font-medium text-sap-text text-xs truncate" title={account.category_display_name || account.category}>
+                            {account.category_display_name || account.category}
                           </div>
-                        ) : (
-                          <div>
-                            <div className="font-medium text-sap-text text-xs truncate" title={account.category_display_name || account.category}>
-                              {account.category_display_name || account.category}
-                            </div>
-                            <div className="text-xs text-sap-text-secondary truncate" title={account.subcategory_display_name || account.subcategory}>
-                              {account.subcategory_display_name || account.subcategory}
-                            </div>
+                          <div className="text-xs text-sap-text-secondary truncate" title={account.subcategory_display_name || account.subcategory}>
+                            {account.subcategory_display_name || account.subcategory}
                           </div>
-                        )}
+                        </div>
                       </td>
                       <td className="text-right px-2 py-2 border-r border-sap-border/30">
-                        {editingAccount === account.id ? (
-                          <input
-                            type="number"
-                            value={editForm.total_amount || 0}
-                            onChange={(e) => setEditForm({ ...editForm, total_amount: parseFloat(e.target.value) })}
-                            className="sap-input text-xs w-full text-right h-[24px] px-1 py-0.5"
-                            step="1"
-                          />
-                        ) : (
-                          <span className="text-xs font-semibold text-sap-text whitespace-nowrap">{formatCurrency(Math.round(account.total_amount))}</span>
-                        )}
+                        <span className="text-xs font-semibold text-sap-text whitespace-nowrap">{formatCurrency(Math.round(account.total_amount))}</span>
                       </td>
                       <td className="text-right px-2 py-2 border-r border-sap-border/30">
                         <span className="text-xs text-green-600 font-medium whitespace-nowrap">{formatCurrency(Math.round(account.paid_amount))}</span>
@@ -548,34 +614,12 @@ export default function BudgetSummaryPage() {
                         </span>
                       </td>
                       <td className="text-right px-2 py-2 border-r border-sap-border/30">
-                        {editingAccount === account.id ? (
-                          <input
-                            type="date"
-                            value={editForm.due_date ? new Date(editForm.due_date).toISOString().split('T')[0] : ''}
-                            onChange={(e) => setEditForm({ ...editForm, due_date: e.target.value ? new Date(e.target.value).toISOString() : '' })}
-                            className="sap-input text-xs w-full h-[24px] px-1 py-0.5"
-                          />
-                        ) : (
-                          <span className="text-xs text-sap-text-secondary whitespace-nowrap">{formatDate(account.due_date)}</span>
-                        )}
+                        <span className="text-xs text-sap-text-secondary whitespace-nowrap">{formatDate(account.due_date)}</span>
                       </td>
                       <td className="text-center px-2 py-2 border-r border-sap-border/30">
-                        {editingAccount === account.id ? (
-                          <select
-                            value={editForm.payment_status || 'pending'}
-                            onChange={(e) => setEditForm({ ...editForm, payment_status: e.target.value as any })}
-                            className="sap-input text-xs w-full h-[24px] px-1 py-0.5"
-                          >
-                            <option value="pending">{getPaymentStatusLabel('pending')}</option>
-                            <option value="partial">{getPaymentStatusLabel('partial')}</option>
-                            <option value="paid">{getPaymentStatusLabel('paid')}</option>
-                            <option value="overdue">{getPaymentStatusLabel('overdue')}</option>
-                          </select>
-                        ) : (
-                          <span className={`text-xs px-1 py-0.5 rounded whitespace-nowrap inline-block ${getPaymentStatusColor(account.payment_status, account.is_overdue)}`}>
-                            {getPaymentStatusLabel(account.payment_status)}
-                          </span>
-                        )}
+                        <span className={`text-xs px-1 py-0.5 rounded whitespace-nowrap inline-block ${getPaymentStatusColor(account.payment_status, account.is_overdue)}`}>
+                          {getPaymentStatusLabel(account.payment_status)}
+                        </span>
                       </td>
                       <td className="text-center px-2 py-2 border-r border-sap-border/30">
                         <button
@@ -614,32 +658,13 @@ export default function BudgetSummaryPage() {
                         </span>
                       </td>
                       <td className="text-center px-2 py-2">
-                        {editingAccount === account.id ? (
-                          <div className="flex items-center justify-center gap-0.5">
-                            <button
-                              onClick={() => handleEditSave(account.id)}
-                              className="sap-button-primary text-xs px-1.5 py-0.5 min-w-[32px] h-[22px] flex items-center justify-center"
-                              title={t.common.save}
-                            >
-                              ✓
-                            </button>
-                            <button
-                              onClick={handleEditCancel}
-                              className="sap-button-secondary text-xs px-1.5 py-0.5 min-w-[32px] h-[22px] flex items-center justify-center"
-                              title={t.common.cancel}
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => handleEditStart(account)}
-                            className="sap-button-secondary text-xs px-1.5 py-0.5 w-[28px] h-[22px] flex items-center justify-center"
-                            title={t.common.edit}
-                          >
-                            ✏️
-                          </button>
-                        )}
+                        <button
+                          onClick={() => handleEditStart(account)}
+                          className="sap-button-secondary text-xs px-1.5 py-0.5 w-[28px] h-[22px] flex items-center justify-center"
+                          title={t.common.edit}
+                        >
+                          <PencilSimple size={14} />
+                        </button>
                       </td>
                     </tr>
                     {expandedMovements.has(account.id) && account.movements.length > 0 && (
@@ -662,20 +687,6 @@ export default function BudgetSummaryPage() {
                         </td>
                       </tr>
                     )}
-                    {editingAccount === account.id && (
-                      <tr>
-                        <td colSpan={10} className="bg-sap-bg-secondary p-4">
-                          <div className="text-xs font-semibold mb-2">{language === 'es' ? 'Notas' : 'Notes'}</div>
-                          <textarea
-                            value={editForm.notes || ''}
-                            onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                            className="sap-input text-sm w-full"
-                            rows={3}
-                            placeholder={language === 'es' ? 'Agregar notas...' : 'Add notes...'}
-                          />
-                        </td>
-                      </tr>
-                    )}
                   </>
                 ))}
               </tbody>
@@ -688,6 +699,91 @@ export default function BudgetSummaryPage() {
           </div>
         )}
       </main>
+
+      {/* Modal de edición */}
+      {showEditModal && editingAccount && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="sap-card max-w-lg w-full mx-4 shadow-lg">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6 border-b border-sap-border pb-4">
+                <h2 className="text-lg font-semibold text-sap-text">{language === 'es' ? 'Editar Cuenta' : 'Edit Account'}</h2>
+                <button onClick={handleEditCancel} className="sap-button-ghost p-2">
+                  <XIcon size={18} className="text-sap-text-secondary" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-sap-text-secondary mb-1">{language === 'es' ? 'Categoría' : 'Category'}</label>
+                  <input
+                    type="text"
+                    value={editForm.category_display_name || ''}
+                    onChange={(e) => setEditForm({ ...editForm, category_display_name: e.target.value })}
+                    className="sap-input"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-sap-text-secondary mb-1">{language === 'es' ? 'Subcategoría' : 'Subcategory'}</label>
+                  <input
+                    type="text"
+                    value={editForm.subcategory_display_name || ''}
+                    onChange={(e) => setEditForm({ ...editForm, subcategory_display_name: e.target.value })}
+                    className="sap-input"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-sap-text-secondary mb-1">{language === 'es' ? 'Monto Total' : 'Total Amount'}</label>
+                    <input
+                      type="number"
+                      value={editForm.total_amount || 0}
+                      onChange={(e) => setEditForm({ ...editForm, total_amount: parseFloat(e.target.value) })}
+                      className="sap-input text-right"
+                      step="1"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-sap-text-secondary mb-1">{language === 'es' ? 'Vencimiento' : 'Due Date'}</label>
+                    <input
+                      type="date"
+                      value={editForm.due_date ? new Date(editForm.due_date).toISOString().split('T')[0] : ''}
+                      onChange={(e) => setEditForm({ ...editForm, due_date: e.target.value ? new Date(e.target.value).toISOString() : '' })}
+                      className="sap-input"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-sap-text-secondary mb-1">{language === 'es' ? 'Estado' : 'Status'}</label>
+                  <select
+                    value={editForm.payment_status || 'pending'}
+                    onChange={(e) => setEditForm({ ...editForm, payment_status: e.target.value as any })}
+                    className="sap-input"
+                  >
+                    <option value="pending">{getPaymentStatusLabel('pending')}</option>
+                    <option value="partial">{getPaymentStatusLabel('partial')}</option>
+                    <option value="paid">{getPaymentStatusLabel('paid')}</option>
+                    <option value="overdue">{getPaymentStatusLabel('overdue')}</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-sap-text-secondary mb-1">{language === 'es' ? 'Notas' : 'Notes'}</label>
+                  <textarea
+                    value={editForm.notes || ''}
+                    onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                    className="sap-input"
+                    rows={3}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-6 border-t border-sap-border mt-6">
+                <button onClick={() => handleEditSave(editingAccount)} className="sap-button-primary flex-1">{t.common.save}</button>
+                <button onClick={handleEditCancel} className="sap-button-secondary flex-1">{t.common.cancel}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

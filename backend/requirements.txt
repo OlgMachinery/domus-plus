@@ -15,4 +15,5 @@ pytesseract>=0.3.10
 twilio>=9.5.0
 httpx>=0.28.1
 python-multipart>=0.0.12
+supabase>=2.0.0
 

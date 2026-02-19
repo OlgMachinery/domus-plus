@@ -1,0 +1,14 @@
+import * as icons from '@phosphor-icons/react';
+
+console.log('House:', !!icons.House);
+console.log('Wallet:', !!icons.Wallet);
+console.log('Bank:', !!icons.Bank);
+console.log('ArrowsLeftRight:', !!icons.ArrowsLeftRight);
+console.log('ChartPieSlice:', !!icons.ChartPieSlice);
+console.log('Receipt:', !!icons.Receipt);
+console.log('FileXls:', !!icons.FileXls);
+console.log('Files:', !!icons.Files);
+console.log('ChartBar:', !!icons.ChartBar);
+console.log('ListPlus:', !!icons.ListPlus);
+console.log('Scroll:', !!icons.Scroll);
+console.log('Users:', !!icons.Users);

@@ -1,7 +1,7 @@
 'use client'
 // Updated: Export buttons changed to Excel, PDF, HTML - Spacing improved
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { format } from 'date-fns'
@@ -11,6 +11,8 @@ import SAPLayout from '@/components/SAPLayout'
 import { formatCurrency } from '@/lib/currency'
 import { getLanguage, setLanguage, useTranslation, type Language } from '@/lib/i18n'
 import { XIcon, PlusIcon } from '@/lib/icons'
+import { safePushLogin } from '@/lib/receiptProcessing'
+import { getAuthHeaders, getToken } from '@/lib/auth'
 
 interface ReceiptItem {
   id: number
@@ -52,11 +54,99 @@ interface Receipt {
   items: ReceiptItem[]
 }
 
+const FOOD_MERCHANT_KEYWORDS = [
+  'heb', 'walmart', 'soriana', 'chedraui', 'costco', 'sams', 'superama', 'aurrera',
+  'super', 'market', 'mercado', 'comercial', 'grocery'
+]
+
+const FOOD_ITEM_KEYWORDS = [
+  'leche', 'pollo', 'carne', 'huevo', 'arroz', 'pan', 'tortilla', 'queso', 'yogurt',
+  'fruta', 'verdura', 'tomate', 'cebolla', 'jamon', 'pasta', 'cereal', 'agua',
+  'atun', 'azucar', 'sal', 'harina', 'aceite', 'galleta', 'frijol', 'lenteja',
+  'chile', 'sopa', 'cafe', 'te', 'mantequilla', 'leche', 'platan', 'manzan'
+]
+
+const normalizeText = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+
+const receiptLooksFood = (receipt: Receipt | null) => {
+  if (!receipt) return false
+  const merchant = normalizeText(receipt.merchant_or_beneficiary || '')
+  if (FOOD_MERCHANT_KEYWORDS.some((keyword) => merchant.includes(keyword))) return true
+
+  const items = receipt.items || []
+  let hits = 0
+  for (const item of items) {
+    const desc = normalizeText(item.description || '')
+    if (FOOD_ITEM_KEYWORDS.some((keyword) => desc.includes(keyword))) {
+      hits += 1
+      if (hits >= 2) return true
+    }
+  }
+  return false
+}
+
+const getReceiptYear = (receipt: Receipt) => {
+  const rawDate = receipt.date || receipt.created_at
+  const parsed = rawDate ? new Date(rawDate) : new Date()
+  return Number.isNaN(parsed.getTime()) ? new Date().getFullYear() : parsed.getFullYear()
+}
+
+const getBudgetId = (budget: any) => budget?.id || budget?.family_budget_id || budget?.family_budget?.id
+const getBudgetCategory = (budget: any) => budget?.category || budget?.family_budget?.category || ''
+const getBudgetSubcategory = (budget: any) => budget?.subcategory || budget?.family_budget?.subcategory || ''
+const getBudgetYear = (budget: any) => budget?.year || budget?.family_budget?.year
+
 export default function ReceiptsPage() {
   const router = useRouter()
   const [language, setLanguageState] = useState<Language>('es')
   const [mounted, setMounted] = useState(false)
   const t = useTranslation(language)
+  const backendUrl = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_URL) || ''
+  const apiBase = backendUrl.replace(/\/$/, '')
+  const getAuthToken = async () => {
+    await getAuthHeaders()
+    return getToken() ?? undefined
+  }
+  const parseNotes = (notes?: string) => {
+    if (!notes) return null as any
+    try {
+      return JSON.parse(notes)
+    } catch {
+      return null as any
+    }
+  }
+  const displayAmount = (item: ReceiptItem) => {
+    const n = parseNotes(item.notes)
+    if (n?.amount_legible === false) return language === 'es' ? 'No legible' : 'Illegible'
+    return formatCurrency(item.amount || 0, language, false)
+  }
+  const exportAmountCell = (item: ReceiptItem) => {
+    const n = parseNotes(item.notes)
+    if (n?.amount_legible === false) return 'no legible'
+    return item.amount ?? 0
+  }
+  const apiErrorToMessage = (data: any, fallback: string) => {
+    if (!data) return fallback
+    const detail = data?.detail
+    if (typeof detail === 'string') return detail
+    if (Array.isArray(detail)) {
+      const parts = detail
+        .map((e: any) => {
+          if (!e) return ''
+          const msg = e.msg || e.message || ''
+          const loc = Array.isArray(e.loc) ? e.loc.filter(Boolean).join('.') : ''
+          return loc && msg ? `${loc}: ${msg}` : (msg || '')
+        })
+        .filter(Boolean)
+      if (parts.length) return parts.join('\n')
+    }
+    if (typeof data?.message === 'string') return data.message
+    return fallback
+  }
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [receipts, setReceipts] = useState<Receipt[]>([])
@@ -74,28 +164,123 @@ export default function ReceiptsPage() {
     assignment_mode: 'percentage' as 'percentage' | 'by_item' // Modo de asignación
   })
 
+  const receiptIsFood = useMemo(() => receiptLooksFood(selectedReceipt), [selectedReceipt])
+  const preferredCategories = useMemo(
+    () => (receiptIsFood ? ['Mercado', 'Alimentos', 'Comida', 'Supermercado', 'Despensa'] : []),
+    [receiptIsFood]
+  )
+  const preferredSet = useMemo(
+    () => new Set(preferredCategories.map((value) => normalizeText(value))),
+    [preferredCategories]
+  )
+  const sortedBudgets = useMemo(() => {
+    const list = [...budgets]
+    const score = (budget: any) => {
+      const category = normalizeText(getBudgetCategory(budget))
+      const subcategory = normalizeText(getBudgetSubcategory(budget))
+      let value = 0
+      if (preferredSet.has(category)) value += 2
+      if (preferredSet.has(subcategory)) value += 1
+      return value
+    }
+    return list.sort((a, b) => {
+      const scoreA = score(a)
+      const scoreB = score(b)
+      if (scoreA !== scoreB) return scoreB - scoreA
+      const catA = getBudgetCategory(a)
+      const catB = getBudgetCategory(b)
+      if (catA !== catB) return catA.localeCompare(catB)
+      return getBudgetSubcategory(a).localeCompare(getBudgetSubcategory(b))
+    })
+  }, [budgets, preferredSet])
+  const suggestedBudgetId = useMemo(() => {
+    if (!preferredSet.size) return null
+    const match = sortedBudgets.find((budget) => {
+      const category = normalizeText(getBudgetCategory(budget))
+      const subcategory = normalizeText(getBudgetSubcategory(budget))
+      return preferredSet.has(category) || preferredSet.has(subcategory)
+    })
+    return match ? getBudgetId(match) : null
+  }, [sortedBudgets, preferredSet])
+
   useEffect(() => {
     setMounted(true)
     setLanguageState(getLanguage())
   }, [])
 
   useEffect(() => {
+    if (!selectedReceipt) return
+    const receiptYear = getReceiptYear(selectedReceipt)
+    loadBudgets(getToken(), receiptYear).catch((err) =>
+      console.error('Error cargando presupuestos para recibo:', err)
+    )
+  }, [selectedReceipt])
+
+  useEffect(() => {
+    if (!selectedReceipt) return
+    if (!suggestedBudgetId) return
+    setAssignForm((prev) =>
+      prev.family_budget_id ? prev : { ...prev, family_budget_id: suggestedBudgetId }
+    )
+  }, [selectedReceipt, suggestedBudgetId])
+
+  useEffect(() => {
     if (typeof window === 'undefined') return
-    
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        router.push('/login')
-        return
+
+    let cancelled = false
+    const init = async () => {
+      try {
+        const headers = await getAuthHeaders()
+        const hasAuth = typeof headers === 'object' && headers !== null && 'Authorization' in (headers as Record<string, string>)
+        if (hasAuth) {
+          const meRes = await fetch(`${apiBase}/api/users/me`, {
+            headers: headers as Record<string, string>,
+            credentials: 'include',
+          })
+          if (meRes.ok && !cancelled) {
+            const me = (await meRes.json()) as User
+            setUser(me)
+            const token = getToken()
+            if (token) {
+              await Promise.all([
+                loadReceipts(token).catch((err) => console.error('Error cargando recibos (backend):', err)),
+                loadTransactions(token).catch((err) => console.error('Error cargando transacciones (backend):', err)),
+                loadFamilyMembers(token, me.family_id ?? null).catch((err) => console.error('Error cargando miembros (backend):', err)),
+                loadBudgets(token).catch((err) => console.error('Error cargando presupuestos (backend):', err)),
+              ])
+            }
+            return
+          }
+          if (meRes.status === 401) {
+            localStorage.removeItem('domus_token')
+          }
+        }
+
+        // Fallback a Supabase
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          safePushLogin(router, 'receipts: no supabase session')
+          return
+        }
+        await loadUserSupabase()
+      } catch (err) {
+        console.error('Error inicializando recibos:', err)
+      } finally {
+        if (!cancelled) setLoading(false)
       }
-      loadUser()
-    })
+    }
+
+    init()
+    return () => {
+      cancelled = true
+    }
   }, [router])
 
-  const loadUser = async () => {
+  const loadUserSupabase = async () => {
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (!authUser) {
-        router.push('/login')
+        safePushLogin(router, 'receipts: no supabase user')
         return
       }
       
@@ -129,27 +314,43 @@ export default function ReceiptsPage() {
       }
     } catch (error: any) {
       console.error('Error cargando usuario:', error)
-      router.push('/login')
+      const token = getToken()
+      if (!token) safePushLogin(router, 'receipts: loadUser error')
     } finally {
       setLoading(false)
     }
   }
 
-  const loadReceipts = async () => {
+  const loadReceipts = async (tokenOverride?: string) => {
     try {
+      const token = tokenOverride || getToken()
+      if (token) {
+        const statusParam = filterStatus !== 'all' ? `&status=${encodeURIComponent(filterStatus)}` : ''
+        const res = await fetch(`${apiBase}/api/receipts/?skip=0&limit=200${statusParam}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (!res.ok) {
+          setReceipts([])
+          return
+        }
+        const data = await res.json()
+        setReceipts((data || []) as Receipt[])
+        return
+      }
+
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (!authUser) return
-      
+
       let query = supabase
         .from('receipts')
         .select('*, items:receipt_items(*)')
         .eq('user_id', authUser.id)
         .order('created_at', { ascending: false })
-      
+
       if (filterStatus !== 'all') {
         query = query.eq('status', filterStatus)
       }
-      
+
       const { data: receiptsData } = await query
       setReceipts((receiptsData || []) as Receipt[])
     } catch (error) {
@@ -157,25 +358,46 @@ export default function ReceiptsPage() {
     }
   }
 
-  const loadTransactions = async () => {
+  const loadTransactions = async (tokenOverride?: string) => {
     try {
+      const token = tokenOverride || getToken()
+      if (token) {
+        const res = await fetch(`${apiBase}/api/transactions/?limit=1000`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const data = res.ok ? await res.json() : []
+        setTransactions(data || [])
+        return
+      }
+
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (!authUser) return
-      
+
       const { data: transactionsData } = await supabase
         .from('transactions')
         .select('*')
         .eq('user_id', authUser.id)
         .order('date', { ascending: false })
-      
+
       setTransactions(transactionsData || [])
     } catch (error) {
       console.error('Error cargando transacciones:', error)
     }
   }
 
-  const loadFamilyMembers = async () => {
+  const loadFamilyMembers = async (tokenOverride?: string, familyIdOverride?: number | null) => {
     try {
+      const token = tokenOverride || getToken()
+      const familyId = familyIdOverride ?? user?.family_id ?? null
+      if (token && familyId) {
+        const res = await fetch(`${apiBase}/api/families/${familyId}/members`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const data = res.ok ? await res.json() : []
+        setFamilyMembers((data || []) as User[])
+        return
+      }
+
       if (user?.family_id) {
         const { data: familyData } = await supabase
           .from('families')
@@ -196,28 +418,66 @@ export default function ReceiptsPage() {
     }
   }
 
-  const loadBudgets = async () => {
+  const loadBudgets = async (tokenOverride?: string, yearOverride?: number) => {
     try {
+      const token = tokenOverride || getToken()
+      const currentYear = new Date().getFullYear()
+      const years = [currentYear]
+      if (yearOverride && yearOverride !== currentYear) years.push(yearOverride)
+
+      const mergeBudgets = (lists: any[][]) => {
+        const map = new Map<number, any>()
+        lists.flat().forEach((budget) => {
+          const id = getBudgetId(budget)
+          if (id != null) map.set(id, budget)
+        })
+        return Array.from(map.values())
+      }
+
+      if (token) {
+        const results: any[][] = []
+        for (const year of years) {
+          const res = await fetch(`${apiBase}/api/budgets/family?year=${year}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          const data = res.ok ? await res.json() : []
+          results.push(data || [])
+        }
+        setBudgets(mergeBudgets(results))
+        return
+      }
+
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (!authUser) return
-      
+
       const { data: userData } = await supabase
         .from('users')
         .select('family_id')
         .eq('id', authUser.id)
         .single()
-      
+
       if (!userData?.family_id) {
         setBudgets([])
         return
       }
-      
-      const { data: budgetsData } = await supabase
-        .from('family_budgets')
-        .select('*')
-        .eq('family_id', userData.family_id)
-      
-      setBudgets(budgetsData || [])
+
+      const results: any[][] = []
+      for (const year of years) {
+        const { data: budgetsData } = await supabase
+          .from('family_budgets')
+          .select('*')
+          .eq('family_id', userData.family_id)
+          .eq('year', year)
+        results.push(budgetsData || [])
+      }
+
+      const merged = results.flat().filter(Boolean)
+      const map = new Map<number, any>()
+      merged.forEach((budget) => {
+        const id = getBudgetId(budget)
+        if (id != null) map.set(id, budget)
+      })
+      setBudgets(Array.from(map.values()))
     } catch (error: any) {
       console.error('Error cargando presupuestos:', error)
       setBudgets([])
@@ -239,6 +499,14 @@ export default function ReceiptsPage() {
 
   const handleAssignReceipt = (receipt: Receipt) => {
     setSelectedReceipt(receipt)
+    // Default: asignar al usuario actual para evitar “asignar a todos” por omisión.
+    setAssignForm({
+      family_budget_id: null,
+      target_user_id: user?.id ?? null,
+      percentage: 100,
+      user_percentages: {},
+      assignment_mode: 'percentage',
+    })
     setShowAssignModal(true)
   }
 
@@ -250,6 +518,78 @@ export default function ReceiptsPage() {
       const item = selectedReceipt.items?.find(i => i.id === itemId)
       if (!item) {
         alert(language === 'es' ? 'Item no encontrado' : 'Item not found')
+        return
+      }
+
+      const token = await getAuthToken()
+      if (token) {
+        const receiptDate = selectedReceipt.date || new Date().toISOString().split('T')[0]
+        const receiptTime = selectedReceipt.time || '00:00'
+        const txDate = `${receiptDate}T${receiptTime}:00`
+
+        const budgetMeta = (budgets || []).find((b: any) => {
+          const bid = b?.id || b?.family_budget_id || b?.family_budget?.id
+          return bid === budgetId
+        })
+        const resolvedCategory =
+          budgetMeta?.category || budgetMeta?.family_budget?.category || item.category || selectedReceipt.category
+        const resolvedSubcategory =
+          budgetMeta?.subcategory || budgetMeta?.family_budget?.subcategory || item.subcategory || selectedReceipt.subcategory
+
+        if (!resolvedCategory || !resolvedSubcategory) {
+          throw new Error(
+            language === 'es'
+              ? 'No se pudo determinar la categoría/subcategoría para crear la transacción. Selecciona una cuenta del presupuesto válida.'
+              : 'Could not determine category/subcategory to create the transaction. Please select a valid budget account.'
+          )
+        }
+
+        const txRes = await fetch(`${apiBase}/api/transactions/`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: item.amount,
+            date: txDate,
+            transaction_type: 'expense',
+            family_budget_id: budgetId,
+            merchant_or_beneficiary: selectedReceipt.merchant_or_beneficiary || item.description,
+            category: resolvedCategory,
+            subcategory: resolvedSubcategory,
+            concept: item.description,
+            currency: selectedReceipt.currency || 'MXN',
+          }),
+        })
+
+        if (!txRes.ok) {
+          const err = await txRes.json().catch(() => ({}))
+          throw new Error(apiErrorToMessage(err, language === 'es' ? 'Error al crear transacción' : 'Error creating transaction'))
+        }
+        const tx = await txRes.json()
+
+        const assignRes = await fetch(
+          `${apiBase}/api/receipts/items/${itemId}/assign?transaction_id=${encodeURIComponent(String(tx.id))}`,
+          {
+            method: 'PUT',
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        )
+        if (!assignRes.ok) {
+          const err = await assignRes.json().catch(() => ({}))
+          throw new Error(apiErrorToMessage(err, language === 'es' ? 'Error al asignar item' : 'Error assigning item'))
+        }
+
+        await loadReceipts(token)
+        await loadTransactions(token)
+
+        const updatedRes = await fetch(`${apiBase}/api/receipts/${selectedReceipt.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (updatedRes.ok) {
+          const updatedReceipt = await updatedRes.json()
+          setSelectedReceipt(updatedReceipt as Receipt)
+        }
+
+        alert(language === 'es' ? 'Item asignado exitosamente' : 'Item assigned successfully')
         return
       }
 
@@ -322,6 +662,8 @@ export default function ReceiptsPage() {
     }
 
     try {
+      const token = await getAuthToken()
+
       // Si el modo es "by_item", asignar cada item individualmente
       if (assignForm.assignment_mode === 'by_item') {
         const itemsToAssign = selectedReceipt.items?.filter(item => !item.assigned_transaction_id) || []
@@ -345,6 +687,49 @@ export default function ReceiptsPage() {
           assignment_mode: 'percentage'
         })
         alert(language === 'es' ? `Recibo asignado: ${itemsToAssign.length} items asignados individualmente` : `Receipt assigned: ${itemsToAssign.length} items assigned individually`)
+        return
+      }
+
+      // Modo porcentaje: backend (si hay token)
+      if (token) {
+        const body = {
+          transaction_id: transactionId,
+          family_budget_id: assignForm.family_budget_id,
+          target_user_id: assignForm.target_user_id && assignForm.target_user_id !== -1 ? assignForm.target_user_id : null,
+          percentage: assignForm.percentage,
+          user_percentages: assignForm.user_percentages,
+          assign_to_all: assignForm.target_user_id === -1,
+        }
+        const res = await fetch(`${apiBase}/api/receipts/${selectedReceipt.id}/assign`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          throw new Error(apiErrorToMessage(err, language === 'es' ? 'Error al asignar recibo' : 'Error assigning receipt'))
+        }
+
+        await loadReceipts(token)
+        await loadTransactions(token)
+
+        const updatedRes = await fetch(`${apiBase}/api/receipts/${selectedReceipt.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (updatedRes.ok) {
+          const updatedReceipt = await updatedRes.json()
+          setSelectedReceipt(updatedReceipt as Receipt)
+        }
+
+        setShowAssignModal(false)
+        setAssignForm({
+          family_budget_id: null,
+          target_user_id: null,
+          percentage: 100,
+          user_percentages: {},
+          assignment_mode: 'percentage',
+        })
+        alert(language === 'es' ? 'Recibo asignado exitosamente.' : 'Receipt assigned successfully.')
         return
       }
 
@@ -406,6 +791,22 @@ export default function ReceiptsPage() {
 
   const handleAddItem = async (receiptId: number, description: string, amount: number) => {
     try {
+      const token = getToken()
+      if (token) {
+        const res = await fetch(`${apiBase}/api/receipts/${receiptId}/items`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ description, amount }),
+        })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          throw new Error(err.detail || 'Error al agregar item')
+        }
+        await loadReceipts(token)
+        alert(language === 'es' ? 'Item agregado exitosamente' : 'Item added successfully')
+        return
+      }
+
       const { error: insertError } = await supabase
         .from('receipt_items')
         .insert({
@@ -438,7 +839,7 @@ export default function ReceiptsPage() {
         item.description.replace(/"/g, '""'),
         item.quantity ?? '',
         item.unit_price ?? '',
-        item.amount ?? 0,
+        exportAmountCell(item),
       ])
 
       let csv = headers.join(',') + '\n'
@@ -470,7 +871,7 @@ export default function ReceiptsPage() {
           <td>${item.description}</td>
           <td style="text-align: right;">${item.quantity ?? '-'}</td>
           <td style="text-align: right;">${item.unit_price != null ? formatCurrency(item.unit_price, language, false) : '-'}</td>
-          <td style="text-align: right;">${formatCurrency(item.amount || 0, language, false)}</td>
+          <td style="text-align: right;">${displayAmount(item)}</td>
         </tr>
       `).join('')
 
@@ -541,7 +942,7 @@ export default function ReceiptsPage() {
           <td>${item.description}</td>
           <td style="text-align: right;">${item.quantity ?? '-'}</td>
           <td style="text-align: right;">${item.unit_price != null ? formatCurrency(item.unit_price, language, false) : '-'}</td>
-          <td style="text-align: right;">${formatCurrency(item.amount || 0, language, false)}</td>
+          <td style="text-align: right;">${displayAmount(item)}</td>
         </tr>
       `).join('')
 
@@ -749,29 +1150,72 @@ export default function ReceiptsPage() {
                 <h4 className="font-semibold text-sap-text mb-4">
                   {language === 'es' ? 'Información del Recibo' : 'Receipt Information'}
                 </h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="space-y-1">
-                    <span className="text-sap-text-secondary block">{language === 'es' ? 'Fecha:' : 'Date:'}</span>
-                    <span className="text-sap-text">
-                      {selectedReceipt.date 
-                        ? format(new Date(selectedReceipt.date + 'T' + (selectedReceipt.time || '00:00')), 'dd/MM/yyyy HH:mm', { locale: language === 'es' ? es : enUS })
-                        : format(new Date(selectedReceipt.created_at), 'dd/MM/yyyy', { locale: language === 'es' ? es : enUS })
-                      }
-                    </span>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-sap-text-secondary block">{language === 'es' ? 'Comercio:' : 'Merchant:'}</span>
-                    <span className="text-sap-text">{selectedReceipt.merchant_or_beneficiary || '-'}</span>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-sap-text-secondary block">{language === 'es' ? 'Monto Total:' : 'Total Amount:'}</span>
-                    <span className="text-sap-text font-semibold">{formatCurrency(selectedReceipt.amount, language, false)}</span>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-sap-text-secondary block">{language === 'es' ? 'Categoría:' : 'Category:'}</span>
-                    <span className="text-sap-text">{selectedReceipt.category || '-'}</span>
-                  </div>
-                </div>
+                {(() => {
+                  const itemsSum = (selectedReceipt.items || []).reduce((sum, it) => sum + (it.amount || 0), 0)
+                  const diff = (selectedReceipt.amount || 0) - itemsSum
+                  const diffAbs = Math.abs(diff)
+                  const lineMismatches = (selectedReceipt.items || []).filter((it) => {
+                    if (it.quantity == null || it.unit_price == null) return false
+                    const expected = (it.quantity || 0) * (it.unit_price || 0)
+                    // Tolerancia por redondeos
+                    return Math.abs(expected - (it.amount || 0)) > 0.05
+                  }).length
+
+                  return (
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="space-y-1">
+                        <span className="text-sap-text-secondary block">{language === 'es' ? 'Fecha:' : 'Date:'}</span>
+                        <span className="text-sap-text">
+                          {selectedReceipt.date
+                            ? format(new Date(selectedReceipt.date + 'T' + (selectedReceipt.time || '00:00')), 'dd/MM/yyyy HH:mm', {
+                                locale: language === 'es' ? es : enUS,
+                              })
+                            : format(new Date(selectedReceipt.created_at), 'dd/MM/yyyy', { locale: language === 'es' ? es : enUS })}
+                        </span>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-sap-text-secondary block">{language === 'es' ? 'Comercio:' : 'Merchant:'}</span>
+                        <span className="text-sap-text">{selectedReceipt.merchant_or_beneficiary || '-'}</span>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-sap-text-secondary block">{language === 'es' ? 'Monto Total:' : 'Total Amount:'}</span>
+                        <span className="text-sap-text font-semibold">{formatCurrency(selectedReceipt.amount, language, false)}</span>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-sap-text-secondary block">{language === 'es' ? 'Categoría:' : 'Category:'}</span>
+                        <span className="text-sap-text">{selectedReceipt.category || '-'}</span>
+                      </div>
+                      {receiptIsFood && (
+                        <div className="space-y-1">
+                          <span className="text-sap-text-secondary block">
+                            {language === 'es' ? 'Tipo detectado:' : 'Detected type:'}
+                          </span>
+                          <span className="text-sap-success font-semibold">
+                            {language === 'es' ? 'Alimentos' : 'Food'}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="space-y-1">
+                        <span className="text-sap-text-secondary block">{language === 'es' ? 'Suma de items:' : 'Items sum:'}</span>
+                        <span className="text-sap-text font-semibold">{formatCurrency(itemsSum, language, false)}</span>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-sap-text-secondary block">{language === 'es' ? 'Diferencia (Total - Items):' : 'Difference (Total - Items):'}</span>
+                        <span className={`font-semibold ${diffAbs < 0.01 ? 'text-sap-success' : 'text-sap-danger'}`}>
+                          {formatCurrency(diff, language, false)}
+                        </span>
+                        {lineMismatches > 0 && (
+                          <div className="text-xs text-sap-danger mt-1">
+                            {language === 'es'
+                              ? `Renglones con aritmética inconsistente: ${lineMismatches}`
+                              : `Lines with inconsistent arithmetic: ${lineMismatches}`}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })()}
               </div>
 
               {/* Asignar recibo completo */}
@@ -796,18 +1240,20 @@ export default function ReceiptsPage() {
                     required
                   >
                     <option value="">{language === 'es' ? 'Selecciona una cuenta del presupuesto' : 'Select a budget account'}</option>
-                    {budgets.length === 0 ? (
+                    {sortedBudgets.length === 0 ? (
                       <option value="" disabled>{language === 'es' ? 'No hay presupuestos disponibles' : 'No budgets available'}</option>
                     ) : (
-                      budgets.map((b) => {
-                        // FamilyBudget tiene id, category, subcategory directamente
-                        // UserBudget tiene family_budget_id y family_budget relación
-                        const budgetId = b.id || b.family_budget_id || b.family_budget?.id
-                        const category = b.category || b.family_budget?.category || 'N/A'
-                        const subcategory = b.subcategory || b.family_budget?.subcategory || 'N/A'
+                      sortedBudgets.map((b) => {
+                        const budgetId = getBudgetId(b)
+                        const category = getBudgetCategory(b) || 'N/A'
+                        const subcategory = getBudgetSubcategory(b) || 'N/A'
+                        const yearLabel = getBudgetYear(b)
+                        const isPreferred =
+                          preferredSet.size > 0 &&
+                          (preferredSet.has(normalizeText(category)) || preferredSet.has(normalizeText(subcategory)))
                         return (
-                          <option key={b.id} value={budgetId}>
-                            {category} - {subcategory}
+                          <option key={budgetId} value={budgetId}>
+                            {category} - {subcategory}{yearLabel ? ` (${yearLabel})` : ''}{isPreferred ? ' · Sugerido' : ''}
                           </option>
                         )
                       })
@@ -966,53 +1412,74 @@ export default function ReceiptsPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-sap-border">
-                      {selectedReceipt.items?.map((item, idx) => (
-                        <tr key={item.id ?? idx} className="hover:bg-sap-bgHover">
-                          <td className="px-3 py-2 text-right text-sap-text-tertiary">#{idx + 1}</td>
-                          <td className="px-3 py-2 text-sap-text break-words">{item.description}</td>
-                          <td className="px-3 py-2 text-right text-sap-text">{item.quantity ?? '-'}</td>
-                          <td className="px-3 py-2 text-right text-sap-text">
-                            {item.unit_price != null ? formatCurrency(item.unit_price, language, false) : '-'}
-                          </td>
-                          <td className="px-3 py-2 text-right text-sap-text font-semibold">
-                            {formatCurrency(item.amount || 0, language, false)}
-                          </td>
-                          <td className="px-3 py-2 text-right">
-                            {assignForm.assignment_mode === 'by_item' && !item.assigned_transaction_id ? (
-                              <select
-                                className="sap-input text-xs min-w-[150px]"
-                                onChange={(e) => {
-                                  if (e.target.value) {
-                                    handleAssignItem(item.id, parseInt(e.target.value))
-                                  }
-                                }}
-                              >
-                                <option value="">{language === 'es' ? 'Asignar...' : 'Assign...'}</option>
-                                {budgets.length > 0 ? (
-                                  budgets.map((b) => {
-                                    const budgetId = b.id || b.family_budget_id || b.family_budget?.id
-                                    const category = b.category || b.family_budget?.category || 'N/A'
-                                    const subcategory = b.subcategory || b.family_budget?.subcategory || 'N/A'
-                                    return (
-                                      <option key={b.id} value={budgetId}>
-                                        {category} - {subcategory}
-                                      </option>
-                                    )
-                                  })
-                                ) : (
-                                  <option value="" disabled>{language === 'es' ? 'No hay presupuestos disponibles' : 'No budgets available'}</option>
-                                )}
-                              </select>
-                            ) : (
-                              item.assigned_transaction_id && (
-                                <span className="text-xs text-green-600">
-                                  {language === 'es' ? 'Asignado a #' : 'Assigned to #'}{item.assigned_transaction_id}
-                                </span>
-                              )
-                            )}
-                          </td>
-                        </tr>
-                      ))}
+                      {selectedReceipt.items?.map((item, idx) => {
+                        const n = parseNotes(item.notes)
+                        const isPlaceholder = n?.line_type === 'placeholder' || n?.is_placeholder === true
+                        const isAdjustment = n?.line_type === 'adjustment' || n?.is_adjustment === true
+                        const amountLegible = n?.amount_legible
+                        const rowClass = isAdjustment
+                          ? 'bg-sap-bgSecondary'
+                          : (isPlaceholder ? 'opacity-75 italic' : '')
+                        const placeholderIdx = typeof n?.placeholder_idx === 'number' ? n.placeholder_idx : null
+                        const placeholderTotal = typeof n?.placeholder_total === 'number' ? n.placeholder_total : null
+                        const description = isPlaceholder && placeholderIdx && placeholderTotal
+                          ? (language === 'es'
+                              ? `No legible (faltante ${placeholderIdx}/${placeholderTotal})`
+                              : `Illegible (missing ${placeholderIdx}/${placeholderTotal})`)
+                          : item.description
+
+                        return (
+                          <tr key={item.id ?? idx} className={`hover:bg-sap-bgHover ${rowClass}`}>
+                            <td className="px-3 py-2 text-right text-sap-text-tertiary">#{idx + 1}</td>
+                            <td className="px-3 py-2 text-sap-text break-words">{description}</td>
+                            <td className="px-3 py-2 text-right text-sap-text">{item.quantity ?? '-'}</td>
+                            <td className="px-3 py-2 text-right text-sap-text">
+                              {item.unit_price != null ? formatCurrency(item.unit_price, language, false) : '-'}
+                            </td>
+                            <td className="px-3 py-2 text-right text-sap-text font-semibold">
+                              {amountLegible === false ? (language === 'es' ? 'No legible' : 'Illegible') : formatCurrency(item.amount || 0, language, false)}
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              {assignForm.assignment_mode === 'by_item' && !item.assigned_transaction_id ? (
+                                <select
+                                  className="sap-input text-xs min-w-[150px]"
+                                  onChange={(e) => {
+                                    if (e.target.value) {
+                                      handleAssignItem(item.id, parseInt(e.target.value))
+                                    }
+                                  }}
+                                >
+                                  <option value="">{language === 'es' ? 'Asignar...' : 'Assign...'}</option>
+                                  {sortedBudgets.length > 0 ? (
+                                    sortedBudgets.map((b) => {
+                                      const budgetId = getBudgetId(b)
+                                      const category = getBudgetCategory(b) || 'N/A'
+                                      const subcategory = getBudgetSubcategory(b) || 'N/A'
+                                      const yearLabel = getBudgetYear(b)
+                                      const isPreferred =
+                                        preferredSet.size > 0 &&
+                                        (preferredSet.has(normalizeText(category)) || preferredSet.has(normalizeText(subcategory)))
+                                      return (
+                                        <option key={budgetId} value={budgetId}>
+                                          {category} - {subcategory}{yearLabel ? ` (${yearLabel})` : ''}{isPreferred ? ' · Sugerido' : ''}
+                                        </option>
+                                      )
+                                    })
+                                  ) : (
+                                    <option value="" disabled>{language === 'es' ? 'No hay presupuestos disponibles' : 'No budgets available'}</option>
+                                  )}
+                                </select>
+                              ) : (
+                                item.assigned_transaction_id && (
+                                  <span className="text-xs text-green-600">
+                                    {language === 'es' ? 'Asignado a #' : 'Assigned to #'}{item.assigned_transaction_id}
+                                  </span>
+                                )
+                              )}
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
                 </div>

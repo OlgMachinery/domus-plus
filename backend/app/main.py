@@ -1,7 +1,19 @@
 from fastapi import FastAPI
+import os
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 from app.database import engine, Base
-from app.routers import users, families, budgets, transactions
+from app.routers import users, families, transactions
+
+# Presupuestos (budgets) - puede fallar por ForwardRef en schemas
+try:
+    from app.routers import budgets
+    BUDGETS_AVAILABLE = True
+except ImportError as e:
+    budgets = None
+    BUDGETS_AVAILABLE = False
+    print(f"⚠️  Router 'budgets' no disponible: {e}")
 
 # Importar routers opcionales (requieren dependencias adicionales)
 try:
@@ -20,10 +32,27 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS - Configuración
+# Static files: uploads (imágenes de recibos, etc.)
+try:
+    backend_dir = Path(__file__).resolve().parent.parent  # .../backend
+    uploads_dir = backend_dir / "uploads"
+    uploads_dir.mkdir(parents=True, exist_ok=True)
+    app.mount("/uploads", StaticFiles(directory=str(uploads_dir)), name="uploads")
+except Exception as e:
+    print(f"⚠️  No se pudo montar /uploads: {e}")
+
+# CORS - Orígenes permitidos (frontend en distintos puertos)
 origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:3004",
+    "http://127.0.0.1:3004",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+    "http://localhost:3002",
+    "http://127.0.0.1:3002",
+    "http://localhost:3003",
+    "http://127.0.0.1:3003",
 ]
 
 app.add_middleware(
@@ -36,8 +65,16 @@ app.add_middleware(
 
 # Routers
 app.include_router(users.router, prefix="/api/users", tags=["users"])
+try:
+    from app.routers import dashboard
+    app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
+except ImportError:
+    pass
 app.include_router(families.router, prefix="/api/families", tags=["families"])
-app.include_router(budgets.router, prefix="/api/budgets", tags=["budgets"])
+if BUDGETS_AVAILABLE and budgets is not None:
+    app.include_router(budgets.router, prefix="/api/budgets", tags=["budgets"])
+else:
+    print("⚠️  Router 'budgets' no incluido (import falló). Revisa schemas.py para ForwardRefs.")
 app.include_router(transactions.router, prefix="/api/transactions", tags=["transactions"])
 
 # Router de presupuestos personales
@@ -96,10 +133,18 @@ try:
 except ImportError as e:
     print(f"⚠️  Custom Categories router no disponible: {e}")
 
+# Control para habilitar/deshabilitar temporalmente el router de WhatsApp desde entorno
+DISABLE_WHATSAPP = os.getenv("DISABLE_WHATSAPP", "0").lower() in ("1", "true", "yes")
+
 # Routers opcionales (requieren dependencias adicionales)
-if WHATSAPP_AVAILABLE:
+if WHATSAPP_AVAILABLE and not DISABLE_WHATSAPP:
     app.include_router(whatsapp.router, prefix="/api/whatsapp", tags=["whatsapp"])
     app.include_router(receipts.router, prefix="/api/receipts", tags=["receipts"])
+else:
+    if DISABLE_WHATSAPP:
+        print("⚠️  WhatsApp router DESHABILITADO por DISABLE_WHATSAPP en entorno")
+    else:
+        print("⚠️  WhatsApp y Receipts routers no disponibles (instala: pip install twilio openai)")
 
 @app.get("/")
 async def root():

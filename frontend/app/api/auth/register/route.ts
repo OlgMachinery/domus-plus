@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createServerClient } from '@supabase/ssr'
+
+export const maxDuration = 25
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { email, password, phone, name } = body
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (!url || !key) {
+      return NextResponse.json(
+        { detail: 'Configuración de Supabase faltante. Revisa las variables de entorno en Vercel.' },
+        { status: 500 }
+      )
+    }
 
-    // Validaciones
+    const body = await request.json().catch(() => ({}))
+    const { email, password, phone, name } = body || {}
+
     if (!email || !password || !phone || !name) {
       return NextResponse.json(
         { detail: 'Faltan campos requeridos' },
@@ -28,7 +38,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = await createClient()
+    const res = NextResponse.next({ request })
+    const supabase = createServerClient(url, key, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet: Array<{ name: string; value: string; options?: Record<string, unknown> }>) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            res.cookies.set(name, value, options ?? {})
+          )
+        },
+      },
+    })
 
     // Crear usuario en Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -56,12 +78,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Crear registro en tabla users
+    // Intentar crear registro en tabla users
+    // Primero intentamos INSERT directo (más simple y confiable)
     const { data: userData, error: userError } = await supabase
       .from('users')
       .insert({
         id: authData.user.id,
-        email,
+        email: email.trim(),
         phone: phone.trim(),
         name: name.trim(),
         is_active: true,
@@ -71,19 +94,40 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (userError) {
-      // Si falla, intentar eliminar el usuario de auth
-      await supabase.auth.admin.deleteUser(authData.user.id)
+      console.error('Error al crear perfil de usuario:', userError)
+      console.error('Usuario de auth creado pero perfil falló:', authData.user.id)
+      
+      // Mensaje más específico según el tipo de error
+      let errorMessage = userError.message || 'Error desconocido'
+      let errorDetail = ''
+      
+      if (errorMessage.includes('row-level security') || errorMessage.includes('RLS') || errorMessage.includes('policy')) {
+        errorDetail = 'Error de permisos (RLS): Las políticas de seguridad están bloqueando el registro. Ejecuta el SQL de "supabase/verificar-y-fix-rls-registro.sql" en Supabase SQL Editor.'
+      } else if (errorMessage.includes('duplicate') || errorMessage.includes('unique') || errorMessage.includes('already exists')) {
+        errorDetail = 'El usuario ya existe en la base de datos.'
+      } else if (errorMessage.includes('Database error')) {
+        errorDetail = 'Error de base de datos. Verifica que las políticas RLS estén configuradas correctamente ejecutando "supabase/verificar-y-fix-rls-registro.sql" en Supabase.'
+      } else {
+        errorDetail = `Error técnico: ${errorMessage}`
+      }
+      
       return NextResponse.json(
-        { detail: `Error al crear perfil: ${userError.message}` },
+        { 
+          detail: `Error al crear perfil: ${errorDetail}. El usuario fue creado en auth.users pero no en public.users.`,
+          error_code: userError.code,
+          error_message: userError.message
+        },
         { status: 500 }
       )
     }
 
+    // Usuario creado exitosamente
     return NextResponse.json(userData, { status: 201 })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Error desconocido'
     console.error('Error en registro:', error)
     return NextResponse.json(
-      { detail: `Error al registrar usuario: ${error.message}` },
+      { detail: `Error al registrar: ${msg}. Si ves "fetch failed" en el navegador, abre en otra pestaña: /api/health para comprobar si el servidor responde.` },
       { status: 500 }
     )
   }

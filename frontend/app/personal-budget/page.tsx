@@ -8,6 +8,8 @@ import { PlusIcon, XIcon, CameraIcon } from '@/lib/icons'
 import SAPLayout from '@/components/SAPLayout'
 import { formatCurrency } from '@/lib/currency'
 import { getLanguage, setLanguage, useTranslation, type Language } from '@/lib/i18n'
+import { safePushLogin, setReceiptProcessing } from '@/lib/receiptProcessing'
+import { getAuthHeaders, getToken } from '@/lib/auth'
 import { format } from 'date-fns'
 import { es, enUS } from 'date-fns/locale'
 
@@ -36,6 +38,8 @@ export default function PersonalBudgetPage() {
   const [language, setLanguageState] = useState<Language>('es')
   const [mounted, setMounted] = useState(false)
   const t = useTranslation(language)
+  const backendUrl = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_URL) || ''
+  const apiBase = backendUrl.replace(/\/$/, '')
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [budgets, setBudgets] = useState<PersonalBudget[]>([])
@@ -45,6 +49,7 @@ export default function PersonalBudgetPage() {
   const [selectedBudgetForUpload, setSelectedBudgetForUpload] = useState<PersonalBudget | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadFiles, setUploadFiles] = useState<File[]>([])
+  const [receiptExtractMode, setReceiptExtractMode] = useState<'precise' | 'fast' | 'text'>('precise')
   const [filterYear, setFilterYear] = useState(new Date().getFullYear())
   const [newBudget, setNewBudget] = useState({
     category: '',
@@ -66,9 +71,33 @@ export default function PersonalBudgetPage() {
 
   const loadUser = async () => {
     try {
+      const headers = await getAuthHeaders()
+      const hasAuth = typeof headers === 'object' && headers !== null && 'Authorization' in (headers as Record<string, string>)
+      if (hasAuth) {
+        const meRes = await fetch(`${apiBase}/api/users/me`, {
+          headers: headers as Record<string, string>,
+          credentials: 'include',
+        })
+        if (meRes.ok) {
+          const me = (await meRes.json()) as User
+          setUser(me)
+          const token = getToken()
+          if (token) {
+            await Promise.all([
+              loadCategories(token),
+              loadBudgets(token),
+            ])
+          }
+          return
+        }
+        if (meRes.status === 401) {
+          localStorage.removeItem('domus_token')
+        }
+      }
+
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (!authUser) {
-        router.push('/login')
+        safePushLogin(router, 'personal-budget: no supabase user')
         return
       }
       
@@ -94,70 +123,74 @@ export default function PersonalBudgetPage() {
       }
     } catch (error: any) {
       console.error('Error cargando usuario:', error)
-      router.push('/login')
+      // Si hay token backend, NO expulsar al usuario por fallas temporales.
+      const token = getToken()
+      if (!token) safePushLogin(router, 'personal-budget: loadUser error')
     } finally {
       setLoading(false)
     }
   }
 
-  const loadCategories = async () => {
+  const loadCategories = async (tokenOverride?: string) => {
     try {
+      const token = tokenOverride || getToken()
+      if (token) {
+        const response = await fetch(`${apiBase}/api/personal-budgets/categories`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (!response.ok) throw new Error('Error al cargar categorías')
+        const data = await response.json()
+        const list = (data && (data.categories || data)) || []
+        setCategories(list || [])
+        return
+      }
+
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (!authUser) return
-      
-      // Obtener categorías únicas de las transacciones del usuario
-      const { data: transactions } = await supabase
-        .from('transactions')
-        .select('category, subcategory')
-        .eq('user_id', authUser.id)
-      
-      if (transactions) {
-        // Agrupar por categoría y subcategorías
-        const categoryMap = new Map<string, Set<string>>()
-        transactions.forEach(t => {
-          if (t.category) {
-            if (!categoryMap.has(t.category)) {
-              categoryMap.set(t.category, new Set())
-            }
-            if (t.subcategory) {
-              categoryMap.get(t.category)!.add(t.subcategory)
-            }
-          }
-        })
-        
-        const categoriesList: CategoryOption[] = Array.from(categoryMap.entries()).map(([category, subcategories]) => ({
-          category,
-          subcategories: Array.from(subcategories).sort()
-        }))
-        
-        setCategories(categoriesList)
-      } else {
-        setCategories([])
+
+      // Usar la API route de Next.js
+      const response = await fetch('/api/personal-budgets/categories', {
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        throw new Error('Error al cargar categorías')
       }
+
+      const data = await response.json()
+      setCategories(data || [])
     } catch (error: any) {
       console.error('Error cargando categorías:', error)
       setCategories([])
     }
   }
 
-  const loadBudgets = async () => {
+  const loadBudgets = async (tokenOverride?: string) => {
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      if (!authUser) return
-      
-      const { data: budgetsData, error } = await supabase
-        .from('personal_budgets')
-        .select('*')
-        .eq('user_id', authUser.id)
-        .eq('year', filterYear)
-        .order('created_at', { ascending: false })
-      
-      if (error) {
-        console.error('Error cargando presupuestos:', error)
-        setBudgets([])
+      const token = tokenOverride || getToken()
+      if (token) {
+        const response = await fetch(`${apiBase}/api/personal-budgets?year=${filterYear}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (!response.ok) throw new Error('Error al cargar presupuestos')
+        const budgetsData = await response.json()
+        setBudgets((budgetsData || []) as PersonalBudget[])
         return
       }
-      
+
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (!authUser) return
+
+      // Usar la API route de Next.js
+      const response = await fetch(`/api/personal-budgets?year=${filterYear}`, {
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        throw new Error('Error al cargar presupuestos')
+      }
+
+      const budgetsData = await response.json()
       setBudgets((budgetsData || []) as PersonalBudget[])
     } catch (error: any) {
       console.error('Error cargando presupuestos personales:', error)
@@ -184,6 +217,36 @@ export default function PersonalBudgetPage() {
     }
 
     try {
+      const token = getToken()
+      if (token) {
+        const response = await fetch(`${apiBase}/api/personal-budgets`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            category: newBudget.category,
+            subcategory: newBudget.subcategory,
+            year: newBudget.year,
+            total_amount: newBudget.total_amount,
+            monthly_amounts: newBudget.monthly_amounts,
+          }),
+        })
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.detail || 'Error al crear presupuesto')
+        }
+        await loadBudgets(token)
+        setShowCreateModal(false)
+        setNewBudget({
+          category: '',
+          subcategory: '',
+          year: new Date().getFullYear(),
+          total_amount: 0,
+          monthly_amounts: {},
+        })
+        alert(language === 'es' ? 'Presupuesto creado exitosamente' : 'Budget created successfully')
+        return
+      }
+
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (!authUser) {
         alert(language === 'es' ? 'No autenticado' : 'Not authenticated')
@@ -201,22 +264,25 @@ export default function PersonalBudgetPage() {
         return
       }
       
-      const { error } = await supabase
-        .from('personal_budgets')
-        .insert({
-          family_id: userData.family_id,
-          user_id: authUser.id,
+      // Usar la API route de Next.js
+      const response = await fetch('/api/personal-budgets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
           category: newBudget.category,
           subcategory: newBudget.subcategory,
           year: newBudget.year,
           total_amount: newBudget.total_amount,
           monthly_amounts: newBudget.monthly_amounts,
-          budget_type: 'personal',
-          target_user_id: authUser.id
-        })
+        }),
+      })
       
-      if (error) {
-        throw error
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || 'Error al crear presupuesto')
       }
       
       await loadBudgets()
@@ -241,16 +307,20 @@ export default function PersonalBudgetPage() {
     }
 
     try {
-      const { error } = await supabase
-        .from('personal_budgets')
-        .delete()
-        .eq('id', budgetId)
+      const token = getToken()
+      const url = token ? `${apiBase}/api/personal-budgets/${budgetId}` : `/api/personal-budgets/${budgetId}`
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        credentials: token ? undefined : 'include',
+      })
       
-      if (error) {
-        throw error
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || 'Error al eliminar presupuesto')
       }
       
-      await loadBudgets()
+      await loadBudgets(token || undefined)
       alert(language === 'es' ? 'Presupuesto eliminado exitosamente' : 'Budget deleted successfully')
     } catch (error: any) {
       console.error('Error eliminando presupuesto:', error)
@@ -265,23 +335,20 @@ export default function PersonalBudgetPage() {
     }
 
     setUploading(true)
+    setReceiptProcessing(true)
     try {
+      const token = getToken()
       const formData = new FormData()
       uploadFiles.forEach((f) => formData.append('files', f))
       formData.append('target_user_id', user?.id?.toString() || '')
+      formData.append('mode', receiptExtractMode)
 
-      // Usar la API Route de Next.js para procesar recibos
-      // Obtener el token de acceso de Supabase para enviarlo como header
-      const { data: { session } } = await supabase.auth.getSession()
-      const accessToken = session?.access_token
-      
-      const response = await fetch('/api/receipts/process', {
+      const processUrl = token ? `${apiBase}/api/receipts/process` : '/api/receipts/process'
+      const response = await fetch(processUrl, {
         method: 'POST',
         body: formData,
-        credentials: 'include', // IMPORTANTE: Incluir cookies en la petición
-        headers: accessToken ? {
-          'Authorization': `Bearer ${accessToken}`
-        } : undefined,
+        credentials: token ? undefined : 'include',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       })
 
       if (!response.ok) {
@@ -293,36 +360,21 @@ export default function PersonalBudgetPage() {
       const receipt = responseData.receipt
       
       if (receipt) {
-        // Asignar el recibo al presupuesto creando una transacción
-        const { data: { user: authUser } } = await supabase.auth.getUser()
-        if (authUser) {
-          const { data: transactionData } = await supabase
-            .from('transactions')
-            .insert({
-              user_id: authUser.id,
-              amount: receipt.amount,
-              date: receipt.date || new Date().toISOString().split('T')[0],
-              transaction_type: 'expense',
+        if (token) {
+          // Asignar recibo al presupuesto (backend crea la transacción)
+          await fetch(`${apiBase}/api/receipts/${receipt.id}/assign`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
               family_budget_id: selectedBudgetForUpload.id,
-              merchant_or_beneficiary: receipt.merchant_or_beneficiary,
-              category: receipt.category,
-              subcategory: receipt.subcategory,
-              concept: `Recibo #${receipt.id}`,
-              currency: receipt.currency || 'MXN'
-            })
-            .select()
-            .single()
-          
-          if (transactionData) {
-            await supabase
-              .from('receipts')
-              .update({ assigned_transaction_id: transactionData.id })
-              .eq('id', receipt.id)
-          }
+              target_user_id: user?.id || null,
+              percentage: 100,
+            }),
+          }).catch(() => {})
         }
       }
 
-      await loadBudgets()
+      await loadBudgets(token || undefined)
       setShowUploadModal(false)
       setUploadFiles([])
       setSelectedBudgetForUpload(null)
@@ -332,6 +384,7 @@ export default function PersonalBudgetPage() {
       alert(error.message || (language === 'es' ? 'Error al subir recibo' : 'Error uploading receipt'))
     } finally {
       setUploading(false)
+      setReceiptProcessing(false)
     }
   }
 
@@ -631,6 +684,28 @@ export default function PersonalBudgetPage() {
                   <div className="sap-input bg-sap-bgSecondary">
                     {selectedBudgetForUpload.category} - {selectedBudgetForUpload.subcategory}
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-sap-text-secondary mb-2">
+                    {language === 'es' ? 'Modo de extracción:' : 'Extraction mode:'}
+                  </label>
+                  <select
+                    value={receiptExtractMode}
+                    onChange={(e) => setReceiptExtractMode(e.target.value as 'precise' | 'fast' | 'text')}
+                    className="sap-input"
+                    disabled={uploading}
+                  >
+                    <option value="precise">
+                      {language === 'es' ? 'Preciso (más lento, mejor total)' : 'Precise (slower, better total)'}
+                    </option>
+                    <option value="fast">
+                      {language === 'es' ? 'Rápido (puede requerir correcciones)' : 'Fast (may need corrections)'}
+                    </option>
+                    <option value="text">
+                      {language === 'es' ? 'Texto (transcribir completo, más estable)' : 'Text (full transcription, more stable)'}
+                    </option>
+                  </select>
                 </div>
 
                 <div>

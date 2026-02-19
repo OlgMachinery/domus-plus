@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+const getAuthUser = async (supabase: Awaited<ReturnType<typeof createClient>>, request: NextRequest) => {
+  const authHeader = request.headers.get('authorization') || ''
+  const token = authHeader.toLowerCase().startsWith('bearer ') ? authHeader.slice(7) : null
+  if (token) {
+    const result = await supabase.auth.getUser(token)
+    if (!result.error && result.data.user) return result
+  }
+  return supabase.auth.getUser()
+}
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient(request)
 
     // Obtener usuario autenticado
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
+    const { data: { user: authUser }, error: authError } = await getAuthUser(supabase, request)
 
     if (authError || !authUser) {
       return NextResponse.json(

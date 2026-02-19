@@ -4,6 +4,7 @@ from app.database import get_db
 from app import models, schemas, auth
 from datetime import timedelta
 from pydantic import BaseModel
+from typing import Optional
 
 router = APIRouter()
 
@@ -54,6 +55,17 @@ def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
         db.rollback()
         print(f"Error al registrar usuario: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error al registrar usuario: {str(e)}")
+
+@router.get("/login")
+def login_get_info():
+    """Respuesta para GET /login: el login debe hacerse por POST con email y contraseña."""
+    return {
+        "detail": "El login es por POST. Envía JSON: { \"email\": \"tu@email.com\", \"password\": \"tu_contraseña\" }",
+        "method": "POST",
+        "body_example": {"email": "tu@email.com", "password": "tu_contraseña"},
+        "docs": "/docs",
+    }
+
 
 @router.post("/login", response_model=schemas.Token)
 def login_user(user_credentials: LoginRequest, db: Session = Depends(get_db)):
@@ -149,3 +161,209 @@ def get_user(user_id: int, db: Session = Depends(get_db), current_user: models.U
         user = current_user
     
     return user
+
+class CreateUserRequest(BaseModel):
+    email: str
+    password: str
+    name: str
+    phone: str
+    family_id: Optional[int] = None
+
+@router.post("/create")
+def create_user_by_admin(
+    user_data: CreateUserRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    """
+    Crea un nuevo usuario. Solo los administradores de familia pueden usar este endpoint.
+    Crea el usuario tanto en auth.users (Supabase) como en public.users (nuestra tabla).
+    """
+    try:
+        # Verificar que el usuario sea administrador
+        if not current_user.is_family_admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Solo los administradores de familia pueden crear usuarios"
+            )
+
+        # Validaciones
+        if len(user_data.password) < 6:
+            raise HTTPException(
+                status_code=400,
+                detail="La contraseña debe tener al menos 6 caracteres"
+            )
+
+        if not user_data.phone or len(user_data.phone.strip()) < 10:
+            raise HTTPException(
+                status_code=400,
+                detail="Teléfono inválido"
+            )
+
+        # Verificar si el email ya existe en Supabase
+        try:
+            from app.supabase_client import supabase_admin
+            
+            # Verificar email en Supabase
+            email_check = supabase_admin.table('users').select('id, email').eq('email', user_data.email.strip()).execute()
+            if email_check.data and len(email_check.data) > 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Email ya registrado"
+                )
+            
+            # Verificar teléfono en Supabase
+            phone_check = supabase_admin.table('users').select('id, phone').eq('phone', user_data.phone.strip()).execute()
+            if phone_check.data and len(phone_check.data) > 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Teléfono ya registrado"
+                )
+        except HTTPException:
+            raise
+        except ImportError:
+            # Si no hay Supabase, usar la BD local (fallback)
+            existing_user = db.query(models.User).filter(models.User.email == user_data.email).first()
+            if existing_user:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Email ya registrado"
+                )
+            existing_user = db.query(models.User).filter(models.User.phone == user_data.phone.strip()).first()
+            if existing_user:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Teléfono ya registrado"
+                )
+        except Exception as e:
+            print(f"⚠️  Error verificando usuario existente: {e}")
+            # Continuar de todas formas, Supabase rechazará si existe
+
+        # Usar el family_id del administrador si no se proporciona
+        target_family_id = user_data.family_id or current_user.family_id
+        if not target_family_id:
+            raise HTTPException(
+                status_code=400,
+                detail="El administrador no tiene familia asignada"
+            )
+
+        # Crear usuario en Supabase Auth usando service_role key
+        try:
+            from app.supabase_client import supabase_admin
+            
+            # Crear usuario en auth.users
+            auth_response = supabase_admin.auth.admin.create_user({
+                "email": user_data.email.strip(),
+                "password": user_data.password,
+                "email_confirm": True,  # Confirmar email automáticamente
+                "user_metadata": {
+                    "name": user_data.name.strip(),
+                    "phone": user_data.phone.strip(),
+                }
+            })
+
+            if not auth_response.user:
+                raise HTTPException(
+                    status_code=500,
+                    detail="No se pudo crear el usuario en Supabase Auth"
+                )
+
+            auth_user_id = auth_response.user.id
+
+        except ImportError:
+            # Si no hay cliente de Supabase configurado, crear solo en la BD local
+            print("⚠️  Supabase no configurado, creando usuario solo en BD local")
+            # Generar un UUID temporal (en producción esto debería venir de Supabase)
+            import uuid
+            auth_user_id = str(uuid.uuid4())
+        except Exception as e:
+            print(f"❌ Error creando usuario en Supabase Auth: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error al crear usuario en Supabase: {str(e)}"
+            )
+
+        # Crear usuario en nuestra tabla users (Supabase)
+        # En Supabase, el id es UUID y viene de auth.users
+        try:
+            # Usar Supabase directamente para insertar en public.users
+            from app.supabase_client import supabase_admin
+            
+            # Insertar en public.users usando el cliente de Supabase
+            user_data_dict = {
+                'id': str(auth_user_id),  # Asegurar que sea string (UUID)
+                'email': user_data.email.strip(),
+                'phone': user_data.phone.strip(),
+                'name': user_data.name.strip(),
+                'is_active': True,
+                'is_family_admin': False,
+                'family_id': target_family_id
+            }
+            
+            print(f"🔧 Intentando insertar usuario en public.users: {user_data_dict}")
+            
+            user_response = supabase_admin.table('users').insert(user_data_dict).execute()
+
+            # Verificar errores en la respuesta
+            if hasattr(user_response, 'error') and user_response.error:
+                error_msg = f"Error de Supabase: {user_response.error.message}"
+                print(f"❌ {error_msg}")
+                raise Exception(error_msg)
+
+            if not user_response.data or len(user_response.data) == 0:
+                raise HTTPException(
+                    status_code=500,
+                    detail="No se pudo crear el usuario en la tabla users (respuesta vacía)"
+                )
+
+            # Retornar el usuario creado
+            created_user = user_response.data[0]
+            print(f"✅ Usuario creado exitosamente: {created_user.get('email')}")
+            
+            # Retornar directamente el diccionario
+            return created_user
+        except HTTPException:
+            # Re-lanzar HTTPException sin modificar
+            raise
+        except Exception as e:
+            error_msg = str(e)
+            print(f"❌ Error al crear usuario en public.users: {error_msg}")
+            import traceback
+            traceback.print_exc()
+            
+            # Si falla, intentar eliminar el usuario de auth
+            try:
+                from app.supabase_client import supabase_admin
+                supabase_admin.auth.admin.delete_user(str(auth_user_id))
+                print(f"🗑️  Usuario eliminado de auth.users debido al error")
+            except Exception as delete_error:
+                print(f"⚠️  No se pudo eliminar usuario de auth.users: {delete_error}")
+            
+            # Mensaje de error más descriptivo
+            if "row-level security" in error_msg.lower() or "rls" in error_msg.lower():
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Error de permisos (RLS): Las políticas de seguridad están bloqueando la creación. Ejecuta el SQL de 'supabase/rls-admin-crear-usuarios.sql' en Supabase. Error: {error_msg}"
+                )
+            elif "duplicate" in error_msg.lower() or "unique" in error_msg.lower() or "already exists" in error_msg.lower():
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"El usuario ya existe en la base de datos. Error: {error_msg}"
+                )
+            else:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Error al crear usuario en la base de datos: {error_msg}"
+                )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"Error al crear usuario: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al crear usuario: {str(e)}"
+        )

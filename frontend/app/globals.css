@@ -2,150 +2,202 @@
 @tailwind components;
 @tailwind utilities;
 
-/* SAP-inspired professional design system */
+/* ==========================================================================
+   DOMUS+ — Sistema de diseño profesional (clase mundial)
+   ========================================================================== */
+
 @layer base {
   * {
     @apply border-sap-border;
   }
-  
-  body {
-    @apply bg-sap-bg text-sap-text font-sans antialiased;
-    font-family: 'Segoe UI', 'Arial', 'Helvetica', sans-serif;
-    font-size: 14px;
-    line-height: 1.5;
-  }
-  
-  h1, h2, h3, h4, h5, h6 {
-    @apply text-sap-text font-semibold;
-    color: #32363a;
-  }
-  
-  h1 {
-    font-size: 24px;
-    font-weight: 600;
-  }
-  
-  h2 {
-    font-size: 20px;
-    font-weight: 600;
-  }
-  
-  h3 {
-    font-size: 18px;
-    font-weight: 600;
-  }
-  
-  /* Smooth scrolling */
+
   html {
     scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-sap-bg text-sap-text antialiased;
+    font-family: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+  }
+
+  /* Selección de texto con color de marca */
+  ::selection {
+    @apply bg-sap-primary/20 text-sap-text;
+  }
+
+  /* Títulos: jerarquía tipográfica y espaciado */
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-sap-text font-semibold tracking-tight;
+    color: #1c1917;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    line-height: 2rem;
+    letter-spacing: -0.02em;
+    font-weight: 600;
+  }
+
+  h2 {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+    font-weight: 600;
+  }
+
+  h3 {
+    font-size: 1.125rem;
+    line-height: 1.5rem;
+    font-weight: 600;
+  }
+
+  /* Focus visible para accesibilidad (teclado) */
+  :focus-visible {
+    @apply outline-none ring-2 ring-sap-primary ring-offset-2 ring-offset-white;
   }
 }
 
-/* SAP-inspired components */
 @layer components {
-  /* Input fields estilo SAP */
+  /* ----- Inputs ----- */
   .sap-input {
-    @apply w-full px-3 py-2 text-sm bg-white border border-sap-border rounded;
-    @apply text-sap-text placeholder:text-sap-text-secondary;
-    @apply transition-all duration-150;
-    @apply focus:outline-none focus:ring-2 focus:ring-sap-primary focus:border-sap-primary;
+    @apply w-full px-3.5 py-2.5 text-sm bg-white border border-sap-border rounded-domus;
+    @apply text-sap-text placeholder:text-sap-text-tertiary/80;
+    @apply transition-all duration-200 ease-smooth;
+    @apply focus:outline-none focus:border-sap-primary focus:ring-2 focus:ring-sap-primary/20;
     @apply hover:border-sap-border-hover;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-sap-bg-hover;
     font-size: 14px;
+    min-height: 40px;
   }
-  
-  /* Buttons estilo SAP */
+
+  /* ----- Botones ----- */
   .sap-button {
-    @apply px-4 py-2 text-sm font-medium rounded;
-    @apply transition-all duration-150;
-    @apply focus:outline-none focus:ring-2 focus:ring-offset-1;
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-medium rounded-domus;
+    @apply transition-all duration-200 ease-smooth;
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none;
     font-size: 14px;
-    min-height: 36px;
+    min-height: 40px;
   }
-  
+
   .sap-button-primary {
-    @apply sap-button bg-sap-primary text-white;
-    @apply hover:bg-sap-primary-hover;
-    @apply focus:ring-sap-primary;
+    @apply sap-button bg-sap-primary text-white shadow-elevation-1;
+    @apply hover:bg-sap-primary-hover hover:shadow-elevation-2;
+    @apply active:scale-[0.99];
+    @apply focus-visible:ring-sap-primary/50;
     border: none;
   }
-  
+
   .sap-button-secondary {
     @apply sap-button bg-white text-sap-text border border-sap-border;
-    @apply hover:bg-sap-bg-hover;
-    @apply focus:ring-sap-border;
+    @apply hover:bg-sap-bg-hover hover:border-sap-border-hover;
+    @apply active:scale-[0.99];
+    @apply focus-visible:ring-sap-border;
   }
-  
+
   .sap-button-ghost {
     @apply sap-button bg-transparent text-sap-text-secondary;
-    @apply hover:bg-sap-bg-hover;
-    @apply focus:ring-sap-border;
+    @apply hover:bg-sap-bg-hover hover:text-sap-text;
+    @apply focus-visible:ring-sap-border;
   }
-  
-  /* Cards estilo SAP */
+
+  /* ----- Cards ----- */
   .sap-card {
-    @apply bg-white border border-sap-border rounded;
-    @apply shadow-sm;
+    @apply bg-white border border-sap-border rounded-domus-lg;
+    @apply shadow-elevation-1;
   }
-  
-  /* Badge estilo SAP */
+
+  .sap-card-hover {
+    @apply sap-card transition-shadow duration-200;
+    @apply hover:shadow-elevation-2;
+  }
+
+  /* ----- Badge ----- */
   .sap-badge {
-    @apply inline-flex items-center px-2 py-1 text-xs font-medium rounded;
-    @apply bg-sap-bg-secondary text-sap-text-secondary;
+    @apply inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-domus;
+    @apply bg-sap-bg-hover text-sap-text-secondary;
   }
-  
-  /* Divider estilo SAP */
+
+  /* ----- Divider ----- */
   .sap-divider {
     @apply border-t border-sap-border my-4;
   }
-  
-  /* Sidebar estilo SAP */
+
+  /* ----- Sidebar ----- */
   .sap-sidebar {
-    @apply bg-sap-sidebar border-r border-sap-border;
-    @apply min-h-screen;
+    @apply bg-sap-sidebar border-r border-white/10 min-h-screen;
   }
-  
-  /* Page container estilo SAP */
+
+  /* ----- Page container (contenido principal) ----- */
   .sap-page {
     @apply w-full px-4 py-4;
   }
-  
-  /* Table estilo SAP */
+
+  .sap-page-container {
+    @apply max-w-7xl mx-auto;
+  }
+
+  /* ----- Section title (títulos de sección en páginas) ----- */
+  .sap-section-title {
+    @apply text-title font-semibold text-sap-text tracking-tight mb-1;
+  }
+
+  .sap-section-subtitle {
+    @apply text-body text-sap-text-secondary;
+  }
+
+  /* ----- Tables ----- */
   .sap-table {
-    @apply w-full border-collapse;
+    @apply w-full border-collapse text-left;
   }
-  
+
   .sap-table thead {
-    @apply bg-sap-table-header border-b-2 border-sap-border;
+    @apply bg-sap-table-header border-b border-sap-border;
   }
-  
-  .sap-table th {
-    @apply px-3 py-2 text-left text-xs font-semibold text-sap-text-secondary uppercase;
-    @apply border-b border-sap-border;
-    background-color: #f5f6f7;
+
+  .sap-table th,
+  .sap-table-header {
+    @apply px-4 py-3 text-xs font-semibold text-sap-text-secondary uppercase tracking-wider;
+    background-color: #fafaf9;
   }
-  
-  .sap-table td {
-    @apply px-3 py-2 text-sm text-sap-text;
-    @apply border-b border-sap-border;
+
+  .sap-table td,
+  .sap-table-cell {
+    @apply px-4 py-3 text-sm text-sap-text border-b border-sap-border;
   }
-  
+
   .sap-table tbody tr {
-    @apply hover:bg-sap-bg-hover transition-colors;
+    @apply hover:bg-sap-bg-hover/80 transition-colors duration-150;
   }
-  
-  /* Toolbar estilo SAP */
-  .sap-toolbar {
-    @apply bg-white border-b border-sap-border px-4 py-3;
-    @apply flex items-center justify-between;
-    @apply shadow-sm;
-  }
-  
-  /* Mejoras para tablas */
+
   .sap-table tbody tr:last-child td {
     @apply border-b-0;
   }
-  
+
   .sap-table tbody tr td {
     @apply align-top;
+  }
+
+  /* ----- Toolbar ----- */
+  .sap-toolbar {
+    @apply bg-white/95 backdrop-blur-sm border-b border-sap-border;
+    @apply px-6 py-3 flex items-center justify-between;
+    @apply shadow-elevation-1;
+  }
+
+  /* ----- Alertas / mensajes ----- */
+  .sap-alert-error {
+    @apply bg-red-50 text-sap-danger border border-red-200 rounded-domus px-3 py-2.5 text-sm;
+  }
+
+  .sap-alert-success {
+    @apply bg-green-50 text-sap-success border border-green-200 rounded-domus px-3 py-2.5 text-sm;
+  }
+
+  .sap-alert-warning {
+    @apply bg-amber-50 text-sap-warning border border-amber-200 rounded-domus px-3 py-2.5 text-sm;
   }
 }

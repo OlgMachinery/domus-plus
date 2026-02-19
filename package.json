@@ -1,0 +1,10 @@
+{
+  "name": "domus-plus",
+  "private": true,
+  "scripts": {
+    "report:schema": "node scripts/export-schema-report.js"
+  },
+  "devDependencies": {
+    "pg": "^8.11.3"
+  }
+}

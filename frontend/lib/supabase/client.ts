@@ -4,8 +4,10 @@ import { createBrowserClient } from '@supabase/ssr'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
-// Validación y diagnóstico
-if (typeof window !== 'undefined') {
+const isDev = process.env.NODE_ENV === 'development'
+
+// Validación y diagnóstico (solo en desarrollo)
+if (typeof window !== 'undefined' && isDev) {
   if (!supabaseUrl || !supabaseAnonKey) {
     console.error('❌ Faltan las variables de entorno de Supabase')
     console.error('   Crea un archivo .env.local en frontend/ con:')

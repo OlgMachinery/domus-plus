@@ -3,6 +3,8 @@
 echo "🔄 Reiniciando servidores DOMUS+..."
 echo ""
 
+BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Detener procesos en puerto 3000 (Frontend)
 echo "🔍 Buscando proceso en el puerto 3000 (Frontend)..."
 PID_FRONTEND=$(lsof -ti :3000 2>/dev/null)
@@ -34,7 +36,7 @@ sleep 2
 
 echo ""
 echo "🚀 Iniciando Backend..."
-cd "$(dirname "$0")/backend"
+cd "$BASE_DIR/backend"
 
 # Verificar si existe el entorno virtual
 if [ ! -d "venv" ]; then
@@ -56,7 +58,7 @@ echo "   PID: $BACKEND_PID"
 
 echo ""
 echo "🚀 Iniciando Frontend..."
-cd "$(dirname "$0")/frontend"
+cd "$BASE_DIR/frontend"
 
 # Verificar si node_modules existe
 if [ ! -d "node_modules" ]; then

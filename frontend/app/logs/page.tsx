@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import type { User } from '@/lib/types'
 import SAPLayout from '@/components/SAPLayout'
+import { safePushLogin } from '@/lib/receiptProcessing'
+import { getAuthHeaders, getToken } from '@/lib/auth'
 
 interface ActivityLog {
   id: number
@@ -29,6 +31,8 @@ export default function LogsPage() {
   const [logs, setLogs] = useState<ActivityLog[]>([])
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<User | null>(null)
+  const backendUrl = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_URL) || ''
+  const apiBase = backendUrl.replace(/\/$/, '')
   const [filters, setFilters] = useState({
     action_type: '',
     entity_type: '',
@@ -44,9 +48,28 @@ export default function LogsPage() {
 
   const loadUser = async () => {
     try {
+        const headers = await getAuthHeaders()
+        const hasAuth = typeof headers === 'object' && headers !== null && 'Authorization' in (headers as Record<string, string>)
+        if (hasAuth) {
+          const res = await fetch(`${apiBase}/api/users/me`, {
+            headers: headers as Record<string, string>,
+            credentials: 'include',
+          })
+        if (res.ok) {
+          const me = await res.json()
+          setUser(me as User)
+          return
+        }
+        if (res.status === 401) {
+          localStorage.removeItem('domus_token')
+          safePushLogin(router, 'logs: backend token invalid')
+        }
+        return
+      }
+
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (!authUser) {
-        router.push('/login')
+        safePushLogin(router, 'logs: no supabase user')
         return
       }
       
@@ -61,13 +84,41 @@ export default function LogsPage() {
       }
     } catch (error) {
       console.error('Error cargando usuario:', error)
-      router.push('/login')
+      const token = getToken()
+      if (!token) safePushLogin(router, 'logs: loadUser error')
     }
   }
 
   const loadLogs = async () => {
     try {
       setLoading(true)
+
+      const token = getToken()
+      if (token) {
+        const params = new URLSearchParams()
+        params.set('skip', '0')
+        params.set('limit', '500')
+        if (filters.action_type) params.set('action_type', filters.action_type)
+        if (filters.entity_type) params.set('entity_type', filters.entity_type)
+        if (filters.days) {
+          const startDate = new Date()
+          startDate.setDate(startDate.getDate() - filters.days)
+          params.set('start_date', startDate.toISOString())
+        }
+        const res = await fetch(`${apiBase}/api/activity-logs?${params.toString()}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          console.error('Error cargando logs (backend):', err)
+          setLogs([])
+          return
+        }
+        const data = await res.json()
+        setLogs((data || []) as ActivityLog[])
+        return
+      }
+
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (!authUser) {
         setLogs([])

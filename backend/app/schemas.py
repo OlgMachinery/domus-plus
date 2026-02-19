@@ -51,7 +51,7 @@ class UserBase(BaseModel):
     name: str
     is_active: bool = True
     is_family_admin: bool = False
-    family_id: Optional[int]
+    family_id: Optional[int] = None
 
 class UserCreate(UserBase):
     password: str

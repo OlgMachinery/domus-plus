@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { format } from 'date-fns'
@@ -9,12 +9,16 @@ import type { User } from '@/lib/types'
 import SAPLayout from '@/components/SAPLayout'
 import { formatCurrency } from '@/lib/currency'
 import { getLanguage, setLanguage, useTranslation, type Language } from '@/lib/i18n'
+import { safePushLogin } from '@/lib/receiptProcessing'
+import { getAuthHeaders, getToken } from '@/lib/auth'
 
 interface ReceiptItem {
   id: number
   receipt_id: number
   description: string
   amount: number
+  quantity?: number
+  unit_price?: number
   category?: string
   subcategory?: string
   assigned_transaction_id?: number
@@ -57,66 +61,157 @@ export default function UserRecordsPage() {
   const [loading, setLoading] = useState(true)
   const [receipts, setReceipts] = useState<Receipt[]>([])
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null)
+  const productsRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     setMounted(true)
     setLanguageState(getLanguage())
   }, [])
 
+  const backendUrl = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_URL) || ''
+  const apiBase = backendUrl.replace(/\/$/, '')
+  const parseNotes = (notes?: string) => {
+    if (!notes) return null as any
+    try {
+      return JSON.parse(notes)
+    } catch {
+      return null as any
+    }
+  }
+
+  const cleanItemName = (description: string) => {
+    const s = String(description || '').trim()
+    if (!s) return ''
+    const tokens = s.split(/\s+/)
+    let numericCount = 0
+    let hasDecimal = false
+    for (let i = tokens.length - 1; i >= 0 && numericCount < 5; i--) {
+      const tok = tokens[i]
+      const normalized = tok.replace(/[()]/g, '')
+      if (/^-?\d+(?:[.,]\d+)?-?$/.test(normalized)) {
+        numericCount += 1
+        if (/[.,]\d+/.test(normalized)) hasDecimal = true
+        continue
+      }
+      break
+    }
+    if (numericCount >= 2 && (hasDecimal || numericCount >= 3)) {
+      return tokens.slice(0, Math.max(1, tokens.length - numericCount)).join(' ')
+    }
+    return s
+  }
+
+  const formatQty = (q: number) => Number(q).toFixed(3).replace(/\.?0+$/, '')
+
   useEffect(() => {
     if (typeof window === 'undefined') return
-    
-    supabase.auth.getSession().then(({ data: { session } }) => {
+
+    let cancelled = false
+    const loadWithBackend = async () => {
+      const headers = await getAuthHeaders()
+      const hasAuth = typeof headers === 'object' && headers !== null && 'Authorization' in (headers as Record<string, string>)
+      if (!hasAuth) return false
+      const token = getToken()
+      if (!token) return false
+      try {
+        const meRes = await fetch(`${apiBase}/api/users/me`, {
+          headers: headers as Record<string, string>,
+          credentials: 'include',
+        })
+        if (!meRes.ok || cancelled) return false
+        const meData = await meRes.json()
+        setUser(meData as User)
+        const recRes = await fetch(`${apiBase}/api/receipts/`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (recRes.ok && !cancelled) {
+          const list = await recRes.json()
+          const mapped: Receipt[] = (list || []).map((r: Record<string, unknown>) => ({
+            id: r.id as number,
+            user_id: r.user_id as number,
+            image_url: r.image_url as string | undefined,
+            whatsapp_message_id: r.whatsapp_message_id as string | undefined,
+            whatsapp_phone: r.whatsapp_phone as string | undefined,
+            date: r.date as string | undefined,
+            time: r.time as string | undefined,
+            amount: Number(r.amount),
+            currency: (r.currency as string) || 'MXN',
+            merchant_or_beneficiary: r.merchant_or_beneficiary as string | undefined,
+            category: typeof r.category === 'string' ? r.category : (r.category as string) || undefined,
+            subcategory: typeof r.subcategory === 'string' ? r.subcategory : (r.subcategory as string) || undefined,
+            concept: r.concept as string | undefined,
+            reference: r.reference as string | undefined,
+            operation_id: r.operation_id as string | undefined,
+            tracking_key: r.tracking_key as string | undefined,
+            notes: r.notes as string | undefined,
+            status: (r.status as string) || 'pending',
+            assigned_transaction_id: r.assigned_transaction_id as number | undefined,
+            created_at: typeof r.created_at === 'string' ? r.created_at : (r.created_at as { isoformat?: () => string })?.isoformat?.() ?? '',
+            updated_at: typeof r.updated_at === 'string' ? r.updated_at : undefined,
+            items: ((r.items as Record<string, unknown>[]) || []).map((it: Record<string, unknown>) => ({
+              id: it.id as number,
+              receipt_id: it.receipt_id as number,
+              description: (it.description as string) || '',
+              amount: Number(it.amount),
+              quantity: typeof it.quantity === 'number' ? Number(it.quantity) : (it.quantity != null ? Number(it.quantity) : undefined),
+              unit_price: typeof it.unit_price === 'number' ? Number(it.unit_price) : (it.unit_price != null ? Number(it.unit_price) : undefined),
+              category: it.category as string | undefined,
+              subcategory: it.subcategory as string | undefined,
+              assigned_transaction_id: it.assigned_transaction_id as number | undefined,
+              notes: it.notes as string | undefined,
+              created_at: typeof it.created_at === 'string' ? it.created_at : '',
+            })),
+          }))
+          setReceipts(mapped)
+        }
+        return true
+      } catch {
+        return false
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    const loadWithSupabase = async () => {
+      const { data: { session } } = await Promise.race([
+        supabase.auth.getSession(),
+        new Promise<{ data: { session: null } }>((resolve) =>
+          setTimeout(() => resolve({ data: { session: null } }), 3000)
+        ),
+      ])
+      if (cancelled) return
       if (!session) {
-        router.push('/login')
+        safePushLogin(router, 'user-records: no supabase session')
+        setLoading(false)
         return
       }
-      loadUser()
-    })
-  }, [router])
-
-  const loadUser = async () => {
-    try {
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (!authUser) {
-        router.push('/login')
+        safePushLogin(router, 'user-records: no supabase user')
+        setLoading(false)
         return
       }
-      
-      const { data: userData } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', authUser.id)
-        .single()
-      
+      const { data: userData } = await supabase.from('users').select('*').eq('id', authUser.id).single()
       if (userData) {
         setUser(userData as User)
-        await loadReceipts()
+        const { data: receiptsData } = await supabase
+          .from('receipts')
+          .select('*, items:receipt_items(*)')
+          .eq('user_id', authUser.id)
+          .order('created_at', { ascending: false })
+        setReceipts((receiptsData || []) as Receipt[])
       }
-    } catch (error) {
-      console.error('Error cargando usuario:', error)
-      router.push('/login')
-    } finally {
       setLoading(false)
     }
-  }
 
-  const loadReceipts = async () => {
-    try {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      if (!authUser) return
-      
-      const { data: receiptsData } = await supabase
-        .from('receipts')
-        .select('*, items:receipt_items(*)')
-        .eq('user_id', authUser.id)
-        .order('created_at', { ascending: false })
-      
-      setReceipts((receiptsData || []) as Receipt[])
-    } catch (error) {
-      console.error('Error cargando recibos:', error)
-    }
-  }
+    ;(async () => {
+      const done = await loadWithBackend()
+      if (cancelled) return
+      if (!done) await loadWithSupabase()
+    })()
+
+    return () => { cancelled = true }
+  }, [router])
 
   const toggleLanguage = () => {
     const newLang = language === 'es' ? 'en' : 'es'
@@ -229,150 +324,199 @@ export default function UserRecordsPage() {
                   </button>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-6">
-                  {/* Imagen del recibo */}
-                  <div>
-                    <h3 className="text-lg font-semibold text-sap-text mb-4">
-                      {language === 'es' ? 'Imagen del Ticket' : 'Ticket Image'}
-                    </h3>
-                    {selectedReceipt.image_url ? (
-                      <img
-                        src={selectedReceipt.image_url}
-                        alt={language === 'es' ? 'Recibo' : 'Receipt'}
-                        className="w-full rounded border border-sap-border"
-                      />
-                    ) : (
-                      <div className="w-full h-64 bg-sap-bgSecondary rounded border border-sap-border flex items-center justify-center">
-                        <p className="text-sap-text-secondary">
-                          {language === 'es' ? 'No hay imagen disponible' : 'No image available'}
-                        </p>
+                {(() => {
+                  const isAdmin = Boolean((user as any)?.is_family_admin)
+                  const itemsAll = selectedReceipt.items || []
+                  const itemsWithNotes = itemsAll.map((it) => ({ ...it, _n: parseNotes(it.notes) }))
+
+                  const hasIllegible = itemsWithNotes.some((it) => it._n?.amount_legible === false)
+                  const sumAll = itemsWithNotes.reduce((sum, it) => sum + (Number(it.amount) || 0), 0)
+                  const diff = (Number(selectedReceipt.amount) || 0) - sumAll
+                  const diffAbs = Math.abs(diff)
+
+                  const status = diffAbs < 0.01 ? (hasIllegible ? 'review' : 'ok') : 'error'
+                  const statusLabel =
+                    status === 'ok'
+                      ? (language === 'es' ? 'Todo correcto' : 'All good')
+                      : status === 'review'
+                        ? (language === 'es' ? 'Revisar algunos productos' : 'Review some items')
+                        : (language === 'es' ? 'Error en el total' : 'Total error')
+
+                  const humanMsg =
+                    status === 'ok'
+                      ? (language === 'es' ? 'El total coincide con los productos.' : 'The total matches the items.')
+                      : status === 'review'
+                        ? (language === 'es' ? 'Revisa algunos productos antes de guardar.' : 'Review a few items before saving.')
+                        : (language === 'es' ? 'No pudimos confirmar el total. Revisa el ticket o intenta de nuevo.' : 'We could not confirm the total. Please review or try again.')
+
+                  const dateLabel = (() => {
+                    try {
+                      if (selectedReceipt.date) {
+                        const dt = new Date(`${selectedReceipt.date}T${selectedReceipt.time || '00:00'}:00`)
+                        return format(dt, 'dd/MM/yyyy HH:mm', { locale: language === 'es' ? es : enUS })
+                      }
+                      return format(new Date(selectedReceipt.created_at), 'dd/MM/yyyy', { locale: language === 'es' ? es : enUS })
+                    } catch {
+                      return selectedReceipt.date || ''
+                    }
+                  })()
+
+                  const isNonProduct = (description: string, n: any) => {
+                    const lineType = String(n?.line_type || '')
+                    if (n?.is_adjustment === true || lineType === 'adjustment') return true
+                    if (['discount', 'cancellation', 'price_change', 'adjustment'].includes(lineType)) return true
+                    const up = String(description || '').toUpperCase()
+                    if (up.includes('PROMOC') || up.includes('DESCU') || up.includes('CANCEL') || up.includes('CAMB. PRECIO') || up.includes('CAMBIO PRECIO')) return true
+                    if (up.includes('AJUSTE PARA CUADRAR TOTAL')) return true
+                    return false
+                  }
+
+                  const products = itemsWithNotes.filter((it) => !isNonProduct(it.description, it._n))
+
+                  return (
+                    <div className="space-y-6">
+                      {/* Resumen superior */}
+                      <div className="sap-card p-5 bg-sap-bgSecondary">
+                        <div className="flex items-start justify-between gap-6">
+                          <div className="min-w-0">
+                            <div className="text-sm text-sap-text-secondary">{language === 'es' ? 'Comercio' : 'Merchant'}</div>
+                            <div className="text-xl font-semibold text-sap-text truncate">
+                              {selectedReceipt.merchant_or_beneficiary || (language === 'es' ? 'Recibo' : 'Receipt')}
+                            </div>
+                            <div className="text-sm text-sap-text-tertiary mt-1">{dateLabel}</div>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <div className="text-sm text-sap-text-secondary">{language === 'es' ? 'Total' : 'Total'}</div>
+                            <div className="text-3xl font-bold text-sap-text">
+                              {formatCurrency(selectedReceipt.amount, language, false)}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 flex items-start gap-3">
+                          <span
+                            className={`px-2.5 py-1 rounded-domus text-xs font-semibold ${
+                              status === 'ok'
+                                ? 'bg-green-100 text-green-800'
+                                : status === 'review'
+                                  ? 'bg-amber-100 text-amber-900'
+                                  : 'bg-red-100 text-red-800'
+                            }`}
+                          >
+                            {statusLabel}
+                          </span>
+                          <p className="text-sm text-sap-text-secondary">{humanMsg}</p>
+                        </div>
                       </div>
-                    )}
-                  </div>
 
-                  {/* Tabla de datos */}
-                  <div>
-                    <h3 className="text-lg font-semibold text-sap-text mb-4">
-                      {language === 'es' ? 'Datos Extraídos' : 'Extracted Data'}
-                    </h3>
-                    <div className="sap-card overflow-hidden">
-                      <table className="w-full">
-                        <thead className="bg-sap-bgSecondary">
-                          <tr>
-                            <th className="sap-table-header">{language === 'es' ? 'Campo' : 'Field'}</th>
-                            <th className="sap-table-header">{language === 'es' ? 'Valor' : 'Value'}</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr className="border-b border-sap-border">
-                            <td className="sap-table-cell font-medium">{language === 'es' ? 'Fecha' : 'Date'}</td>
-                            <td className="sap-table-cell">
-                              {selectedReceipt.date 
-                                ? format(new Date(selectedReceipt.date + 'T' + (selectedReceipt.time || '00:00')), 'dd/MM/yyyy HH:mm', { locale: language === 'es' ? es : enUS })
-                                : format(new Date(selectedReceipt.created_at), 'dd/MM/yyyy', { locale: language === 'es' ? es : enUS })
-                              }
-                            </td>
-                          </tr>
-                          <tr className="border-b border-sap-border">
-                            <td className="sap-table-cell font-medium">{language === 'es' ? 'Comercio' : 'Merchant'}</td>
-                            <td className="sap-table-cell">{selectedReceipt.merchant_or_beneficiary || '-'}</td>
-                          </tr>
-                          <tr className="border-b border-sap-border">
-                            <td className="sap-table-cell font-medium">{language === 'es' ? 'Monto Total' : 'Total Amount'}</td>
-                            <td className="sap-table-cell">{formatCurrency(selectedReceipt.amount, language, false)}</td>
-                          </tr>
-                          <tr className="border-b border-sap-border">
-                            <td className="sap-table-cell font-medium">{language === 'es' ? 'Categoría' : 'Category'}</td>
-                            <td className="sap-table-cell">{selectedReceipt.category || '-'}</td>
-                          </tr>
-                          <tr className="border-b border-sap-border">
-                            <td className="sap-table-cell font-medium">{language === 'es' ? 'Subcategoría' : 'Subcategory'}</td>
-                            <td className="sap-table-cell">{selectedReceipt.subcategory || '-'}</td>
-                          </tr>
-                          <tr className="border-b border-sap-border">
-                            <td className="sap-table-cell font-medium">{language === 'es' ? 'Concepto' : 'Concept'}</td>
-                            <td className="sap-table-cell">{selectedReceipt.concept || '-'}</td>
-                          </tr>
-                          <tr className="border-b border-sap-border">
-                            <td className="sap-table-cell font-medium">{language === 'es' ? 'Referencia' : 'Reference'}</td>
-                            <td className="sap-table-cell">{selectedReceipt.reference || '-'}</td>
-                          </tr>
-                          <tr className="border-b border-sap-border">
-                            <td className="sap-table-cell font-medium">{language === 'es' ? 'Operación ID' : 'Operation ID'}</td>
-                            <td className="sap-table-cell">{selectedReceipt.operation_id || '-'}</td>
-                          </tr>
-                          <tr className="border-b border-sap-border">
-                            <td className="sap-table-cell font-medium">{language === 'es' ? 'Tracking Key' : 'Tracking Key'}</td>
-                            <td className="sap-table-cell">{selectedReceipt.tracking_key || '-'}</td>
-                          </tr>
-                          <tr className="border-b border-sap-border">
-                            <td className="sap-table-cell font-medium">{language === 'es' ? 'Estado' : 'Status'}</td>
-                            <td className="sap-table-cell">
-                              <span className={`px-2 py-1 rounded text-xs ${
-                                selectedReceipt.status === 'assigned' ? 'bg-green-100 text-green-800' :
-                                selectedReceipt.status === 'processed' ? 'bg-blue-100 text-blue-800' :
-                                'bg-yellow-100 text-yellow-800'
-                              }`}>
-                                {selectedReceipt.status === 'assigned' ? (language === 'es' ? 'Asignado' : 'Assigned') :
-                                 selectedReceipt.status === 'processed' ? (language === 'es' ? 'Procesado' : 'Processed') :
-                                 (language === 'es' ? 'Pendiente' : 'Pending')}
-                              </span>
-                            </td>
-                          </tr>
-                          {selectedReceipt.notes && (
-                            <tr>
-                              <td className="sap-table-cell font-medium">{language === 'es' ? 'Notas' : 'Notes'}</td>
-                              <td className="sap-table-cell">{selectedReceipt.notes}</td>
-                            </tr>
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
+                      {/* Acciones */}
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedReceipt(null)}
+                          className="sap-button-primary w-full sm:flex-1 text-base py-3"
+                        >
+                          {language === 'es' ? 'Confirmar y Guardar' : 'Confirm & Save'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => productsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                          className="sap-button-secondary w-full sm:flex-1 text-base py-3"
+                        >
+                          {language === 'es' ? 'Revisar productos' : 'Review items'}
+                        </button>
+                      </div>
 
-                {/* Items del recibo */}
-                {selectedReceipt.items && selectedReceipt.items.length > 0 && (
-                  <div className="mt-6">
-                    <h3 className="text-lg font-semibold text-sap-text mb-4">
-                      {language === 'es' ? 'Conceptos Extraídos' : 'Extracted Items'}
-                    </h3>
-                    <div className="sap-card overflow-hidden">
-                      <table className="w-full">
-                        <thead className="bg-sap-bgSecondary">
-                          <tr>
-                            <th className="sap-table-header">{language === 'es' ? 'Descripción' : 'Description'}</th>
-                            <th className="sap-table-header">{language === 'es' ? 'Monto' : 'Amount'}</th>
-                            <th className="sap-table-header">{language === 'es' ? 'Categoría' : 'Category'}</th>
-                            <th className="sap-table-header">{language === 'es' ? 'Subcategoría' : 'Subcategory'}</th>
-                            <th className="sap-table-header">{language === 'es' ? 'Estado' : 'Status'}</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {selectedReceipt.items.map((item) => (
-                            <tr key={item.id} className="border-b border-sap-border">
-                              <td className="sap-table-cell">{item.description}</td>
-                              <td className="sap-table-cell">{formatCurrency(item.amount, language, false)}</td>
-                              <td className="sap-table-cell">{item.category || '-'}</td>
-                              <td className="sap-table-cell">{item.subcategory || '-'}</td>
-                              <td className="sap-table-cell">
-                                {item.assigned_transaction_id ? (
-                                  <span className="text-green-600 text-xs">
-                                    {language === 'es' ? `Asignado a #${item.assigned_transaction_id}` : `Assigned to #${item.assigned_transaction_id}`}
-                                  </span>
-                                ) : (
-                                  <span className="text-yellow-600 text-xs">
-                                    {language === 'es' ? 'Pendiente' : 'Pending'}
-                                  </span>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                      {/* Productos */}
+                      <div ref={productsRef} className="sap-card overflow-hidden">
+                        <div className="px-4 py-3 border-b border-sap-border bg-white">
+                          <h3 className="text-sm font-semibold text-sap-text">
+                            {language === 'es' ? 'Productos' : 'Items'}
+                          </h3>
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead className="bg-sap-bgSecondary">
+                              <tr>
+                                <th className="sap-table-header">{language === 'es' ? 'Nombre' : 'Name'}</th>
+                                <th className="sap-table-header text-right">
+                                  {language === 'es' ? 'Cantidad × Precio = Total' : 'Qty × Price = Total'}
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {products.length === 0 ? (
+                                <tr>
+                                  <td colSpan={2} className="sap-table-cell text-center text-sap-text-secondary py-6">
+                                    {language === 'es' ? 'No se encontraron productos.' : 'No items found.'}
+                                  </td>
+                                </tr>
+                              ) : (
+                                products.map((it, idx) => {
+                                  const n = it._n
+                                  const amountLegible = n?.amount_legible !== false
+                                  const q = typeof it.quantity === 'number' ? it.quantity : null
+                                  const up = typeof it.unit_price === 'number' ? it.unit_price : null
+                                  const total = typeof it.amount === 'number' ? it.amount : Number(it.amount) || 0
+
+                                  const name = amountLegible ? cleanItemName(it.description || '') : (language === 'es' ? 'No legible' : 'Illegible')
+                                  const formula = !amountLegible
+                                    ? (language === 'es' ? 'No legible' : 'Illegible')
+                                    : (q != null && up != null)
+                                      ? `${formatQty(q)} × ${formatCurrency(up, language, false)} = ${formatCurrency(total, language, false)}`
+                                      : formatCurrency(total, language, false)
+
+                                  return (
+                                    <tr key={it.id ?? idx} className="border-b border-sap-border">
+                                      <td className="sap-table-cell">
+                                        <span className="text-sap-text">{name || (language === 'es' ? 'No legible' : 'Illegible')}</span>
+                                      </td>
+                                      <td className="sap-table-cell text-right font-medium text-sap-text">{formula}</td>
+                                    </tr>
+                                  )
+                                })
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      {/* Imagen */}
+                      <div className="sap-card p-4">
+                        <h3 className="text-sm font-semibold text-sap-text mb-3">
+                          {language === 'es' ? 'Imagen del Ticket' : 'Ticket image'}
+                        </h3>
+                        {selectedReceipt.image_url ? (
+                          <img
+                            src={selectedReceipt.image_url}
+                            alt={language === 'es' ? 'Recibo' : 'Receipt'}
+                            className="w-full rounded border border-sap-border"
+                          />
+                        ) : (
+                          <div className="w-full h-64 bg-sap-bgSecondary rounded border border-sap-border flex items-center justify-center">
+                            <p className="text-sap-text-secondary">
+                              {language === 'es' ? 'No hay imagen disponible' : 'No image available'}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Detalles técnicos (solo Admin) */}
+                      {isAdmin && (
+                        <details className="sap-card p-4">
+                          <summary className="cursor-pointer text-sm font-semibold text-sap-text">
+                            {language === 'es' ? 'Ver detalles técnicos' : 'View technical details'}
+                          </summary>
+                          <div className="mt-3 space-y-3">
+                            <pre className="sap-input font-mono text-xs whitespace-pre-wrap overflow-x-auto max-h-[360px]">
+                              {selectedReceipt.notes ? String(selectedReceipt.notes) : JSON.stringify(selectedReceipt, null, 2)}
+                            </pre>
+                          </div>
+                        </details>
+                      )}
                     </div>
-                  </div>
-                )}
+                  )
+                })()}
               </div>
             </div>
           </div>

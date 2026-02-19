@@ -19,14 +19,14 @@ export default function SAPLogo({
     <div className={`flex items-center gap-2 ${className}`}>
       {/* Logo corporativo estilo SAP - Simple y profesional */}
       <div 
-        className="flex items-center justify-center bg-sap-primary text-white font-bold rounded"
+        className="flex items-center justify-center bg-sap-primary text-white font-bold rounded-domus"
         style={{ width: size, height: size, fontSize: size * 0.5 }}
       >
         D+
       </div>
       {showText && (
         <div className="flex flex-col">
-          <span className="text-white font-semibold text-sm leading-tight">DOMUS+</span>
+          <span className="text-white font-semibold text-sm leading-tight">Domus Fam</span>
           <span className="text-white/70 text-[10px] leading-tight">Gestión Financiera</span>
         </div>
       )}

@@ -1,25 +1,38 @@
 import axios from 'axios'
 
-// El frontend corre en puerto 3000, el backend en puerto 8000
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+// Usar las rutas API de Next.js (relativas, sin baseURL)
+// Las rutas de Next.js están en /api/* y se ejecutan en el mismo servidor
+const API_URL = '' // Rutas relativas para Next.js API routes
 
-console.log('🔧 API URL configurada:', API_URL)
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  console.log('🔧 API URL configurada: Rutas de Next.js (/api/*)')
+}
 
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: API_URL, // Vacío para usar rutas relativas
   headers: {
     'Content-Type': 'application/json',
   },
   timeout: 180000, // 3 minutos de timeout por defecto (para recibos grandes)
+  withCredentials: true, // Incluir cookies para autenticación de Supabase
 })
 
-// Interceptor para agregar token de autenticación
-api.interceptors.request.use((config) => {
-  // Verificar que estamos en el cliente antes de acceder a localStorage
+// Interceptor: usar token del backend (domus_token) o, si no hay, sesión de Supabase
+api.interceptors.request.use(async (config) => {
   if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('token')
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
+    const backendToken = localStorage.getItem('domus_token')
+    if (backendToken) {
+      config.headers.Authorization = `Bearer ${backendToken}`
+      return config
+    }
+    try {
+      const { supabase } = await import('./supabase/client')
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) {
+        config.headers.Authorization = `Bearer ${session.access_token}`
+      }
+    } catch {
+      // Sin Supabase o sin sesión
     }
   }
   return config
@@ -29,14 +42,18 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Si es error 401 (no autorizado), limpiar token y redirigir al login
+    // Si es error 401 (no autorizado), NO redirigir automáticamente.
+    // En esta app hay modo híbrido (token backend + Supabase). Un 401 en una ruta
+    // de Next/Supabase no debe sacar al usuario que está autenticado con `domus_token`.
     if (error.response?.status === 401) {
-      // Limpiar token del localStorage
       if (typeof window !== 'undefined') {
+        const hasBackendToken = !!localStorage.getItem('domus_token')
+        // Solo limpiar el token legacy (si existe). Mantener `domus_token`.
+        // El guardado/expiración del backend se maneja por página.
         localStorage.removeItem('token')
-        // Redirigir al login solo si no estamos ya en la página de login
-        if (window.location.pathname !== '/login') {
-          window.location.href = '/login'
+        if (!hasBackendToken) {
+          // Si no hay token backend, dejar que la UI decida (no forzar redirect).
+          // Esto evita “saltos” inesperados durante procesos largos (ej. escaneo de recibos).
         }
       }
     }
@@ -55,9 +72,9 @@ api.interceptors.response.use(
       // Mostrar mensaje más claro según el tipo de error
       if (!error.response) {
         console.error('❌ Error de conexión - No se recibió respuesta del servidor:', errorDetails)
-        console.error('💡 Verifica que el backend esté corriendo en http://localhost:8000')
+        console.error('💡 Verifica que el servidor de Next.js esté corriendo')
       } else if (error.response.status === 401) {
-        console.error('❌ Error de autenticación (401): Token expirado o inválido. Redirigiendo al login...')
+        console.error('❌ Error de autenticación (401):', errorDetails)
       } else if (error.response.status === 404) {
         console.error('❌ Endpoint no encontrado (404):', errorDetails)
       } else {

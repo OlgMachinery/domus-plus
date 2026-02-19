@@ -9,6 +9,8 @@ import type { User, Transaction, UserBudget } from '@/lib/types'
 import SAPLayout from '@/components/SAPLayout'
 import { formatCurrency } from '@/lib/currency'
 import { getLanguage, setLanguage, useTranslation, type Language } from '@/lib/i18n'
+import { safePushLogin } from '@/lib/receiptProcessing'
+import { getAuthHeaders, getToken } from '@/lib/auth'
 
 type ReportType = 'transactions' | 'budgets' | 'income_expense' | 'category' | 'annual_budget'
 type ExportFormat = 'html' | 'pdf' | 'excel'
@@ -18,6 +20,8 @@ export default function ReportsPage() {
   const [language, setLanguageState] = useState<Language>('es')
   const [mounted, setMounted] = useState(false)
   const t = useTranslation(language)
+  const backendUrl = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_URL) || ''
+  const apiBase = backendUrl.replace(/\/$/, '')
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [reportType, setReportType] = useState<ReportType>('transactions')
@@ -35,22 +39,51 @@ export default function ReportsPage() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        router.push('/login')
-        setLoading(false)
-        return
+
+    let cancelled = false
+    const init = async () => {
+      try {
+        const headers = await getAuthHeaders()
+        const hasAuth = typeof headers === 'object' && headers !== null && 'Authorization' in (headers as Record<string, string>)
+        if (hasAuth) {
+          const meRes = await fetch(`${apiBase}/api/users/me`, {
+            headers: headers as Record<string, string>,
+            credentials: 'include',
+          })
+          if (meRes.ok && !cancelled) {
+            const me = await meRes.json()
+            setUser(me as User)
+            return
+          }
+          if (meRes.status === 401) {
+            localStorage.removeItem('domus_token')
+          }
+        }
+
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          safePushLogin(router, 'reports: no supabase session')
+          return
+        }
+        loadUser()
+      } catch (err) {
+        console.error('Error inicializando reportes:', err)
+      } finally {
+        if (!cancelled) setLoading(false)
       }
-      loadUser()
-    })
+    }
+
+    init()
+    return () => {
+      cancelled = true
+    }
   }, [router])
 
   const loadUser = async () => {
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (!authUser) {
-        router.push('/login')
+        safePushLogin(router, 'reports: no supabase user')
         return
       }
       
@@ -65,7 +98,8 @@ export default function ReportsPage() {
       }
     } catch (error) {
       console.error('Error cargando usuario:', error)
-      router.push('/login')
+      const token = getToken()
+      if (!token) safePushLogin(router, 'reports: loadUser error')
     } finally {
       setLoading(false)
     }
@@ -74,6 +108,52 @@ export default function ReportsPage() {
   const loadReportData = async () => {
     try {
       setGenerating(true)
+
+      const token = getToken()
+      if (token) {
+        if (reportType === 'transactions' || reportType === 'income_expense' || reportType === 'category') {
+          const params = new URLSearchParams()
+          params.set('limit', '1000')
+          params.set('start_date', `${dateFrom}T00:00:00`)
+          params.set('end_date', `${dateTo}T23:59:59`)
+          const res = await fetch(`${apiBase}/api/transactions/?${params.toString()}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          const data = res.ok ? await res.json() : []
+          setTransactions((data || []) as Transaction[])
+        }
+
+        if (reportType === 'budgets' || reportType === 'annual_budget') {
+          const res = await fetch(`${apiBase}/api/budgets/family?year=${year}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          const familyBudgets = res.ok ? await res.json() : []
+          const mapped = (familyBudgets || []).flatMap((b: any) => {
+            const alloc = (b.user_allocations || []).find((a: any) => a.user_id === user?.id)
+            if (!alloc) return []
+            return [{
+              ...alloc,
+              family_budget: {
+                id: b.id,
+                family_id: b.family_id,
+                category: b.category,
+                subcategory: b.subcategory,
+                year: b.year,
+                total_amount: b.total_amount,
+                budget_type: b.budget_type,
+                distribution_method: b.distribution_method,
+                auto_distribute: b.auto_distribute,
+                target_user_id: b.target_user_id,
+                created_at: b.created_at,
+              }
+            }]
+          })
+          setBudgets(mapped as any)
+        }
+
+        return
+      }
+
       if (reportType === 'transactions' || reportType === 'income_expense' || reportType === 'category') {
         const { data: { user: authUser } } = await supabase.auth.getUser()
         if (authUser) {
@@ -223,7 +303,7 @@ export default function ReportsPage() {
   ${reportContent}
   <div class="footer">
     <p>${language === 'es' ? 'Generado el' : 'Generated on'} ${generatedDate}</p>
-    <p>${language === 'es' ? 'Sistema DOMUS+' : 'DOMUS+ System'}</p>
+    <p>${language === 'es' ? 'Sistema Domus Fam' : 'Domus Fam System'}</p>
   </div>
 </body>
 </html>`
