@@ -1,4 +1,5 @@
 'use client'
+// Resumen por entidad — requiere Root Directory = frontend en Vercel
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'

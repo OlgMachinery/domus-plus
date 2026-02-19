@@ -1,4 +1,5 @@
-backend/.env*# Node
+backend/.env*
+# Node
 node_modules/
 .next/
 dist/
@@ -60,3 +61,4 @@ Thumbs.db
 frontend/.env.local
 frontend/.env.local.backup
 backend/.env.bak
+.vercel
