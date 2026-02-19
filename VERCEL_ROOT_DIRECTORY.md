@@ -1,12 +1,9 @@
-# Configuración Vercel — 404 en rutas (ej. /budget-overview)
+# Despliegue en Vercel
 
-Este repositorio es un **monorepo**: la app Next.js está en la carpeta **`frontend`**.
+La app Next.js está en la **raíz del repositorio** (app/, components/, lib/, etc.).
 
-Para que todas las rutas (incluida `/budget-overview`) funcionen en producción:
+- **Root Directory** en Vercel debe estar **vacío** (no poner `frontend`).
+- El build usa el `package.json` y `next.config.js` de la raíz.
+- Todas las rutas (incluida `/budget-overview`) se sirven desde la raíz.
 
-1. Entra en **Vercel** → tu proyecto → **Settings** → **General**.
-2. En **Root Directory** haz clic en **Edit**.
-3. Escribe: **`frontend`** (sin barra final).
-4. Guarda y **redeploy** el proyecto.
-
-Si Root Directory está vacío o apunta a otra carpeta, Vercel construye desde la raíz del repo y la app Next (y sus rutas) no se despliegan correctamente.
+Para desarrollo local: desde la raíz ejecuta `npm run dev` (o usa `reiniciar_servidores.sh`).

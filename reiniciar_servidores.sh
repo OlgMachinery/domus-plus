@@ -58,7 +58,7 @@ echo "   PID: $BACKEND_PID"
 
 echo ""
 echo "🚀 Iniciando Frontend..."
-cd "$BASE_DIR/frontend"
+cd "$BASE_DIR"
 
 # Verificar si node_modules existe
 if [ ! -d "node_modules" ]; then

@@ -12,7 +12,7 @@ lsof -ti :8000 | xargs kill -9 2>/dev/null
 
 # Clean cache
 echo "🗑️ Eliminando caché de Next.js..."
-rm -rf "$BASE_DIR/frontend/.next"
+rm -rf "$BASE_DIR/frontend/.next" "$BASE_DIR/.next"
 
 # Start Backend
 echo "🚀 Iniciando Backend..."
@@ -28,7 +28,7 @@ echo "   Backend PID: $BACKEND_PID"
 
 # Start Frontend
 echo "🚀 Iniciando Frontend..."
-cd "$BASE_DIR/frontend"
+cd "$BASE_DIR"
 if [ ! -d "node_modules" ]; then
     echo "📦 Instalando dependencias..."
     npm install

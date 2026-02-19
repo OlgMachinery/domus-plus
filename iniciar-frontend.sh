@@ -2,7 +2,7 @@
 
 echo "🚀 Iniciando Frontend DOMUS+..."
 
-cd "$(dirname "$0")/frontend"
+cd "$(dirname "$0")"
 
 # Verificar si node_modules existe
 if [ ! -d "node_modules" ]; then
