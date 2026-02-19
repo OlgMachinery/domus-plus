@@ -4,7 +4,7 @@ import { generateSmartReport } from '@/lib/services/ai-assistant'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient(request)
+    const supabase = await createClient()
     const body = await request.json()
 
     // Verificar autenticación

@@ -6,7 +6,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = await createClient(request)
+    const supabase = await createClient()
     const itemId = parseInt(params.id)
     const body = await request.json()
 

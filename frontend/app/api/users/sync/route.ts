@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 // Esta API route crea automáticamente el usuario en la tabla users si no existe
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient(request)
+    const supabase = await createClient()
     
     // Verificar autenticación
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()

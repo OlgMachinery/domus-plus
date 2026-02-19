@@ -4,7 +4,7 @@ import { parseExcelBudgets } from '@/lib/services/excel-parser'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient(request)
+    const supabase = await createClient()
 
     // Verificar autenticación (múltiples métodos)
     let authUser = null

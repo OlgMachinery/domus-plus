@@ -6,7 +6,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = await createClient(request)
+    const supabase = await createClient()
     const budgetId = parseInt(params.id)
 
     // Verificar autenticación

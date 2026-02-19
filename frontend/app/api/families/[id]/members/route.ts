@@ -6,7 +6,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = await createClient(request)
+    const supabase = await createClient()
     const familyId = parseInt(params.id)
 
     // Verificar autenticación

@@ -23,9 +23,13 @@ export interface ReceiptData {
 
 export interface ReceiptItem {
   raw_line: string
+  description?: string
+  quantity?: number
+  unit_price?: number
   quantity_raw?: string
   unit_price_raw?: string
   total_raw?: string
+  total?: number
 }
 
 const SYSTEM_PROMPT = `You are a receipt data extraction assistant. Extract information from receipt images and return structured JSON data.

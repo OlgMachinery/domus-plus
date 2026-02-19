@@ -20,7 +20,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = await createClient(request)
+    const supabase = await createClient()
     const userId = params.id
 
     // Verificar autenticación
@@ -83,7 +83,7 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = await createClient(request)
+    const supabase = await createClient()
     const userId = params.id
     const body = await request.json().catch(() => ({}))
 
@@ -180,7 +180,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = await createClient(request)
+    const supabase = await createClient()
     const userId = params.id
 
     const { data: { user: authUser }, error: authError } = await getAuthUser(supabase, request)

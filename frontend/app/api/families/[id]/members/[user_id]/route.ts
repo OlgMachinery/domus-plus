@@ -6,7 +6,7 @@ export async function POST(
   { params }: { params: { id: string; user_id: string } }
 ) {
   try {
-    const supabase = await createClient(request)
+    const supabase = await createClient()
     const familyId = parseInt(params.id)
     const userId = params.user_id
 

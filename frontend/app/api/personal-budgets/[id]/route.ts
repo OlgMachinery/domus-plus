@@ -6,7 +6,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = await createClient(request)
+    const supabase = await createClient()
     const budgetId = parseInt(params.id)
 
     // Verificar autenticación
@@ -79,7 +79,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = await createClient(request)
+    const supabase = await createClient()
     const budgetId = parseInt(params.id)
     const updates = await request.json()
 
@@ -200,7 +200,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = await createClient(request)
+    const supabase = await createClient()
     const budgetId = parseInt(params.id)
 
     // Verificar autenticación

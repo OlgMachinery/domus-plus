@@ -59,7 +59,7 @@ async function seedPredefinedIfNeeded(supabase: Awaited<ReturnType<typeof create
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient(request)
+    const supabase = await createClient()
 
     const { data: { user: authUser }, error: authError } = await getAuthUser(supabase, request)
     if (authError || !authUser) {
@@ -127,7 +127,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient(request)
+    const supabase = await createClient()
     const body = await request.json()
 
     // Verificar autenticación

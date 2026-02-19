@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = await createClient(request)
+    const supabase = await createClient()
 
     // Verificar que el usuario actual sea administrador
     const { data: { user: authUser } } = await getAuthUser(supabase, request)

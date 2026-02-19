@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 export async function POST(request: NextRequest) {
   try {
     // Verificar autenticación
-    const supabase = await createClient(request)
+    const supabase = await createClient()
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
     if (authError || !authUser) {
       return NextResponse.json(

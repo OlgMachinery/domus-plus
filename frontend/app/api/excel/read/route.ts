@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 export async function POST(request: NextRequest) {
   try {
     // Verificar autenticación (múltiples métodos)
-    const supabase = await createClient(request)
+    const supabase = await createClient()
     let authUser = null
     
     // Método 1: Token en header Authorization

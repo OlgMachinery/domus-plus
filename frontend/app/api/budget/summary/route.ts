@@ -30,7 +30,7 @@ const emptyResponse: BudgetSummaryResponse = {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient(request)
+    const supabase = await createClient()
 
     const {
       data: { user: authUser },

@@ -218,7 +218,7 @@ function escapeXml(text: string): string {
     .replace(/'/g, '&apos;')
 }
 
-async function findUserByPhone(supabase: ReturnType<typeof createClient>, phone: string) {
+async function findUserByPhone(supabase: import('@supabase/supabase-js').SupabaseClient, phone: string) {
   let { data: user } = await supabase
     .from('users')
     .select('*')

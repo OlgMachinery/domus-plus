@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     // ============================================
     // PASO 1: AUTENTICACIÓN
     // ============================================
-    const supabase = await createClient(request)
+    const supabase = await createClient()
     let authUser = null
     
     // Método 1: Token en header Authorization
