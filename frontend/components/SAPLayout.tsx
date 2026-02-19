@@ -1,11 +1,27 @@
 'use client'
 
-import { ReactNode, useState, useEffect } from 'react'
+import { ReactNode, useState, useEffect, type ElementType } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import type { User } from '@/lib/types'
 import { useTranslation, getLanguage, type Language } from '@/lib/i18n'
 import AIAssistant from './AIAssistant'
+import { supabase } from '@/lib/supabase/client'
+import {
+  House,
+  Wallet,
+  Bank,
+  ArrowsLeftRight,
+  ChartPieSlice,
+  ChartDonut,
+  Receipt,
+  FileXls,
+  Files,
+  ChartBar,
+  ListPlus,
+  Scroll,
+  Users
+} from '@phosphor-icons/react'
 
 interface SAPLayoutProps {
   children: ReactNode
@@ -15,8 +31,16 @@ interface SAPLayoutProps {
   toolbar?: ReactNode
 }
 
+interface MenuItem {
+  href: string
+  label: string
+  active: boolean
+  icon: ElementType
+}
+
 export default function SAPLayout({ children, user, title, subtitle, toolbar }: SAPLayoutProps) {
   const pathname = usePathname()
+  const router = useRouter()
   const [language, setLanguage] = useState<Language>('es')
   const [mounted, setMounted] = useState(false)
   const t = useTranslation(language)
@@ -54,97 +78,117 @@ export default function SAPLayout({ children, user, title, subtitle, toolbar }: 
     }
   }, [mounted])
 
-  const menuItems = [
-    { href: '/dashboard', label: t.nav.dashboard, active: pathname === '/dashboard' },
-    { href: '/budgets', label: t.nav.budgets, active: pathname === '/budgets' },
-    { href: '/personal-budget', label: t.nav.personalBudget, active: pathname === '/personal-budget' },
-    { href: '/transactions', label: t.nav.transactions, active: pathname === '/transactions' },
-    { href: '/budget-summary', label: t.nav.budgetSummary, active: pathname === '/budget-summary' },
-    { href: '/receipts', label: t.nav.receipts, active: pathname === '/receipts' },
-    { href: '/user-records', label: t.nav.userRecords, active: pathname === '/user-records' },
-    { href: '/reports', label: t.nav.reports, active: pathname === '/reports' },
-    { href: '/custom-categories', label: language === 'es' ? 'Categorías Personalizadas' : 'Custom Categories', active: pathname === '/custom-categories' },
-    { href: '/logs', label: t.nav.logs, active: pathname === '/logs' },
+  const menuItems: MenuItem[] = [
+    { href: '/dashboard', label: t.nav.dashboard, active: pathname === '/dashboard', icon: House },
+    { href: '/budgets', label: t.nav.budgets, active: pathname === '/budgets', icon: Wallet },
+    { href: '/family', label: language === 'es' ? 'Familia' : 'Family', active: pathname === '/family', icon: Users },
+    { href: '/personal-budget', label: t.nav.personalBudget, active: pathname === '/personal-budget', icon: Bank },
+    { href: '/transactions', label: t.nav.transactions, active: pathname === '/transactions', icon: ArrowsLeftRight },
+    { href: '/budget-summary', label: t.nav.budgetSummary, active: pathname === '/budget-summary', icon: ChartPieSlice },
+    { href: '/budget-overview', label: language === 'es' ? 'Resumen por entidad' : 'Budget overview', active: pathname === '/budget-overview', icon: ChartDonut },
+    { href: '/receipts', label: t.nav.receipts, active: pathname === '/receipts', icon: Receipt },
+    { href: '/excel', label: language === 'es' ? 'Importar Excel' : 'Import Excel', active: pathname === '/excel', icon: FileXls },
+    { href: '/user-records', label: t.nav.userRecords, active: pathname === '/user-records', icon: Files },
+    { href: '/reports', label: t.nav.reports, active: pathname === '/reports', icon: ChartBar },
+    { href: '/custom-categories', label: language === 'es' ? 'Categorías Personalizadas' : 'Custom Categories', active: pathname === '/custom-categories', icon: ListPlus },
+    { href: '/logs', label: t.nav.logs, active: pathname === '/logs', icon: Scroll },
+    ...(user?.is_family_admin ? [{ href: '/users', label: language === 'es' ? 'Usuarios' : 'Users', active: pathname === '/users', icon: Users }] : []),
   ]
+
+  const handleLogout = async () => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('domus_token')
+        localStorage.removeItem('token')
+      }
+    } catch {}
+    try {
+      await supabase.auth.signOut()
+    } catch {}
+    router.push('/login')
+  }
 
   return (
     <div className="h-screen bg-sap-bg flex overflow-hidden">
-      {/* Sidebar estilo SAP - más delgado */}
-      <aside className="sap-sidebar w-48 flex-shrink-0 flex flex-col">
-        {/* Header del sidebar */}
-        <div className="px-3 py-3 border-b border-sap-border">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-sap-primary rounded flex items-center justify-center flex-shrink-0">
-              <span className="text-white font-bold text-xs">D+</span>
+      {/* Sidebar — navegación principal */}
+      <aside className="sap-sidebar w-52 flex-shrink-0 flex flex-col">
+        <div className="px-4 py-4 border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-sap-primary rounded-domus flex items-center justify-center flex-shrink-0 shadow-elevation-1">
+              <span className="text-white font-bold text-sm tracking-tight">DF</span>
             </div>
             <div className="min-w-0">
-              <h1 className="text-white font-semibold text-xs truncate">DOMUS+</h1>
-              <p className="text-xs text-sap-text-secondary text-white/70 truncate">{t.nav.system}</p>
+              <h1 className="text-white font-semibold text-sm tracking-tight truncate">Domus Fam</h1>
+              <p className="text-caption text-white/60 truncate">{t.nav.system}</p>
             </div>
           </div>
           {user && (
-            <div className="mt-2 pt-2 border-t border-white/10">
-              <p className="text-xs text-white/90 font-medium truncate" title={user.name}>{user.name}</p>
-              <p className="text-xs text-white/60 truncate" title={user.email}>{user.email}</p>
+            <div className="mt-3 pt-3 border-t border-white/10">
+              <p className="text-caption text-white/90 font-medium truncate" title={user.name}>{user.name}</p>
+              <p className="text-caption text-white/50 truncate" title={user.email}>{user.email}</p>
             </div>
           )}
         </div>
 
-        {/* Navegación */}
-        <nav className="flex-1 px-1.5 py-3 overflow-y-auto">
+        <nav className="flex-1 px-2 py-4 overflow-y-auto" aria-label="Navegación principal">
           {menuItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-2 px-2 py-1.5 text-xs rounded mb-0.5 transition-colors ${
+              className={`flex items-center gap-3 px-3 py-2.5 min-h-[44px] text-sm rounded-domus mb-0.5 transition-all duration-200 ease-smooth ${
                 item.active
-                  ? 'bg-sap-primary text-white'
-                  : 'text-white/80 hover:bg-white/10 hover:text-white'
+                  ? 'bg-sap-primary text-white shadow-elevation-1 border-l-2 border-l-white/30 -ml-0.5 pl-3.5'
+                  : 'text-white/85 hover:bg-white/10 hover:text-white border-l-2 border-l-transparent'
               }`}
               title={item.label}
+              aria-current={item.active ? 'page' : undefined}
             >
-              <span className="w-3 h-3 flex items-center justify-center flex-shrink-0">
-                {item.active && <span className="w-0.5 h-3 bg-white rounded-full" />}
+              <span className="w-4 h-4 flex items-center justify-center flex-shrink-0">
+                {item.active && <span className="w-0.5 h-4 bg-white rounded-full" />}
               </span>
-              <span className="truncate">{item.label}</span>
+              <span className="flex items-center min-w-0">
+                {item.icon && <item.icon size={20} weight="regular" className="mr-2 text-sap-muted" />}
+                <span className="truncate">{item.label}</span>
+              </span>
             </Link>
           ))}
         </nav>
 
-        {/* Footer del sidebar */}
-        <div className="px-3 py-2 border-t border-white/10">
-          <Link
-            href="/login"
-            className="flex items-center gap-2 px-2 py-1.5 text-xs text-white/80 hover:bg-white/10 hover:text-white rounded transition-colors"
+        <div className="px-2 py-3 border-t border-white/10">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-3 py-2.5 min-h-[44px] text-sm text-white/80 hover:bg-white/10 hover:text-white rounded-domus transition-colors focus-visible:ring-2 focus-visible:ring-white/30 focus-visible:ring-offset-2 focus-visible:ring-offset-sap-sidebar"
           >
-            <span className="w-3 h-3 flex-shrink-0" />
+            <span className="w-4 h-4 flex-shrink-0" />
             <span className="truncate">{t.nav.logout}</span>
-          </Link>
+          </button>
         </div>
       </aside>
 
-      {/* Contenido principal */}
       <main className="flex-1 flex flex-col bg-sap-bg overflow-hidden" style={{ position: 'relative' }}>
-        {/* Toolbar estilo SAP - estático */}
-        <div className="sap-toolbar fixed top-0 left-48 right-0 z-30 bg-white border-b border-sap-border px-6 py-3 flex items-center gap-4">
+        <header className="sap-toolbar fixed top-0 left-52 right-0 z-30 flex items-center gap-4">
           <div className="flex-1 min-w-0 overflow-hidden">
-            <h1 className="text-lg font-semibold text-sap-text truncate">{title}</h1>
+            <h1 className="text-title text-sap-text truncate">{title}</h1>
             {subtitle && (
-              <p className="text-sm text-sap-text-secondary mt-1 truncate">{subtitle}</p>
+              <p className="text-body text-sap-text-secondary mt-0.5 truncate">{subtitle}</p>
             )}
           </div>
           {toolbar && <div className="flex items-center gap-2 flex-shrink-0">{toolbar}</div>}
-        </div>
+        </header>
 
-        {/* Contenido de la página - con scroll */}
-        <div 
-          className="sap-page flex-1 overflow-y-auto px-6 py-4" 
-          style={{ 
-            marginTop: '73px', 
-            height: 'calc(100vh - 73px)',
-            overflow: 'auto'
+        <div
+          className="sap-page flex-1 overflow-y-auto px-6 py-5"
+          style={{
+            marginTop: '72px',
+            height: 'calc(100vh - 72px)',
+            overflow: 'auto',
           }}
         >
+          {/* Indicador visible: si ves esta barra, estás en el código actualizado */}
+          <div className="bg-sap-primary text-white text-center py-2 px-4 text-sm font-medium rounded-domus mb-4 shadow-elevation-1">
+            Domus Fam · Gestión familiar
+          </div>
           {children}
         </div>
       </main>
