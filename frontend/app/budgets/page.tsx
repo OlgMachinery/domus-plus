@@ -8,21 +8,13 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import type { User, FamilyBudget, AnnualBudgetMatrix, GlobalBudgetSummary } from '@/lib/types'
 import { PlusIcon, XIcon } from '@/lib/icons'
-import SAPLayout from '@/components/SAPLayout'
+import AppLayout from "@/components/AppLayout"
 import { useTranslation, getLanguage, setLanguage, type Language } from '@/lib/i18n'
 import { formatCurrency } from '@/lib/currency'
-import { safePushLogin } from '@/lib/receiptProcessing'
-import { useMemo } from 'react'
-
-// Categorías que se consideran globales (toda la familia). El resto viene de la API.
-const GLOBAL_CATEGORIES = ['Servicios Basicos', 'Mercado']
 
 export default function BudgetsPage() {
   const router = useRouter()
-  // const backendUrl = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_URL) || ''
-  // const apiBase = backendUrl.replace(/\/$/, '')
-  const [language, setLanguageState] = useState<Language>('es') // Valor por defecto, se actualiza en useEffect
-  const [mounted, setMounted] = useState(false)
+  const [language, setLanguageState] = useState<Language>(getLanguage())
   const t = useTranslation(language)
   const [budgets, setBudgets] = useState<FamilyBudget[]>([])
   const [allBudgets, setAllBudgets] = useState<FamilyBudget[]>([])
@@ -35,14 +27,10 @@ export default function BudgetsPage() {
   const [familyMembers, setFamilyMembers] = useState<User[]>([])
   const [customCategories, setCustomCategories] = useState<any[]>([])
   const [showCreateCategoryModal, setShowCreateCategoryModal] = useState(false)
-  const [showCreateFamilyModal, setShowCreateFamilyModal] = useState(false)
-  const [creatingFamily, setCreatingFamily] = useState(false)
-  const [familyName, setFamilyName] = useState('')
-  const [createFamilyError, setCreateFamilyError] = useState('')
   const [globalSummary, setGlobalSummary] = useState<GlobalBudgetSummary | null>(null)
   const [showGlobalSummary, setShowGlobalSummary] = useState(false)
   const [filters, setFilters] = useState({
-    year: 2024, // Valor por defecto, se actualiza en useEffect
+    year: new Date().getFullYear(),
     category: '',
     subcategory: '',
     budgetType: 'all' as 'all' | 'shared' | 'individual',
@@ -56,10 +44,10 @@ export default function BudgetsPage() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingBudget, setEditingBudget] = useState<FamilyBudget | null>(null)
   const [newBudget, setNewBudget] = useState({
-    step: 'account' as 'account' | 'amounts', // Paso actual del formulario
+    step: 'account' as 'account' | 'contributors' | 'amounts', // Paso actual del formulario
     category: '',
     subcategory: '',
-    year: 2024, // Valor por defecto, se actualiza en useEffect
+    year: new Date().getFullYear(),
     total_amount: 0,
     budget_type: 'shared' as 'shared' | 'individual', // Por defecto compartido
     distribution_method: 'equal' as 'equal' | 'percentage' | 'manual',
@@ -79,48 +67,32 @@ export default function BudgetsPage() {
     manually_adjusted_percentages: {} as Record<number, boolean> // Rastrear qué porcentajes fueron ajustados manualmente
   })
 
-  const getAuthHeaders = async (): Promise<HeadersInit | undefined> => {
-    if (typeof window === 'undefined') return undefined
-    const { data: { session } } = await supabase.auth.getSession()
-    const sessionToken = session?.access_token
-    if (sessionToken) {
-      localStorage.setItem('domus_token', sessionToken)
-      return { Authorization: `Bearer ${sessionToken}` }
-    }
-    const token = localStorage.getItem('domus_token')
-    return token ? { Authorization: `Bearer ${token}` } : undefined
-  }
-
-  // Inicializar valores del cliente después del montaje
   useEffect(() => {
-    setMounted(true)
-    setLanguageState(getLanguage())
-    const currentYear = new Date().getFullYear()
-    setFilters(prev => ({ ...prev, year: currentYear }))
-    setNewBudget(prev => ({ ...prev, year: currentYear }))
-  }, [])
-
-  useEffect(() => {
-    if (!mounted || typeof window === 'undefined') return
+    if (typeof window === 'undefined') return
     
-    let isMounted = true
+    let mounted = true
     
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
-        safePushLogin(router, 'budgets: no supabase session')
+        router.push('/login')
         setLoading(false)
         return
       }
       
-      // Cargar datos en paralelo - OPTIMIZED
-      // loadUser ya carga categorías y miembros, no necesitamos esperarlo para mostrar la UI básica
-      loadUser().catch(err => console.error('Error en loadUser:', err))
-      
-      // loadBudgets es lo principal
-      loadBudgets().catch(err => {
-        console.error('Error en loadBudgets:', err)
-      }).finally(() => {
-        if (isMounted) setLoading(false)
+      // Cargar datos en paralelo
+      Promise.all([
+        loadUser().catch(err => {
+          console.error('Error en loadUser:', err)
+          return null
+        }),
+        loadBudgets().catch(err => {
+          console.error('Error en loadBudgets:', err)
+          return null
+        })
+      ]).finally(() => {
+        if (mounted) {
+          setLoading(false)
+        }
       })
     }).catch(err => {
       console.error('Error obteniendo sesión:', err)
@@ -129,23 +101,23 @@ export default function BudgetsPage() {
     
     // Timeout de seguridad: si después de 10 segundos sigue cargando, desactivar loading
     const timeout = setTimeout(() => {
-      if (isMounted) {
+      if (mounted) {
         console.warn('Timeout de carga - desactivando loading')
         setLoading(false)
       }
     }, 10000)
     
     return () => {
-      isMounted = false
+      mounted = false
       clearTimeout(timeout)
     }
-  }, [mounted, router])
+  }, [router])
 
   const loadUser = async () => {
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (!authUser) {
-        safePushLogin(router, 'budgets: no supabase user')
+        router.push('/login')
         return
       }
       
@@ -167,132 +139,53 @@ export default function BudgetsPage() {
       console.error('Detalles del error:', error.message, error)
       // Solo redirigir si es un error de autenticación
       if (error.message?.includes('JWT') || error.message?.includes('session')) {
-        safePushLogin(router, 'budgets: auth error')
+        router.push('/login')
       }
     }
   }
 
   const loadCustomCategories = async () => {
     try {
-      // Usar ruta relativa (Next.js API) con token si existe
-      let token = typeof window !== 'undefined' ? localStorage.getItem('domus_token') : null
-      if (!token) {
-        const { data: { session } } = await supabase.auth.getSession()
-        token = session?.access_token || null
-      }
-      const res = await fetch('/api/custom-categories', {
-        credentials: 'include',
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setCustomCategories(data || [])
-      } else {
-        console.error('Error cargando categorías:', await res.text())
-        setCustomCategories([])
-      }
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (!authUser) return
+      
+      const { data: userData } = await supabase
+        .from('users')
+        .select('family_id')
+        .eq('id', authUser.id)
+        .single()
+      
+      if (!userData?.family_id) return
+      
+      const { data: categories } = await supabase
+        .from('custom_categories')
+        .select('*')
+        .eq('family_id', userData.family_id)
+        .eq('is_active', true)
+      
+      setCustomCategories(categories || [])
     } catch (error) {
       console.error('Error cargando categorías personalizadas:', error)
       setCustomCategories([])
     }
   }
 
-  const openCreateFamilyModal = () => {
-    setCreateFamilyError('')
-    setFamilyName('')
-    setShowCreateFamilyModal(true)
-  }
-
-  const handleCreateFamily = async () => {
-    if (creatingFamily) return
-    setCreatingFamily(true)
-    setCreateFamilyError('')
-    try {
-      const defaultName =
-        language === 'es'
-          ? `Familia de ${user?.name || user?.email?.split('@')[0] || 'Usuario'}`
-          : `Family of ${user?.name || user?.email?.split('@')[0] || 'User'}`
-      const name = familyName.trim() || defaultName
-
-      let token = typeof window !== 'undefined' ? localStorage.getItem('domus_token') : null
-      if (!token) {
-        const { data: { session } } = await supabase.auth.getSession()
-        token = session?.access_token || null
-      }
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (token) headers.Authorization = `Bearer ${token}`
-
-      const res = await fetch('/api/families', {
-        method: 'POST',
-        credentials: 'include',
-        headers,
-        body: JSON.stringify({ name }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        setCreateFamilyError(data.detail || 'Error al crear familia')
-        return
-      }
-
-      setShowCreateFamilyModal(false)
-      setFamilyName('')
-      await loadUser()
-      await loadBudgets()
-    } catch (err: any) {
-      setCreateFamilyError(err?.message || 'Error al crear familia')
-    } finally {
-      setCreatingFamily(false)
-    }
-  }
-
   const loadFamilyMembers = async (familyId: number) => {
     try {
-      const authHeaders = await getAuthHeaders()
-      const res = await fetch('/api/families', {
-        credentials: 'include',
-        headers: authHeaders,
-      })
-
-      if (res.ok) {
-        const data = await res.json().catch(() => null)
-        const members = (data?.members || []).filter((member: User) =>
-          member.family_id === familyId
-        )
-        if (members.length > 0) {
-          setFamilyMembers(members)
-          return
-        }
+      const { data: familyData } = await supabase
+        .from('families')
+        .select(`
+          *,
+          members:users(*)
+        `)
+        .eq('id', familyId)
+        .single()
+      
+      if (familyData?.members) {
+        setFamilyMembers(familyData.members as User[])
       }
-
-      // Fallback a Supabase si el API falla o no devuelve miembros
-      const { data: members, error: membersError } = await supabase
-        .from('users')
-        .select('id, name, email, phone, is_family_admin, is_active, family_id')
-        .eq('family_id', familyId)
-        .eq('is_active', true)
-        .order('name')
-
-      if (membersError) {
-        console.error('Error cargando miembros de la familia:', membersError)
-        const { data: { user: authUser } } = await supabase.auth.getUser()
-        if (authUser) {
-          const { data: currentUser } = await supabase
-            .from('users')
-            .select('id, name, email, phone, is_family_admin, is_active, family_id')
-            .eq('id', authUser.id)
-            .single()
-
-          if (currentUser) {
-            setFamilyMembers([currentUser as User])
-          }
-        }
-        return
-      }
-
-      setFamilyMembers((members || []) as User[])
     } catch (error: any) {
       console.error('Error cargando miembros:', error)
-      setFamilyMembers([])
     }
   }
 
@@ -346,7 +239,7 @@ export default function BudgetsPage() {
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (!authUser) {
-        safePushLogin(router, 'budgets: loadBudgets no supabase user')
+        router.push('/login')
         return
       }
       
@@ -396,21 +289,10 @@ export default function BudgetsPage() {
   const loadGlobalSummary = async () => {
     try {
       const year = filters.year || new Date().getFullYear()
-      const authHeaders = await getAuthHeaders()
-      const response = await fetch(`/api/budgets/global-summary?year=${year}`, {
-        credentials: 'include',
-        headers: authHeaders,
-      })
-      
-      if (!response.ok) {
-        throw new Error('Error al cargar resumen global')
-      }
-      
-      const data = await response.json()
-      setGlobalSummary(data)
+      // TODO: Implementar resumen global con Supabase
+      setGlobalSummary(null)
     } catch (error: any) {
       console.error('Error cargando resumen global:', error)
-      setGlobalSummary(null)
     }
   }
 
@@ -426,24 +308,13 @@ export default function BudgetsPage() {
   const loadAnnualMatrix = async () => {
     setLoadingMatrix(true)
     try {
-      const year = filters.year || new Date().getFullYear()
-      const authHeaders = await getAuthHeaders()
-      const response = await fetch(`/api/budgets/annual-matrix?year=${year}`, {
-        credentials: 'include',
-        headers: authHeaders,
-      })
-      
-      if (!response.ok) {
-        throw new Error('Error al cargar matriz anual')
-      }
-      
-      const data = await response.json()
-      setMatrixData(data)
-      setShowMatrixModal(true)
+      const year = new Date().getFullYear()
+      // TODO: Implementar matriz anual con Supabase
+      alert('Funcionalidad de matriz anual en desarrollo')
+      setLoadingMatrix(false)
     } catch (error: any) {
       console.error('Error cargando matriz anual:', error)
-      alert('Error al cargar la matriz anual: ' + (error.message || 'Error desconocido'))
-    } finally {
+      alert('Error al cargar la matriz anual')
       setLoadingMatrix(false)
     }
   }
@@ -463,7 +334,7 @@ export default function BudgetsPage() {
     }
     
     if (newBudget.selected_members.length === 0) {
-      alert('No se encontraron integrantes disponibles para crear el presupuesto')
+      alert('Por favor, selecciona al menos un integrante que contribuye a esta cuenta')
       return
     }
     
@@ -521,27 +392,13 @@ export default function BudgetsPage() {
       
       const { data: userData } = await supabase
         .from('users')
-        .select('family_id, is_family_admin')
+        .select('family_id')
         .eq('id', authUser.id)
         .single()
       
       if (!userData?.family_id) {
         alert('Usuario no tiene familia asignada')
         return
-      }
-
-      // Verificar permisos: usuarios normales solo pueden crear presupuestos individuales
-      if (!userData.is_family_admin && isShared) {
-        alert('Solo los administradores pueden crear presupuestos compartidos. Los usuarios solo pueden crear presupuestos individuales.')
-        return
-      }
-
-      // Si es usuario normal, forzar que sea individual y para él mismo
-      if (!userData.is_family_admin) {
-        budgetData.budget_type = 'individual'
-        budgetData.target_user_id = authUser.id
-        budgetData.distribution_method = 'manual'
-        budgetData.auto_distribute = false
       }
       
       budgetData.family_id = userData.family_id
@@ -553,11 +410,6 @@ export default function BudgetsPage() {
         .single()
       
       if (budgetError || !familyBudget) {
-        console.error('Error al crear presupuesto:', budgetError)
-        // Mensaje más específico para errores de RLS
-        if (budgetError?.message?.includes('row-level security') || budgetError?.message?.includes('RLS')) {
-          throw new Error('Error de permisos: No tienes permisos para crear presupuestos. Verifica que seas administrador de familia y que las políticas RLS estén configuradas correctamente.')
-        }
         throw new Error(budgetError?.message || 'Error al crear presupuesto')
       }
       
@@ -580,10 +432,6 @@ export default function BudgetsPage() {
           
           if (userBudgetError) {
             console.error('Error creando presupuestos de usuario:', userBudgetError)
-            // Si falla la creación de user_budgets, mostrar advertencia pero no fallar todo
-            if (userBudgetError.message?.includes('row-level security') || userBudgetError.message?.includes('RLS')) {
-              alert('El presupuesto se creó pero hubo un error al asignar montos a usuarios. Verifica las políticas RLS para user_budgets.')
-            }
           }
         }
       }
@@ -613,9 +461,7 @@ export default function BudgetsPage() {
       })
       loadBudgets()
     } catch (error: any) {
-      console.error('Error completo al crear presupuesto:', error)
-      const errorMessage = error.message || error.response?.data?.detail || 'Error al crear presupuesto'
-      alert(errorMessage)
+      alert(error.response?.data?.detail || 'Error al crear presupuesto')
     }
   }
 
@@ -813,47 +659,75 @@ export default function BudgetsPage() {
     return monthlyAmounts
   }
 
-  // Obtener categorías y años únicos de presupuestos existentes (para filtros) - MEMOIZED
-  const { existingCategories, allSubcategories, allYears } = useMemo(() => {
-    const cats = Array.from(new Set(allBudgets.map(b => b.category))).sort()
-    const subcats = Array.from(new Set(
-      allBudgets
-        .filter(b => !filters.category || b.category === filters.category)
-        .map(b => b.subcategory)
-        .filter(s => s)
-    )).sort()
-    const years = Array.from(new Set(allBudgets.map(b => b.year))).sort((a, b) => b - a)
-    return { existingCategories: cats, allSubcategories: subcats, allYears: years }
-  }, [allBudgets, filters.category])
+  // Obtener categorías y años únicos de presupuestos existentes (para filtros)
+  const existingCategories = Array.from(new Set(allBudgets.map(b => b.category))).sort()
+  const allSubcategories = Array.from(new Set(
+    allBudgets
+      .filter(b => !filters.category || b.category === filters.category)
+      .map(b => b.subcategory)
+      .filter(s => s)
+  )).sort()
+  const allYears = Array.from(new Set(allBudgets.map(b => b.year))).sort((a, b) => b - a)
 
-  const globalCategories = GLOBAL_CATEGORIES
+  // Categorías que siempre deben ser globales (todos los integrantes contribuyen)
+  const globalCategories = ['Servicios Basicos', 'Mercado']
 
-  // Todas las categorías vienen de la API (predefinidas sembradas + personalizadas)
-  const { predefinedCategories, allCategories, subcategories } = useMemo(() => {
-    const predef = customCategories.filter((c: any) => c.is_predefined).map((c: any) => c.name)
-    const custom = customCategories.filter((c: any) => !c.is_predefined).map((c: any) => c.name)
-    const all = [...predef, ...custom]
-    const subs: Record<string, string[]> = {}
-    customCategories.forEach((cat: any) => {
-      if (cat.subcategories?.length) {
-        subs[cat.name] = cat.subcategories.map((s: any) => s.name)
-      }
-    })
-    return {
-      predefinedCategories: predef,
-      allCategories: all,
-      subcategories: subs,
+  // Todas las categorías disponibles (catálogo de cuentas)
+  const predefinedCategories = [
+    'Servicios Basicos', 'Mercado', 'Vivienda', 'Transporte',
+    'Impuestos', 'Educacion', 'Salud', 'Salud Medicamentos', 'Vida Social'
+  ]
+
+  // Combinar categorías predefinidas con personalizadas
+  const allCategories = [
+    ...predefinedCategories,
+    ...customCategories.map(cat => cat.name)
+  ]
+
+  const subcategories: Record<string, string[]> = {
+    'Servicios Basicos': ['Electricidad CFE', 'Agua Potable', 'Gas LP', 'Internet', 'Entretenimiento', 'Garrafones Agua', 'Telcel'],
+    'Mercado': ['Mercado General'],
+    'Vivienda': ['Cuotas Olinala', 'Seguro Vivienda', 'Mejoras y Remodelaciones'],
+    'Transporte': ['Gasolina', 'Mantenimiento coches', 'Seguros y Derechos', 'Lavado', 'LX600', 'BMW', 'HONDA CIVIC', 'LAND CRUISER'],
+    'Impuestos': ['Predial'],
+    'Educacion': ['Colegiaturas', 'Gonzalo', 'Sebastian', 'Emiliano', 'Isabela', 'Santiago', 'Enrique'],
+    'Salud': ['Consulta', 'Medicamentos', 'Seguro Medico', 'Prevencion'],
+    'Salud Medicamentos': [
+      'Gonzalo Jr Vuminix, Medikinet',
+      'Isabela Luvox, Risperdal',
+      'Gonzalo MF, Lexapro, Concerta, Efexxor',
+      'Sebastian MB, Concerta',
+      'Emiliano MB, Concerta, Vuminix'
+    ],
+    'Vida Social': [
+      'Salidas Personales', 
+      'Salidas Familiares', 
+      'Cumpleanos', 
+      'Aniversarios', 
+      'Regalos Navidad',
+      'Salidas Gonzalo',
+      'Salidas Emiliano',
+      'Salidas Sebastian',
+      'Semana Isabela',
+      'Semana Santiago'
+    ]
+  }
+
+  // Agregar subcategorías de categorías personalizadas
+  customCategories.forEach(cat => {
+    if (cat.subcategories && cat.subcategories.length > 0) {
+      subcategories[cat.name] = cat.subcategories.map((sub: any) => sub.name)
     }
-  }, [customCategories])
+  })
   
 
   if (loading) {
   return (
-      <SAPLayout user={user} title={t.budgets.title} toolbar={null}>
+      <AppLayout user={user} title={t.budgets.title} toolbar={null}>
         <div className="flex items-center justify-center py-12">
-          <div className="text-sap-text-secondary">{t.common.loading}</div>
+          <div className="text-muted-foreground">{t.common.loading}</div>
             </div>
-      </SAPLayout>
+      </AppLayout>
     )
   }
 
@@ -862,11 +736,6 @@ export default function BudgetsPage() {
     setLanguage(newLang)
     setLanguageState(newLang)
   }
-
-  const familyPlaceholder =
-    language === 'es'
-      ? `Familia de ${user?.name || user?.email?.split('@')[0] || 'Usuario'}`
-      : `Family of ${user?.name || user?.email?.split('@')[0] || 'User'}`
 
   const toolbar = (
               <>
@@ -899,64 +768,41 @@ export default function BudgetsPage() {
   )
 
   return (
-    <SAPLayout
+    <AppLayout
       user={user}
       title={t.budgets.title}
       subtitle={t.budgets.subtitle}
       toolbar={toolbar}
     >
-      {user && !user.family_id && (
-        <div className="sap-card p-4 mb-4 border border-sap-warning/30 bg-sap-warning/10">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-sap-text">
-                {language === 'es' ? 'No tienes familia asignada' : 'No family assigned'}
-              </p>
-              <p className="text-xs text-sap-text-secondary mt-1">
-                {language === 'es'
-                  ? 'Para crear categorías y presupuestos necesitas una familia.'
-                  : 'You need a family to create categories and budgets.'}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={openCreateFamilyModal}
-              className="sap-button-primary"
-            >
-              {language === 'es' ? 'Crear familia' : 'Create family'}
-            </button>
-          </div>
-        </div>
-      )}
       {/* Resumen Global */}
       {showGlobalSummary && globalSummary && (
         <div className="sap-card p-6 mb-4">
           <div className="flex justify-between items-center mb-4">
             <div>
-              <h3 className="text-base font-semibold text-sap-text">Resumen Global {globalSummary.year}</h3>
-              <p className="text-xs text-sap-text-secondary mt-1">
+              <h3 className="text-base font-semibold text-foreground">Resumen Global {globalSummary.year}</h3>
+              <p className="text-xs text-muted-foreground mt-1">
                 Presupuestos compartidos + individuales agrupados por categoría
               </p>
           </div>
         </div>
 
           {/* Totales */}
-          <div className="grid grid-cols-3 gap-4 mb-4 pb-4 border-b border-sap-border">
+          <div className="grid grid-cols-3 gap-4 mb-4 pb-4 border-b border-border">
             <div>
-              <div className="text-xs text-sap-text-secondary mb-1">Compartidos</div>
-              <div className="text-lg font-semibold text-sap-primary">
+              <div className="text-xs text-muted-foreground mb-1">Compartidos</div>
+              <div className="text-lg font-semibold text-primary">
                 {formatCurrency(globalSummary.totals.shared, language, false)}
               </div>
             </div>
             <div>
-              <div className="text-xs text-sap-text-secondary mb-1">Individuales</div>
+              <div className="text-xs text-muted-foreground mb-1">Individuales</div>
               <div className="text-lg font-semibold text-sap-warning">
                 {formatCurrency(globalSummary.totals.individual, language, false)}
               </div>
             </div>
             <div>
-              <div className="text-xs text-sap-text-secondary mb-1">Total Global</div>
-              <div className="text-lg font-semibold text-sap-text">
+              <div className="text-xs text-muted-foreground mb-1">Total Global</div>
+              <div className="text-lg font-semibold text-foreground">
                 {formatCurrency(globalSummary.totals.global, language, false)}
               </div>
             </div>
@@ -965,19 +811,19 @@ export default function BudgetsPage() {
           {/* Detalle por categoría */}
           <div className="space-y-3 max-h-96 overflow-y-auto">
             {globalSummary.summary.map((item, idx) => (
-              <div key={idx} className="border border-sap-border rounded p-3">
+              <div key={idx} className="border border-border rounded p-3">
                 <div className="flex justify-between items-start mb-2">
                   <div>
-                    <div className="text-sm font-semibold text-sap-text">{item.category}</div>
-                    <div className="text-xs text-sap-text-secondary">{item.subcategory}</div>
+                    <div className="text-sm font-semibold text-foreground">{item.category}</div>
+                    <div className="text-xs text-muted-foreground">{item.subcategory}</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-semibold text-sap-text">
+                    <div className="text-sm font-semibold text-foreground">
                       {formatCurrency(item.total_amount, language, false)}
                     </div>
-                    <div className="text-xs text-sap-text-secondary">
+                    <div className="text-xs text-muted-foreground">
                       {item.shared_amount > 0 && (
-                        <span className="text-sap-primary">Global: {formatCurrency(item.shared_amount, language, false)}</span>
+                        <span className="text-primary">Global: {formatCurrency(item.shared_amount, language, false)}</span>
                       )}
                       {item.shared_amount > 0 && item.individual_total > 0 && ' + '}
                       {item.individual_total > 0 && (
@@ -991,8 +837,8 @@ export default function BudgetsPage() {
 
                 {/* Desglose de presupuestos individuales */}
                 {Object.keys(item.individual_amounts).length > 0 && (
-                  <div className="mt-2 pt-2 border-t border-sap-border">
-                    <div className="text-xs text-sap-text-secondary mb-1">
+                  <div className="mt-2 pt-2 border-t border-border">
+                    <div className="text-xs text-muted-foreground mb-1">
                       {globalCategories.includes(item.category) 
                         ? 'Partidas Especiales/Incrementos:' 
                         : 'Presupuestos individuales:'}
@@ -1021,9 +867,9 @@ export default function BudgetsPage() {
       <div className="sap-card p-4 mb-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
-            <h3 className="text-sm font-semibold text-sap-text">Filtros</h3>
+            <h3 className="text-sm font-semibold text-foreground">Filtros</h3>
             {hasActiveFilters && (
-              <span className="sap-badge bg-sap-primary/10 text-sap-primary">
+              <span className="sap-badge bg-primary/10 text-primary">
                 {Object.values(filters).filter((v, i) => i !== 0 && v !== '' && v !== 'all').length} activos
               </span>
             )}
@@ -1048,7 +894,7 @@ export default function BudgetsPage() {
 
         {/* Filtro rápido por año */}
         <div className="flex gap-2 mb-3">
-          <label className="text-xs font-medium text-sap-text-secondary flex items-center">
+          <label className="text-xs font-medium text-muted-foreground flex items-center">
             Año:
           </label>
           <select
@@ -1066,9 +912,9 @@ export default function BudgetsPage() {
 
         {/* Filtros avanzados */}
         {showFilters && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-sap-border">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-border">
                   <div>
-              <label className="block text-xs font-medium text-sap-text-secondary mb-1">
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
                 Categoría
               </label>
               <select
@@ -1084,7 +930,7 @@ export default function BudgetsPage() {
                   </div>
 
                   <div>
-              <label className="block text-xs font-medium text-sap-text-secondary mb-1">
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
                 Subcategoría
               </label>
               <select
@@ -1101,7 +947,7 @@ export default function BudgetsPage() {
                   </div>
 
                   <div>
-              <label className="block text-xs font-medium text-sap-text-secondary mb-1">
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
                 Tipo
               </label>
               <select
@@ -1116,7 +962,7 @@ export default function BudgetsPage() {
                 </div>
 
             <div>
-              <label className="block text-xs font-medium text-sap-text-secondary mb-1">
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
                 Estado
               </label>
               <select
@@ -1169,9 +1015,9 @@ export default function BudgetsPage() {
                       >
                         <td>
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-sap-text">{budget.category}</span>
+                            <span className="text-sm font-medium text-foreground">{budget.category}</span>
                             {budget.budget_type === 'shared' && (
-                              <span className="text-[10px] px-1.5 py-0.5 bg-sap-primary/10 text-sap-primary rounded font-medium">C</span>
+                              <span className="text-[10px] px-1.5 py-0.5 bg-primary/10 text-primary rounded font-medium">C</span>
                             )}
                             {budget.budget_type === 'individual' && globalCategories.includes(budget.category) && (
                               <span className="text-[10px] px-1.5 py-0.5 bg-sap-warning/10 text-sap-warning rounded font-medium" title="Partida Especial/Incremento">PE</span>
@@ -1183,7 +1029,7 @@ export default function BudgetsPage() {
                         </td>
                         <td>
                           <div className="flex flex-col">
-                            <span className="text-xs text-sap-text-secondary">{budget.subcategory}</span>
+                            <span className="text-xs text-muted-foreground">{budget.subcategory}</span>
                             {budget.budget_type === 'individual' && budget.target_user && (
                               <span className={`text-[10px] mt-0.5 ${
                                 globalCategories.includes(budget.category) 
@@ -1197,37 +1043,37 @@ export default function BudgetsPage() {
               </div>
                         </td>
                         <td className="text-right">
-                          <span className="text-sm font-medium text-sap-text">
+                          <span className="text-sm font-medium text-foreground">
                             {formatCurrency(montoMensual, language, false)}
                           </span>
                         </td>
                         <td className="text-right">
-                          <span className="text-sm font-semibold text-sap-text">
+                          <span className="text-sm font-semibold text-foreground">
                             {formatCurrency(budget.total_amount, language, false)}
                           </span>
                         </td>
                         <td className="text-right">
-                          <span className="text-xs text-sap-text-secondary">
+                          <span className="text-xs text-muted-foreground">
                             {formatCurrency(totalAllocated, language, false)}
                           </span>
                         </td>
                         <td className="text-right">
                           <span className={`text-xs font-medium ${
-                            totalSpent > 0 ? 'text-sap-danger' : 'text-sap-text-secondary'
+                            totalSpent > 0 ? 'text-sap-danger' : 'text-muted-foreground'
                           }`}>
                             {formatCurrency(totalSpent, language, false)}
                           </span>
                         </td>
                         <td className="text-right">
                           <span className={`text-xs font-semibold ${
-                            available > 0 ? 'text-sap-success' : available < 0 ? 'text-sap-danger' : 'text-sap-text-secondary'
+                            available > 0 ? 'text-sap-success' : available < 0 ? 'text-sap-danger' : 'text-muted-foreground'
                           }`}>
                             {formatCurrency(available, language, false)}
                           </span>
                         </td>
                         <td className="text-center">
                           <div className="flex items-center justify-center gap-2">
-                            <div className="w-16 h-1.5 bg-sap-bg rounded-full overflow-hidden">
+                            <div className="w-16 h-1.5 bg-background rounded-full overflow-hidden">
                               <div
                                 className={`h-full transition-all ${
                                   percentage > 80 ? 'bg-sap-danger' : 
@@ -1237,7 +1083,7 @@ export default function BudgetsPage() {
                                 style={{ width: `${Math.min(percentage, 100)}%` }}
                               />
                             </div>
-                            <span className="text-xs font-medium text-sap-text-secondary min-w-[35px]">
+                            <span className="text-xs font-medium text-muted-foreground min-w-[35px]">
                               {percentage.toFixed(0)}%
                             </span>
                           </div>
@@ -1250,7 +1096,7 @@ export default function BudgetsPage() {
             </div>
           ) : (
             <div className="sap-card p-12 text-center">
-              <p className="text-sm text-sap-text-secondary mb-4">
+              <p className="text-sm text-muted-foreground mb-4">
                 No hay presupuestos creados aún
               </p>
               <button
@@ -1268,12 +1114,13 @@ export default function BudgetsPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="sap-card max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto shadow-lg">
             <div className="p-6">
-              <div className="flex justify-between items-center mb-6 border-b border-sap-border pb-4">
+              <div className="flex justify-between items-center mb-6 border-b border-border pb-4">
               <div>
-                  <h2 className="text-lg font-semibold text-sap-text">Crear Presupuesto Anual</h2>
-                  <p className="text-xs text-sap-text-secondary mt-1">
+                  <h2 className="text-lg font-semibold text-foreground">Crear Presupuesto Anual</h2>
+                  <p className="text-xs text-muted-foreground mt-1">
                     {newBudget.step === 'account' && 'Paso 1: Selecciona la cuenta del catálogo'}
-                    {newBudget.step === 'amounts' && 'Paso 2: Asigna el monto del presupuesto'}
+                    {newBudget.step === 'contributors' && 'Paso 2: Selecciona los integrantes que contribuyen'}
+                    {newBudget.step === 'amounts' && 'Paso 3: Asigna montos a cada integrante'}
                   </p>
                 </div>
                 <button
@@ -1304,7 +1151,7 @@ export default function BudgetsPage() {
                   }}
                   className="sap-button-ghost p-2"
                 >
-                  <XIcon size={18} className="text-sap-text-secondary" />
+                  <XIcon size={18} className="text-muted-foreground" />
                 </button>
               </div>
 
@@ -1313,15 +1160,15 @@ export default function BudgetsPage() {
                 {newBudget.step === 'account' && (
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-sap-text-secondary mb-3">
+                      <label className="block text-sm font-medium text-muted-foreground mb-3">
                         Selecciona la cuenta del catálogo
                       </label>
-                      <p className="text-xs text-sap-text-tertiary mb-3">
-                        Selecciona la categoría y subcategoría. Después podrás asignar el monto.
+                      <p className="text-xs text-muted-foreground mb-3">
+                        Primero selecciona la categoría y subcategoría. Luego definirás qué integrantes contribuyen a esta cuenta.
                       </p>
                       
                       <div className="mb-4">
-                        <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+                        <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                           Categoría
                         </label>
                         <div className="flex gap-2">
@@ -1355,13 +1202,7 @@ export default function BudgetsPage() {
                 </select>
                           <button
                             type="button"
-                            onClick={() => {
-                              if (!user?.family_id) {
-                                openCreateFamilyModal()
-                                return
-                              }
-                              setShowCreateCategoryModal(true)
-                            }}
+                            onClick={() => setShowCreateCategoryModal(true)}
                             className="sap-button-secondary flex items-center gap-1 px-3"
                             title={language === 'es' ? 'Crear nueva categoría' : 'Create new category'}
                           >
@@ -1370,15 +1211,15 @@ export default function BudgetsPage() {
                           </button>
                         </div>
                         {newBudget.category && globalCategories.includes(newBudget.category) && (
-                          <p className="text-xs text-sap-primary mt-1.5">
-                            Esta categoría es global y aplica a toda la familia
+                          <p className="text-xs text-primary mt-1.5">
+                            Esta categoría es siempre global (todos los integrantes contribuyen)
                           </p>
                         )}
               </div>
 
               {newBudget.category && (
                 <div>
-                          <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+                          <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                             Subcategoría
                           </label>
                   <select
@@ -1396,27 +1237,35 @@ export default function BudgetsPage() {
               )}
 
                       {newBudget.category && newBudget.subcategory && (
-                        <div className="mt-4 pt-4 border-t border-sap-border">
+                        <div className="mt-4 pt-4 border-t border-border">
                           <button
                             type="button"
                             onClick={() => {
-                              const allMemberIds = familyMembers.length > 0
-                                ? familyMembers.map(m => m.id)
-                                : (user?.id ? [user.id] : [])
-                              const initialAmounts: Record<number, number> = {}
-                              allMemberIds.forEach(id => {
-                                initialAmounts[id] = newBudget.member_amounts[id] || 0
-                              })
-                              setNewBudget({
-                                ...newBudget,
-                                selected_members: allMemberIds,
-                                member_amounts: initialAmounts,
-                                step: 'amounts'
-                              })
+                              // Si es categoría global, seleccionar todos los miembros automáticamente
+                              if (globalCategories.includes(newBudget.category)) {
+                                setNewBudget({ 
+                                  ...newBudget, 
+                                  selected_members: familyMembers.map(m => m.id),
+                                  step: 'amounts'
+                                })
+                              } else {
+                                // Seleccionar todos los integrantes por defecto
+                                const allMemberIds = familyMembers.map(m => m.id)
+                                const initialAmounts: Record<number, number> = {}
+                                allMemberIds.forEach(id => {
+                                  initialAmounts[id] = 0
+                                })
+                                setNewBudget({ 
+                                  ...newBudget, 
+                                  selected_members: allMemberIds,
+                                  member_amounts: initialAmounts,
+                                  step: 'contributors' 
+                                })
+                              }
                             }}
                             className="sap-button-primary w-full"
                           >
-                            Continuar → Monto
+                            Continuar → Seleccionar Integrantes
                           </button>
                         </div>
                       )}
@@ -1424,20 +1273,144 @@ export default function BudgetsPage() {
                   </div>
                 )}
 
-                {/* Paso 2: Asignar montos */}
+                {/* Paso 2: Seleccionar integrantes que contribuyen */}
+                {newBudget.step === 'contributors' && (
+                  <div className="space-y-4">
+              <div>
+                      <label className="block text-sm font-medium text-muted-foreground mb-3">
+                        ¿Qué integrantes contribuyen a esta cuenta?
+                      </label>
+                      <p className="text-xs text-muted-foreground mb-3">
+                        <strong>Todos los integrantes están seleccionados por defecto.</strong> Deselecciona los que no contribuyen a {newBudget.category} - {newBudget.subcategory}
+                      </p>
+                      
+                      <div className="mb-3 p-2 bg-primary/10 border border-sap-primary/20 rounded">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-semibold text-foreground">
+                            {newBudget.selected_members.length} de {familyMembers.length} integrantes seleccionados
+                          </span>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const allMemberIds = familyMembers.map(m => m.id)
+                                const initialAmounts: Record<number, number> = {}
+                                allMemberIds.forEach(id => {
+                                  initialAmounts[id] = newBudget.member_amounts[id] || 0
+                                })
+                                setNewBudget({
+                                  ...newBudget,
+                                  selected_members: allMemberIds,
+                                  member_amounts: initialAmounts
+                                })
+                              }}
+                              className="text-xs text-primary hover:underline"
+                            >
+                              Seleccionar todos
+                            </button>
+                            <span className="text-sap-border">|</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setNewBudget({
+                                  ...newBudget,
+                                  selected_members: [],
+                                  member_amounts: {}
+                                })
+                              }}
+                              className="text-xs text-muted-foreground hover:underline"
+                            >
+                              Deseleccionar todos
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 gap-2 mb-4">
+                        {familyMembers.map(member => (
+                          <label
+                            key={member.id}
+                            className={`sap-card p-3 cursor-pointer hover:border-sap-primary transition-colors border-2 ${
+                              newBudget.selected_members.includes(member.id) 
+                                ? 'border-sap-primary bg-primary/5' 
+                                : ''
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                checked={newBudget.selected_members.includes(member.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setNewBudget({
+                                      ...newBudget,
+                                      selected_members: [...newBudget.selected_members, member.id],
+                                      member_amounts: { ...newBudget.member_amounts, [member.id]: 0 }
+                                    })
+                                  } else {
+                                    const newMembers = newBudget.selected_members.filter(id => id !== member.id)
+                                    const newAmounts = { ...newBudget.member_amounts }
+                                    delete newAmounts[member.id]
+                                    setNewBudget({
+                                      ...newBudget,
+                                      selected_members: newMembers,
+                                      member_amounts: newAmounts
+                                    })
+                                  }
+                                }}
+                                className="w-4 h-4"
+                              />
+                              <div className="flex-1">
+                                <div className="font-medium text-foreground">
+                                  {member.name} {member.id === user?.id && '(Tú)'}
+                                </div>
+                                <div className="text-xs text-muted-foreground">{member.email}</div>
+                              </div>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+
+                      {newBudget.selected_members.length > 0 && (
+                        <div className="mt-4 pt-4 border-t border-border">
+                          <button
+                            type="button"
+                            onClick={() => setNewBudget({ ...newBudget, step: 'amounts' })}
+                            className="sap-button-primary w-full"
+                            disabled={newBudget.selected_members.length === 0}
+                          >
+                            Continuar → Asignar Montos ({newBudget.selected_members.length} integrante{newBudget.selected_members.length > 1 ? 's' : ''})
+                          </button>
+                        </div>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => setNewBudget({ ...newBudget, step: 'account', selected_members: [], member_amounts: {} })}
+                        className="sap-button-secondary text-sm mt-3"
+                      >
+                        ← Volver
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Paso 3: Asignar montos */}
                 {newBudget.step === 'amounts' && (
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-sap-text-secondary mb-3">
-                        Asigna el monto del presupuesto
+                      <label className="block text-sm font-medium text-muted-foreground mb-3">
+                        Asigna montos a cada integrante
                       </label>
-                      <p className="text-xs text-sap-text-tertiary mb-4">
-                        Define el monto total para {newBudget.category} - {newBudget.subcategory}
+                      <p className="text-xs text-muted-foreground mb-4">
+                        Define cuánto contribuye cada integrante a {newBudget.category} - {newBudget.subcategory}
+                        <br />
+                        <strong className="text-primary">{newBudget.selected_members.length} integrante{newBudget.selected_members.length > 1 ? 's' : ''} seleccionado{newBudget.selected_members.length > 1 ? 's' : ''}</strong>
                       </p>
 
                       {/* Selección de frecuencia */}
                       <div className="mb-4">
-                        <label className="block text-sm font-medium text-sap-text-secondary mb-2">
+                        <label className="block text-sm font-medium text-muted-foreground mb-2">
                           Frecuencia de asignación
                         </label>
                         <select
@@ -1463,7 +1436,7 @@ export default function BudgetsPage() {
                       {/* Si es diario: seleccionar días del mes */}
                       {newBudget.frequency === 'diario' && (
                         <div className="mb-4">
-                          <label className="block text-sm font-medium text-sap-text-secondary mb-2">
+                          <label className="block text-sm font-medium text-muted-foreground mb-2">
                             Mes para asignación diaria
                           </label>
                           <select
@@ -1483,10 +1456,10 @@ export default function BudgetsPage() {
                               <option key={index + 1} value={index + 1}>{mes}</option>
                             ))}
                           </select>
-                          <label className="block text-sm font-medium text-sap-text-secondary mb-2 mt-3">
+                          <label className="block text-sm font-medium text-muted-foreground mb-2 mt-3">
                             Días del mes ({new Date(newBudget.year, newBudget.daily_month, 0).getDate()} días disponibles)
                           </label>
-                          <div className="grid grid-cols-7 gap-2 max-h-48 overflow-y-auto p-2 border border-sap-border rounded">
+                          <div className="grid grid-cols-7 gap-2 max-h-48 overflow-y-auto p-2 border border-border rounded">
                             {Array.from({ length: new Date(newBudget.year, newBudget.daily_month, 0).getDate() }, (_, i) => i + 1).map(day => (
                               <label key={day} className="flex items-center cursor-pointer">
                                 <input
@@ -1507,7 +1480,7 @@ export default function BudgetsPage() {
                                   }}
                                   className="w-4 h-4 mr-1"
                                 />
-                                <span className="text-xs text-sap-text">{day}</span>
+                                <span className="text-xs text-foreground">{day}</span>
                               </label>
                             ))}
                           </div>
@@ -1529,7 +1502,7 @@ export default function BudgetsPage() {
                               })}
                               className="w-4 h-4 mr-2"
                             />
-                            <span className="text-sm text-sap-text">¿Es igual todos los meses?</span>
+                            <span className="text-sm text-foreground">¿Es igual todos los meses?</span>
                           </label>
                         </div>
                       )}
@@ -1537,10 +1510,10 @@ export default function BudgetsPage() {
                       {/* Si no es igual todos los meses: seleccionar meses */}
                       {!newBudget.same_all_months && newBudget.frequency !== 'anual' && (
                         <div className="mb-4">
-                          <label className="block text-sm font-medium text-sap-text-secondary mb-2">
+                          <label className="block text-sm font-medium text-muted-foreground mb-2">
                             Selecciona los meses
                           </label>
-                          <div className="grid grid-cols-3 gap-2 max-h-32 overflow-y-auto p-2 border border-sap-border rounded">
+                          <div className="grid grid-cols-3 gap-2 max-h-32 overflow-y-auto p-2 border border-border rounded">
                             {['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'].map((mes, index) => (
                               <label key={index + 1} className="flex items-center cursor-pointer">
                                 <input
@@ -1562,60 +1535,419 @@ export default function BudgetsPage() {
                                   }}
                                   className="w-4 h-4 mr-2"
                                 />
-                                <span className="text-xs text-sap-text">{mes}</span>
+                                <span className="text-xs text-foreground">{mes}</span>
                               </label>
                             ))}
                           </div>
                         </div>
                       )}
 
-                      <div className="sap-card p-4 mb-4">
-                        <label className="block text-sm font-medium text-sap-text-secondary mb-2">
-                          Monto total del presupuesto
-                        </label>
-                        <p className="text-xs text-sap-text-tertiary mb-3">
-                          Este monto aplica a la categoría seleccionada.
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg text-sap-text-secondary">$</span>
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={newBudget.total_budget_amount || 0}
-                            onChange={(e) => {
-                              const totalAmount = parseFloat(e.target.value) || 0
-                              const memberAmounts: Record<number, number> = {}
-                              if (newBudget.selected_members.length > 0) {
-                                const amountPerMember = totalAmount / newBudget.selected_members.length
-                                newBudget.selected_members.forEach(memberId => {
-                                  memberAmounts[memberId] = amountPerMember
-                                })
-                              }
-                              setNewBudget({
-                                ...newBudget,
-                                total_budget_amount: totalAmount,
-                                total_amount: totalAmount,
-                                member_amounts: memberAmounts
-                              })
-                            }}
-                            className="sap-input text-lg font-semibold text-right flex-1"
-                            placeholder="0.00"
-                            min="0"
-                          />
+                      {/* Opción de asignación variable por mes - Solo si hay monto total definido */}
+                      {newBudget.total_budget_amount > 0 && (
+                        <div className="mb-4">
+                          <label className="flex items-center cursor-pointer mb-2">
+                            <input
+                              type="checkbox"
+                              checked={Object.keys(newBudget.variable_monthly_amounts).length > 0}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  // Inicializar SOLO con los integrantes seleccionados
+                                  const initialVariable: Record<number, Record<number, number>> = {}
+                                  newBudget.selected_members.forEach(memberId => {
+                                    const baseAmount = newBudget.member_amounts[memberId] || 0
+                                    initialVariable[memberId] = {}
+                                    for (let month = 1; month <= 12; month++) {
+                                      initialVariable[memberId][month] = baseAmount / 12
+                                    }
+                                  })
+                                  setNewBudget({
+                                    ...newBudget,
+                                    variable_monthly_amounts: initialVariable
+                                  })
+                                } else {
+                                  setNewBudget({
+                                    ...newBudget,
+                                    variable_monthly_amounts: {}
+                                  })
+                                }
+                              }}
+                              className="w-4 h-4 mr-2"
+                            />
+                            <span className="text-sm text-foreground">Asignación variable por mes</span>
+                          </label>
+                          {Object.keys(newBudget.variable_monthly_amounts).length > 0 && (
+                            <p className="text-xs text-muted-foreground mb-3">
+                              Define montos específicos para cada mes del año ({newBudget.selected_members.length} integrante{newBudget.selected_members.length > 1 ? 's' : ''} seleccionado{newBudget.selected_members.length > 1 ? 's' : ''})
+                            </p>
+                          )}
                         </div>
-                      </div>
+                      )}
 
-                      <div className="p-3 bg-sap-primary/10 border border-sap-primary/20 rounded mb-4">
+                      {/* Detectar si son todos los integrantes */}
+                      {(() => {
+                        const isAllMembers = newBudget.selected_members.length === familyMembers.length
+                        
+                        return (
+                          <>
+                            {/* Si son todos: mostrar solo monto total */}
+                            {isAllMembers ? (
+                              <div className="space-y-4 mb-4">
+                                <div className="sap-card p-4">
+                                  <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                    Monto total del presupuesto
+                                  </label>
+                                  <p className="text-xs text-muted-foreground mb-3">
+                                    Este monto se dividirá igual entre todos los integrantes ({newBudget.selected_members.length} personas)
+                                  </p>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-lg text-muted-foreground">$</span>
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      value={newBudget.total_budget_amount || 0}
+                                      onChange={(e) => {
+                                        const totalAmount = parseFloat(e.target.value) || 0
+                                        const amountPerMember = totalAmount / newBudget.selected_members.length
+                                        const memberAmounts: Record<number, number> = {}
+                                        newBudget.selected_members.forEach(memberId => {
+                                          memberAmounts[memberId] = amountPerMember
+                                        })
+                                        setNewBudget({
+                                          ...newBudget,
+                                          total_budget_amount: totalAmount,
+                                          total_amount: totalAmount,
+                                          member_amounts: memberAmounts
+                                        })
+                                      }}
+                                      className="sap-input text-lg font-semibold text-right flex-1"
+                                      placeholder="0.00"
+                                      min="0"
+                                    />
+                                  </div>
+                                  {newBudget.total_budget_amount > 0 && (
+                                    <div className="mt-3 pt-3 border-t border-border">
+                                      <div className="text-xs text-muted-foreground">
+                                        Monto por integrante: <strong className="text-primary">{formatCurrency(newBudget.total_budget_amount / newBudget.selected_members.length, language, true)}</strong>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              // Si son algunos: mostrar opción de monto total o porcentajes
+                              <div className="space-y-4 mb-4">
+                                {/* Selección de modo de distribución */}
+                                <div className="mb-4">
+                                  <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                    Modo de distribución
+                                  </label>
+                                  <div className="flex gap-4">
+                                    <label className="flex items-center cursor-pointer">
+                                      <input
+                                        type="radio"
+                                        name="distribution_mode"
+                                        checked={newBudget.distribution_mode === 'total'}
+                                        onChange={() => setNewBudget({ 
+                                          ...newBudget, 
+                                          distribution_mode: 'total', 
+                                          total_budget_amount: newBudget.total_amount,
+                                          manually_adjusted_percentages: {} // Limpiar ajustes manuales al cambiar modo
+                                        })}
+                                        className="w-4 h-4 mr-2"
+                                      />
+                                      <span className="text-sm text-foreground">Monto total (dividir igual)</span>
+                                    </label>
+                                    <label className="flex items-center cursor-pointer">
+                                      <input
+                                        type="radio"
+                                        name="distribution_mode"
+                                        checked={newBudget.distribution_mode === 'percentage'}
+                                        onChange={() => {
+                                          // Inicializar porcentajes iguales y limpiar ajustes manuales
+                                          const totalAmount = newBudget.total_budget_amount || newBudget.total_amount || 0
+                                          const equalAmount = totalAmount / newBudget.selected_members.length
+                                          const initialAmounts: Record<number, number> = {}
+                                          newBudget.selected_members.forEach(memberId => {
+                                            initialAmounts[memberId] = equalAmount
+                                          })
+                                          setNewBudget({ 
+                                            ...newBudget, 
+                                            distribution_mode: 'percentage',
+                                            member_amounts: initialAmounts,
+                                            manually_adjusted_percentages: {} // Limpiar ajustes manuales
+                                          })
+                                        }}
+                                        className="w-4 h-4 mr-2"
+                                      />
+                                      <span className="text-sm text-foreground">Distribución por porcentajes</span>
+                                    </label>
+                                  </div>
+                                  {newBudget.distribution_mode === 'percentage' && (
+                                    <p className="text-xs text-muted-foreground mt-2">
+                                      💡 Al modificar un porcentaje, la diferencia se distribuye automáticamente entre los demás para mantener el 100%
+                                    </p>
+                                  )}
+                                </div>
+
+                                {newBudget.distribution_mode === 'total' ? (
+                                  // Modo: Monto total
+                                  <div className="sap-card p-4">
+                                    <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                      Monto total del presupuesto
+                                    </label>
+                                    <p className="text-xs text-muted-foreground mb-3">
+                                      Este monto se dividirá igual entre los {newBudget.selected_members.length} integrantes seleccionados
+                                    </p>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-lg text-muted-foreground">$</span>
+                                      <input
+                                        type="number"
+                                        step="0.01"
+                                        value={newBudget.total_budget_amount || 0}
+                                        onChange={(e) => {
+                                          const totalAmount = parseFloat(e.target.value) || 0
+                                          const amountPerMember = totalAmount / newBudget.selected_members.length
+                                          const memberAmounts: Record<number, number> = {}
+                                          newBudget.selected_members.forEach(memberId => {
+                                            memberAmounts[memberId] = amountPerMember
+                                          })
+                                          setNewBudget({
+                                            ...newBudget,
+                                            total_budget_amount: totalAmount,
+                                            total_amount: totalAmount,
+                                            member_amounts: memberAmounts
+                                          })
+                                        }}
+                                        className="sap-input text-lg font-semibold text-right flex-1"
+                                        placeholder="0.00"
+                                        min="0"
+                                      />
+                                    </div>
+                                    {newBudget.total_budget_amount > 0 && (
+                                      <div className="mt-3 pt-3 border-t border-border">
+                                        <div className="text-xs text-muted-foreground">
+                                          Monto por integrante: <strong className="text-primary">{formatCurrency(newBudget.total_budget_amount / newBudget.selected_members.length, language, true)}</strong>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  // Modo: Porcentajes
+                                  <div className="space-y-3">
+                                    <div className="sap-card p-4 bg-primary/5 border border-sap-primary/20">
+                                      <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                        Monto total del presupuesto
+                                      </label>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-lg text-muted-foreground">$</span>
+                                        <input
+                                          type="number"
+                                          step="0.01"
+                                          value={newBudget.total_budget_amount || 0}
+                                          onChange={(e) => {
+                                            const totalAmount = parseFloat(e.target.value) || 0
+                                            // Recalcular montos individuales basándose en porcentajes actuales
+                                            const memberAmounts: Record<number, number> = {}
+                                            let totalPercentage = 0
+                                            newBudget.selected_members.forEach(memberId => {
+                                              const currentAmount = newBudget.member_amounts[memberId] || 0
+                                              const currentTotal = newBudget.total_amount || 1
+                                              const percentage = (currentAmount / currentTotal) * 100
+                                              totalPercentage += percentage
+                                              memberAmounts[memberId] = (totalAmount * percentage) / 100
+                                            })
+                                            // Si no hay porcentajes definidos, dividir igual
+                                            if (totalPercentage === 0) {
+                                              const equalAmount = totalAmount / newBudget.selected_members.length
+                                              newBudget.selected_members.forEach(memberId => {
+                                                memberAmounts[memberId] = equalAmount
+                                              })
+                                            }
+                                            setNewBudget({
+                                              ...newBudget,
+                                              total_budget_amount: totalAmount,
+                                              total_amount: totalAmount,
+                                              member_amounts: memberAmounts
+                                            })
+                                          }}
+                                          className="sap-input text-lg font-semibold text-right flex-1"
+                                          placeholder="0.00"
+                                          min="0"
+                                        />
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="space-y-2">
+                                      {newBudget.selected_members.map(memberId => {
+                                        const member = familyMembers.find(m => m.id === memberId)
+                                        if (!member) return null
+                                        const currentAmount = newBudget.member_amounts[memberId] || 0
+                                        const currentTotal = newBudget.total_budget_amount || 1
+                                        const percentage = (currentAmount / currentTotal) * 100
+                                        
+                                        return (
+                                          <div key={memberId} className="sap-card p-3">
+                                            <div className="flex items-center justify-between gap-3">
+                                              <div className="flex-1">
+                                                <div className="font-medium text-foreground text-sm">
+                                                  {member.name} {member.id === user?.id && '(Tú)'}
+                                                </div>
+                                              </div>
+                                              <div className="flex items-center gap-3">
+                                                <div className="flex items-center gap-2 w-32">
+                                                  <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    value={percentage.toFixed(2)}
+                                                    onChange={(e) => {
+                                                      const newPercentage = parseFloat(e.target.value) || 0
+                                                      const totalAmount = newBudget.total_budget_amount || 0
+                                                      const oldPercentage = percentage
+                                                      const difference = newPercentage - oldPercentage
+                                                      
+                                                      // Marcar este porcentaje como ajustado manualmente
+                                                      const adjustedPercentages = {
+                                                        ...newBudget.manually_adjusted_percentages,
+                                                        [memberId]: true
+                                                      }
+                                                      
+                                                      // Obtener integrantes que NO han sido modificados manualmente (excepto el actual)
+                                                      const unadjustedMembers = newBudget.selected_members.filter(
+                                                        id => id !== memberId && !adjustedPercentages[id]
+                                                      )
+                                                      
+                                                      // Calcular nuevos montos
+                                                      const newMemberAmounts = { ...newBudget.member_amounts }
+                                                      newMemberAmounts[memberId] = (totalAmount * newPercentage) / 100
+                                                      
+                                                      // Distribuir la diferencia entre los no modificados
+                                                      if (unadjustedMembers.length > 0 && difference !== 0) {
+                                                        const adjustmentPerMember = -difference / unadjustedMembers.length
+                                                        unadjustedMembers.forEach(unadjustedId => {
+                                                          const currentPct = (newMemberAmounts[unadjustedId] || 0) / totalAmount * 100
+                                                          const newPct = Math.max(0, currentPct + adjustmentPerMember)
+                                                          newMemberAmounts[unadjustedId] = (totalAmount * newPct) / 100
+                                                        })
+                                                      } else if (unadjustedMembers.length === 0 && difference !== 0) {
+                                                        // Si todos han sido modificados, distribuir entre todos excepto el actual
+                                                        const otherMembers = newBudget.selected_members.filter(id => id !== memberId)
+                                                        const adjustmentPerMember = -difference / otherMembers.length
+                                                        otherMembers.forEach(otherId => {
+                                                          const currentPct = (newMemberAmounts[otherId] || 0) / totalAmount * 100
+                                                          const newPct = Math.max(0, currentPct + adjustmentPerMember)
+                                                          newMemberAmounts[otherId] = (totalAmount * newPct) / 100
+                                                        })
+                                                      }
+                                                      
+                                                      setNewBudget({
+                                                        ...newBudget,
+                                                        member_amounts: newMemberAmounts,
+                                                        total_amount: newBudget.total_budget_amount,
+                                                        manually_adjusted_percentages: adjustedPercentages
+                                                      })
+                                                    }}
+                                                    className="sap-input w-20 text-right"
+                                                    placeholder="0.00"
+                                                    min="0"
+                                                    max="100"
+                                                  />
+                                                  <span className="text-xs text-muted-foreground">%</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 w-32">
+                                                  <span className="text-xs text-muted-foreground">$</span>
+                                                  <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    value={currentAmount.toFixed(2)}
+                                                    onChange={(e) => {
+                                                      const newAmount = parseFloat(e.target.value) || 0
+                                                      const totalAmount = newBudget.total_budget_amount || 1
+                                                      const oldAmount = currentAmount
+                                                      const difference = newAmount - oldAmount
+                                                      const differencePercentage = (difference / totalAmount) * 100
+                                                      
+                                                      // Marcar este porcentaje como ajustado manualmente
+                                                      const adjustedPercentages = {
+                                                        ...newBudget.manually_adjusted_percentages,
+                                                        [memberId]: true
+                                                      }
+                                                      
+                                                      // Obtener integrantes que NO han sido modificados manualmente (excepto el actual)
+                                                      const unadjustedMembers = newBudget.selected_members.filter(
+                                                        id => id !== memberId && !adjustedPercentages[id]
+                                                      )
+                                                      
+                                                      // Calcular nuevos montos
+                                                      const newMemberAmounts = { ...newBudget.member_amounts }
+                                                      newMemberAmounts[memberId] = newAmount
+                                                      
+                                                      // Distribuir la diferencia entre los no modificados
+                                                      if (unadjustedMembers.length > 0 && difference !== 0) {
+                                                        const adjustmentPerMember = -difference / unadjustedMembers.length
+                                                        unadjustedMembers.forEach(unadjustedId => {
+                                                          const currentAmount = newMemberAmounts[unadjustedId] || 0
+                                                          newMemberAmounts[unadjustedId] = Math.max(0, currentAmount + adjustmentPerMember)
+                                                        })
+                                                      } else if (unadjustedMembers.length === 0 && difference !== 0) {
+                                                        // Si todos han sido modificados, distribuir entre todos excepto el actual
+                                                        const otherMembers = newBudget.selected_members.filter(id => id !== memberId)
+                                                        const adjustmentPerMember = -difference / otherMembers.length
+                                                        otherMembers.forEach(otherId => {
+                                                          const currentAmount = newMemberAmounts[otherId] || 0
+                                                          newMemberAmounts[otherId] = Math.max(0, currentAmount + adjustmentPerMember)
+                                                        })
+                                                      }
+                                                      
+                                                      setNewBudget({
+                                                        ...newBudget,
+                                                        member_amounts: newMemberAmounts,
+                                                        total_amount: newBudget.total_budget_amount,
+                                                        manually_adjusted_percentages: adjustedPercentages
+                                                      })
+                                                    }}
+                                                    className="sap-input w-28 text-right"
+                                                    placeholder="0.00"
+                                                    min="0"
+                                                  />
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )
+                                      })}
+                                    </div>
+                                    
+                                    {newBudget.total_budget_amount > 0 && (
+                                      <div className="p-3 bg-sap-warning/10 border border-sap-warning/20 rounded">
+                                        <div className="text-xs text-muted-foreground">
+                                          Total porcentajes: <strong className={Math.abs(Object.values(newBudget.member_amounts).reduce((sum, amt) => sum + ((amt / (newBudget.total_budget_amount || 1)) * 100), 0) - 100) < 0.01 ? 'text-sap-success' : 'text-sap-error'}>
+                                            {Object.values(newBudget.member_amounts).reduce((sum, amt) => sum + ((amt / (newBudget.total_budget_amount || 1)) * 100), 0).toFixed(2)}%
+                                          </strong>
+                                          {Math.abs(Object.values(newBudget.member_amounts).reduce((sum, amt) => sum + ((amt / (newBudget.total_budget_amount || 1)) * 100), 0) - 100) >= 0.01 && (
+                                            <span className="text-sap-error ml-2">(debe sumar 100%)</span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </>
+                        )
+                      })()}
+
+                      <div className="p-3 bg-primary/10 border border-sap-primary/20 rounded mb-4">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm font-semibold text-sap-text">Total de la cuenta:</span>
-                          <span className="text-lg font-bold text-sap-primary">
+                          <span className="text-sm font-semibold text-foreground">Total de la cuenta:</span>
+                          <span className="text-lg font-bold text-primary">
                             {formatCurrency(newBudget.total_amount, language, true)}
                           </span>
                         </div>
                       </div>
 
                       <div className="mb-4">
-                        <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+                        <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                           Año
                         </label>
                 <input
@@ -1627,10 +1959,16 @@ export default function BudgetsPage() {
                 />
               </div>
 
-                      <div className="flex gap-3 pt-4 border-t border-sap-border">
+                      <div className="flex gap-3 pt-4 border-t border-border">
                         <button
                           type="button"
-                          onClick={() => setNewBudget({ ...newBudget, step: 'account' })}
+                          onClick={() => {
+                            if (globalCategories.includes(newBudget.category)) {
+                              setNewBudget({ ...newBudget, step: 'account' })
+                            } else {
+                              setNewBudget({ ...newBudget, step: 'contributors' })
+                            }
+                          }}
                           className="sap-button-secondary"
                         >
                           ← Volver
@@ -1731,12 +2069,12 @@ export default function BudgetsPage() {
       {showBudgetDetailModal && selectedBudget && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-auto">
-            <div className="sticky top-0 bg-white border-b border-sap-border p-4 flex justify-between items-center">
+            <div className="sticky top-0 bg-white border-b border-border p-4 flex justify-between items-center">
               <div>
-                <h2 className="text-lg font-semibold text-sap-text">
+                <h2 className="text-lg font-semibold text-foreground">
                   Composición del Presupuesto
                 </h2>
-                <p className="text-xs text-sap-text-secondary mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   {selectedBudget.category} - {selectedBudget.subcategory} ({selectedBudget.year})
                 </p>
               </div>
@@ -1749,7 +2087,7 @@ export default function BudgetsPage() {
                 }}
                 className="p-2 hover:bg-sap-hover rounded transition-colors"
               >
-                <XIcon size={20} className="text-sap-text-secondary" />
+                <XIcon size={20} className="text-muted-foreground" />
               </button>
             </div>
 
@@ -1758,31 +2096,31 @@ export default function BudgetsPage() {
               <div className="sap-card p-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <div className="text-xs text-sap-text-secondary mb-1">Monto Total Anual</div>
-                    <div className="text-lg font-semibold text-sap-primary">
+                    <div className="text-xs text-muted-foreground mb-1">Monto Total Anual</div>
+                    <div className="text-lg font-semibold text-primary">
                       {formatCurrency(selectedBudget.total_amount, language, true)}
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs text-sap-text-secondary mb-1">Monto Mensual</div>
-                    <div className="text-lg font-semibold text-sap-text">
+                    <div className="text-xs text-muted-foreground mb-1">Monto Mensual</div>
+                    <div className="text-lg font-semibold text-foreground">
                       {formatCurrency(selectedBudget.total_amount / 12, language, true)}
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs text-sap-text-secondary mb-1">Tipo</div>
-                    <div className="text-sm font-medium text-sap-text">
+                    <div className="text-xs text-muted-foreground mb-1">Tipo</div>
+                    <div className="text-sm font-medium text-foreground">
                       {selectedBudget.budget_type === 'shared' ? 'Compartido' : 'Individual'}
                       {selectedBudget.budget_type === 'individual' && selectedBudget.target_user && (
-                        <span className="text-sap-text-secondary ml-2">
+                        <span className="text-muted-foreground ml-2">
                           ({selectedBudget.target_user.name})
                         </span>
                       )}
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs text-sap-text-secondary mb-1">Método de Distribución</div>
-                    <div className="text-sm font-medium text-sap-text">
+                    <div className="text-xs text-muted-foreground mb-1">Método de Distribución</div>
+                    <div className="text-sm font-medium text-foreground">
                       {selectedBudget.distribution_method === 'equal' ? 'Igual' : 
                        selectedBudget.distribution_method === 'percentage' ? 'Por Porcentaje' : 
                        'Manual'}
@@ -1793,7 +2131,7 @@ export default function BudgetsPage() {
 
               {/* Lista de integrantes que contribuyen */}
               <div>
-                <h3 className="text-sm font-semibold text-sap-text mb-3">
+                <h3 className="text-sm font-semibold text-foreground mb-3">
                   Integrantes que Contribuyen
                 </h3>
                 {selectedBudget.user_allocations && selectedBudget.user_allocations.length > 0 ? (
@@ -1806,33 +2144,33 @@ export default function BudgetsPage() {
                         <div key={allocation.id} className="sap-card p-3">
                           <div className="flex items-center justify-between">
                             <div className="flex-1">
-                              <div className="font-medium text-sap-text text-sm">
+                              <div className="font-medium text-foreground text-sm">
                                 {allocation.user?.name || 'Usuario desconocido'}
                                 {allocation.user?.id === user?.id && ' (Tú)'}
                               </div>
-                              <div className="text-xs text-sap-text-secondary mt-0.5">
+                              <div className="text-xs text-muted-foreground mt-0.5">
                                 {allocation.user?.email || ''}
                               </div>
                             </div>
                             <div className="text-right">
-                              <div className="text-sm font-semibold text-sap-text">
+                              <div className="text-sm font-semibold text-foreground">
                                 {formatCurrency(allocation.allocated_amount, language, true)}
                               </div>
-                              <div className="text-xs text-sap-text-secondary">
+                              <div className="text-xs text-muted-foreground">
                                 {percentage.toFixed(2)}%
                               </div>
                             </div>
                           </div>
                           {allocation.spent_amount > 0 && (
-                            <div className="mt-2 pt-2 border-t border-sap-border">
+                            <div className="mt-2 pt-2 border-t border-border">
                               <div className="flex justify-between text-xs">
-                                <span className="text-sap-text-secondary">Gastado:</span>
+                                <span className="text-muted-foreground">Gastado:</span>
                                 <span className="text-sap-danger font-medium">
                                   ${allocation.spent_amount.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </span>
                               </div>
                               <div className="flex justify-between text-xs mt-1">
-                                <span className="text-sap-text-secondary">Disponible:</span>
+                                <span className="text-muted-foreground">Disponible:</span>
                                 <span className={`font-medium ${
                                   allocation.available_amount > 0 ? 'text-sap-success' : 'text-sap-danger'
                                 }`}>
@@ -1847,7 +2185,7 @@ export default function BudgetsPage() {
                   </div>
                 ) : (
                   <div className="sap-card p-4 text-center">
-                    <p className="text-sm text-sap-text-secondary">
+                    <p className="text-sm text-muted-foreground">
                       No hay asignaciones de integrantes para este presupuesto
                     </p>
                   </div>
@@ -1856,7 +2194,7 @@ export default function BudgetsPage() {
 
               {/* Botón para modificar */}
               {user?.is_family_admin && (
-                <div className="pt-4 border-t border-sap-border">
+                <div className="pt-4 border-t border-border">
                   <button
                     onClick={() => setShowPasswordModal(true)}
                     className="sap-button-primary w-full"
@@ -1875,14 +2213,14 @@ export default function BudgetsPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
             <div className="p-6">
-              <h3 className="text-lg font-semibold text-sap-text mb-2">
+              <h3 className="text-lg font-semibold text-foreground mb-2">
                 Verificación de Administrador
               </h3>
-              <p className="text-sm text-sap-text-secondary mb-4">
+              <p className="text-sm text-muted-foreground mb-4">
                 Para modificar este presupuesto, ingresa tu contraseña de administrador
               </p>
               <div className="mb-4">
-                <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+                <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                   Contraseña
                 </label>
                 <input
@@ -1926,12 +2264,12 @@ export default function BudgetsPage() {
       {showEditModal && editingBudget && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-auto">
-            <div className="sticky top-0 bg-white border-b border-sap-border p-4 flex justify-between items-center">
+            <div className="sticky top-0 bg-white border-b border-border p-4 flex justify-between items-center">
               <div>
-                <h2 className="text-lg font-semibold text-sap-text">
+                <h2 className="text-lg font-semibold text-foreground">
                   Editar Presupuesto
                 </h2>
-                <p className="text-xs text-sap-text-secondary mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   {editingBudget.category} - {editingBudget.subcategory} ({editingBudget.year})
                 </p>
               </div>
@@ -1942,7 +2280,7 @@ export default function BudgetsPage() {
                 }}
                 className="p-2 hover:bg-sap-hover rounded transition-colors"
               >
-                <XIcon size={20} className="text-sap-text-secondary" />
+                <XIcon size={20} className="text-muted-foreground" />
               </button>
             </div>
 
@@ -1999,11 +2337,11 @@ export default function BudgetsPage() {
             >
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                     Monto Total Anual
                   </label>
                   <div className="flex items-center gap-2">
-                    <span className="text-lg text-sap-text-secondary">$</span>
+                    <span className="text-lg text-muted-foreground">$</span>
                 <input
                   type="number"
                       name="total_amount"
@@ -2016,7 +2354,7 @@ export default function BudgetsPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-1.5">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1.5">
                     Año
                   </label>
                   <input
@@ -2031,28 +2369,28 @@ export default function BudgetsPage() {
                 </div>
               </div>
 
-              <div className="sap-card p-4 bg-sap-primary/5 border border-sap-primary/20">
-                <div className="text-xs text-sap-text-secondary mb-2">
+              <div className="sap-card p-4 bg-primary/5 border border-sap-primary/20">
+                <div className="text-xs text-muted-foreground mb-2">
                   Información del Presupuesto
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
-                    <span className="text-sap-text-secondary">Categoría:</span>
-                    <span className="ml-2 font-medium text-sap-text">{editingBudget.category}</span>
+                    <span className="text-muted-foreground">Categoría:</span>
+                    <span className="ml-2 font-medium text-foreground">{editingBudget.category}</span>
                   </div>
                   <div>
-                    <span className="text-sap-text-secondary">Subcategoría:</span>
-                    <span className="ml-2 font-medium text-sap-text">{editingBudget.subcategory}</span>
+                    <span className="text-muted-foreground">Subcategoría:</span>
+                    <span className="ml-2 font-medium text-foreground">{editingBudget.subcategory}</span>
                   </div>
                   <div>
-                    <span className="text-sap-text-secondary">Tipo:</span>
-                    <span className="ml-2 font-medium text-sap-text">
+                    <span className="text-muted-foreground">Tipo:</span>
+                    <span className="ml-2 font-medium text-foreground">
                       {editingBudget.budget_type === 'shared' ? 'Compartido' : 'Individual'}
                     </span>
                   </div>
                   <div>
-                    <span className="text-sap-text-secondary">Método:</span>
-                    <span className="ml-2 font-medium text-sap-text">
+                    <span className="text-muted-foreground">Método:</span>
+                    <span className="ml-2 font-medium text-foreground">
                       {editingBudget.distribution_method === 'equal' ? 'Igual' : 
                        editingBudget.distribution_method === 'percentage' ? 'Por Porcentaje' : 
                        'Manual'}
@@ -2063,7 +2401,7 @@ export default function BudgetsPage() {
 
               {editingBudget.user_allocations && editingBudget.user_allocations.length > 0 && (
                 <div>
-                  <div className="text-sm font-semibold text-sap-text mb-2">
+                  <div className="text-sm font-semibold text-foreground mb-2">
                     Asignaciones Actuales
                   </div>
                   <div className="space-y-2 max-h-48 overflow-y-auto">
@@ -2075,15 +2413,15 @@ export default function BudgetsPage() {
                         <div key={allocation.id} className="sap-card p-3">
                           <div className="flex items-center justify-between">
                             <div className="flex-1">
-                              <div className="font-medium text-sap-text text-sm">
+                              <div className="font-medium text-foreground text-sm">
                                 {allocation.user?.name || 'Usuario desconocido'}
                               </div>
                             </div>
                             <div className="text-right">
-                              <div className="text-sm font-semibold text-sap-text">
+                              <div className="text-sm font-semibold text-foreground">
                                 {formatCurrency(allocation.allocated_amount, language, true)}
                               </div>
-                              <div className="text-xs text-sap-text-secondary">
+                              <div className="text-xs text-muted-foreground">
                                 {percentage.toFixed(2)}%
                               </div>
                             </div>
@@ -2092,14 +2430,14 @@ export default function BudgetsPage() {
                       )
                     })}
                   </div>
-                  <p className="text-xs text-sap-text-tertiary mt-2">
+                  <p className="text-xs text-muted-foreground mt-2">
                     Nota: Las asignaciones individuales no se modifican automáticamente. 
                     Puedes redistribuir el presupuesto después de actualizar el monto total.
                   </p>
                 </div>
               )}
 
-              <div className="flex gap-3 pt-4 border-t border-sap-border">
+              <div className="flex gap-3 pt-4 border-t border-border">
                 <button
                   type="button"
                   onClick={() => {
@@ -2124,8 +2462,8 @@ export default function BudgetsPage() {
 
       {loadingMatrix && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded p-6 border border-sap-border">
-            <div className="text-sap-text">Cargando matriz...</div>
+          <div className="bg-white rounded p-6 border border-border">
+            <div className="text-foreground">Cargando matriz...</div>
     </div>
         </div>
       )}
@@ -2135,7 +2473,7 @@ export default function BudgetsPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-sap-text">
+              <h3 className="text-lg font-semibold text-foreground">
                 {language === 'es' ? 'Crear Nueva Categoría' : 'Create New Category'}
               </h3>
               <button
@@ -2148,7 +2486,7 @@ export default function BudgetsPage() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-sap-text-secondary mb-1">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   {language === 'es' ? 'Nombre *' : 'Name *'}
                 </label>
                 <input
@@ -2160,7 +2498,7 @@ export default function BudgetsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-sap-text-secondary mb-1">
+                <label className="block text-sm font-medium text-muted-foreground mb-1">
                   {language === 'es' ? 'Subcategoría (opcional)' : 'Subcategory (optional)'}
                 </label>
                 <input
@@ -2174,10 +2512,6 @@ export default function BudgetsPage() {
               <div className="flex gap-3 pt-4">
                 <button
                   onClick={async () => {
-                    if (!user?.family_id) {
-                      openCreateFamilyModal()
-                      return
-                    }
                     const nameInput = document.getElementById('newCategoryName') as HTMLInputElement
                     const subcatInput = document.getElementById('newSubcategoryName') as HTMLInputElement
                     
@@ -2187,56 +2521,19 @@ export default function BudgetsPage() {
                     }
 
                     try {
-                      // Obtener token (domus_token o fallback a supabase session)
-                      let token = typeof window !== 'undefined' ? localStorage.getItem('domus_token') : null
-                      if (!token) {
-                        const { data: { session } } = await supabase.auth.getSession()
-                        token = session?.access_token || null
+                      const categoryData: any = {
+                        name: nameInput.value.trim(),
+                        description: '',
+                        color: '#0070f2'
                       }
 
-                      // Intentar usar API primero (Next.js)
-                      if (token) {
-                        const res = await fetch('/api/custom-categories', {
-                          method: 'POST',
-                          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            name: nameInput.value.trim(),
-                            description: '',
-                            color: '#0070f2',
-                            subcategories: subcatInput?.value.trim() ? [{ name: subcatInput.value.trim() }] : []
-                          }),
-                        })
-                        
-                        if (res.ok) {
-                          await loadCustomCategories()
-                          setShowCreateCategoryModal(false)
-                          
-                          // Seleccionar la nueva categoría
-                          setNewBudget({
-                            ...newBudget,
-                            category: nameInput.value.trim(),
-                            subcategory: subcatInput?.value.trim() || ''
-                          })
-                          
-                          alert(language === 'es' ? 'Categoría creada exitosamente' : 'Category created successfully')
-                          return
-                        } else {
-                          const errData = await res.json().catch(() => ({}))
-                          console.error('Error API crear categoría:', errData)
-                          if (typeof errData?.detail === 'string' && errData.detail.toLowerCase().includes('familia')) {
-                            openCreateFamilyModal()
-                            return
-                          }
-                          // Si falla la API, intentar fallback a Supabase (aunque probablemente falle también si es local)
-                          // Pero si es un error 400 (duplicado), mostrarlo
-                          if (res.status === 400) {
-                            alert(errData.detail || 'Error: Datos inválidos')
-                            return
-                          }
-                        }
+                      if (subcatInput?.value.trim()) {
+                        categoryData.subcategories = [{
+                          name: subcatInput.value.trim(),
+                          description: ''
+                        }]
                       }
 
-                      // Fallback a Supabase si no hay API o falla
                       const { data: { user: authUser } } = await supabase.auth.getUser()
                       if (!authUser) return
                       
@@ -2248,35 +2545,14 @@ export default function BudgetsPage() {
                       
                       if (!userData?.family_id) return
                       
-                      // 1. Insertar categoría
-                      const { data: newCat, error: categoryError } = await supabase
+                      const { error: categoryError } = await supabase
                         .from('custom_categories')
                         .insert({
-                          name: nameInput.value.trim(),
-                          description: '',
-                          color: '#0070f2',
-                          family_id: userData.family_id,
-                          is_active: true
+                          ...categoryData,
+                          family_id: userData.family_id
                         })
-                        .select()
-                        .single()
                       
                       if (categoryError) throw categoryError
-                      if (!newCat) throw new Error('Error al crear categoría')
-
-                      // 2. Insertar subcategoría si existe
-                      if (subcatInput?.value.trim()) {
-                         const { error: subError } = await supabase
-                          .from('custom_subcategories')
-                          .insert({
-                            custom_category_id: newCat.id,
-                            name: subcatInput.value.trim(),
-                            is_active: true
-                          })
-                        
-                        if (subError) throw subError
-                      }
-
                       await loadCustomCategories()
                       setShowCreateCategoryModal(false)
                       
@@ -2308,67 +2584,6 @@ export default function BudgetsPage() {
           </div>
         </div>
       )}
-
-      {/* Modal para crear familia */}
-      {showCreateFamilyModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-sap-text">
-                {language === 'es' ? 'Crear Familia' : 'Create Family'}
-              </h3>
-              <button
-                onClick={() => setShowCreateFamilyModal(false)}
-                className="sap-button-ghost p-2"
-              >
-                <XIcon size={18} />
-              </button>
-            </div>
-
-            {createFamilyError && (
-              <div className="sap-alert-error text-center mb-3" role="alert">
-                {createFamilyError}
-              </div>
-            )}
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-sap-text-secondary mb-1">
-                  {language === 'es' ? 'Nombre de la familia' : 'Family name'}
-                </label>
-                <input
-                  type="text"
-                  className="sap-input w-full"
-                  value={familyName}
-                  onChange={(e) => setFamilyName(e.target.value)}
-                  placeholder={familyPlaceholder}
-                />
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateFamilyModal(false)}
-                  className="sap-button-secondary flex-1"
-                  disabled={creatingFamily}
-                >
-                  {language === 'es' ? 'Cancelar' : 'Cancel'}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCreateFamily}
-                  className="sap-button-primary flex-1"
-                  disabled={creatingFamily}
-                >
-                  {creatingFamily
-                    ? (language === 'es' ? 'Creando...' : 'Creating...')
-                    : (language === 'es' ? 'Crear familia' : 'Create family')}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </SAPLayout>
+    </AppLayout>
   )
 }

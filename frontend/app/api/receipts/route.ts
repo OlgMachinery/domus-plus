@@ -3,56 +3,41 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient(request)
-    
-    // Verificar autenticación
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
-    if (authError || !authUser) {
-      return NextResponse.json(
-        { detail: 'No autenticado' },
-        { status: 401 }
-      )
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Obtener parámetros
     const { searchParams } = new URL(request.url)
-    const skip = parseInt(searchParams.get('skip') || '0')
-    const limit = parseInt(searchParams.get('limit') || '100')
     const status = searchParams.get('status')
+    const limit = parseInt(searchParams.get('limit') || '100')
+    const offset = parseInt(searchParams.get('offset') || '0')
 
-    // Construir query
     let query = supabase
       .from('receipts')
       .select(`
         *,
         items:receipt_items(*)
       `)
-      .eq('user_id', authUser.id)
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
 
     if (status) {
       query = query.eq('status', status)
     }
 
-    // Paginación
-    query = query.range(skip, skip + limit - 1)
-
     const { data: receipts, error } = await query
 
     if (error) {
-      console.error('Error obteniendo recibos:', error)
-      return NextResponse.json(
-        { detail: `Error al obtener recibos: ${error.message}` },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json(receipts || [], { status: 200 })
-  } catch (error: any) {
-    console.error('Error en GET /api/receipts:', error)
-    return NextResponse.json(
-      { detail: `Error al obtener recibos: ${error.message}` },
-      { status: 500 }
-    )
+    return NextResponse.json(receipts)
+  } catch (error) {
+    console.error('Error fetching receipts:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

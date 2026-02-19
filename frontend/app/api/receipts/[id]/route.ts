@@ -3,19 +3,15 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createClient(request)
-    const receiptId = parseInt(params.id)
+    const { id } = await params
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-    // Verificar autenticación
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
-    if (authError || !authUser) {
-      return NextResponse.json(
-        { detail: 'No autenticado' },
-        { status: 401 }
-      )
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const { data: receipt, error } = await supabase
@@ -24,29 +20,57 @@ export async function GET(
         *,
         items:receipt_items(*)
       `)
-      .eq('id', receiptId)
-      .eq('user_id', authUser.id)
+      .eq('id', parseInt(id))
+      .eq('user_id', user.id)
       .single()
 
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return NextResponse.json(
-          { detail: 'Recibo no encontrado' },
-          { status: 404 }
-        )
-      }
-      return NextResponse.json(
-        { detail: `Error al obtener recibo: ${error.message}` },
-        { status: 500 }
-      )
+    if (error || !receipt) {
+      return NextResponse.json({ error: 'Receipt not found' }, { status: 404 })
     }
 
-    return NextResponse.json(receipt, { status: 200 })
-  } catch (error: any) {
-    console.error('Error en GET /api/receipts/[id]:', error)
-    return NextResponse.json(
-      { detail: `Error al obtener recibo: ${error.message}` },
-      { status: 500 }
-    )
+    return NextResponse.json(receipt)
+  } catch (error) {
+    console.error('Error fetching receipt:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { data: existingReceipt } = await supabase
+      .from('receipts')
+      .select('id')
+      .eq('id', parseInt(id))
+      .eq('user_id', user.id)
+      .single()
+
+    if (!existingReceipt) {
+      return NextResponse.json({ error: 'Receipt not found' }, { status: 404 })
+    }
+
+    const { error } = await supabase
+      .from('receipts')
+      .delete()
+      .eq('id', parseInt(id))
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ message: 'Receipt deleted successfully' })
+  } catch (error) {
+    console.error('Error deleting receipt:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

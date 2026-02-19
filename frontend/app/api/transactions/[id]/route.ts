@@ -1,211 +1,203 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { createClient as createAdminClient } from '@supabase/supabase-js'
-
-const getAuthUser = async (
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  request: NextRequest
-) => {
-  const authHeader = request.headers.get('authorization') || ''
-  const token = authHeader.toLowerCase().startsWith('bearer ') ? authHeader.slice(7) : null
-  if (token) {
-    const result = await supabase.auth.getUser(token)
-    if (!result.error && result.data.user) return result
-  }
-  return supabase.auth.getUser()
-}
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createClient(request)
-    const transactionId = parseInt(params.id)
+    const { id } = await params
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-    // Verificar autenticaci?n
-    const { data: { user: authUser }, error: authError } = await getAuthUser(supabase, request)
-    if (authError || !authUser) {
-      return NextResponse.json(
-        { detail: 'No autenticado' },
-        { status: 401 }
-      )
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const { data: transaction, error } = await supabase
       .from('transactions')
       .select('*')
-      .eq('id', transactionId)
-      .eq('user_id', authUser.id)
+      .eq('id', parseInt(id))
+      .eq('user_id', user.id)
       .single()
 
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return NextResponse.json(
-          { detail: 'Transacci?n no encontrada' },
-          { status: 404 }
-        )
-      }
-      return NextResponse.json(
-        { detail: `Error al obtener transacci?n: ${error.message}` },
-        { status: 500 }
-      )
+    if (error || !transaction) {
+      return NextResponse.json({ error: 'Transaction not found' }, { status: 404 })
     }
 
-    return NextResponse.json(transaction, { status: 200 })
-  } catch (error: any) {
-    console.error('Error en GET /api/transactions/[id]:', error)
-    return NextResponse.json(
-      { detail: `Error al obtener transacci?n: ${error.message}` },
-      { status: 500 }
-    )
+    return NextResponse.json(transaction)
+  } catch (error) {
+    console.error('Error fetching transaction:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createClient(request)
-    const transactionId = parseInt(params.id)
-    const updates = await request.json()
+    const { id } = await params
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-    // Verificar autenticaci?n
-    const { data: { user: authUser }, error: authError } = await getAuthUser(supabase, request)
-    if (authError || !authUser) {
-      return NextResponse.json(
-        { detail: 'No autenticado' },
-        { status: 401 }
-      )
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    if (!supabaseUrl || !serviceRoleKey) {
-      return NextResponse.json(
-        { detail: 'Falta SUPABASE_SERVICE_ROLE_KEY en el servidor' },
-        { status: 500 }
-      )
-    }
+    const body = await request.json()
 
-    const admin = createAdminClient(supabaseUrl, serviceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    })
-
-    // Obtener transacci?n actual
-    const { data: currentTransaction, error: getError } = await admin
+    const { data: existingTransaction } = await supabase
       .from('transactions')
       .select('*')
-      .eq('id', transactionId)
+      .eq('id', parseInt(id))
+      .eq('user_id', user.id)
       .single()
 
-    if (getError || !currentTransaction) {
-      return NextResponse.json(
-        { detail: 'Transacci?n no encontrada' },
-        { status: 404 }
-      )
+    if (!existingTransaction) {
+      return NextResponse.json({ error: 'Transaction not found' }, { status: 404 })
     }
 
-    if (currentTransaction.user_id !== authUser.id) {
-      return NextResponse.json(
-        { detail: 'No tienes acceso a esta transacci?n' },
-        { status: 403 }
-      )
-    }
-
-    // Validar y preparar actualizaciones
-    const updateData: any = {}
-
-    if ('amount' in updates) {
-      const newAmount = parseFloat(updates.amount)
-      if (newAmount <= 0) {
-        return NextResponse.json(
-          { detail: 'El monto debe ser mayor a cero' },
-          { status: 400 }
-        )
+    const updateData: Record<string, unknown> = {}
+    if (body.amount !== undefined) {
+      if (body.amount <= 0) {
+        return NextResponse.json({ error: 'Amount must be greater than zero' }, { status: 400 })
       }
-      if (newAmount > 1000000000) {
-        return NextResponse.json(
-          { detail: 'El monto excede el l?mite permitido' },
-          { status: 400 }
-        )
+      updateData.amount = body.amount
+    }
+    if (body.date !== undefined) updateData.date = body.date
+    if (body.concept !== undefined) updateData.concept = body.concept
+    if (body.merchant_or_beneficiary !== undefined) updateData.merchant_or_beneficiary = body.merchant_or_beneficiary
+    if (body.category !== undefined) updateData.category = body.category
+    if (body.subcategory !== undefined) updateData.subcategory = body.subcategory
+    if (body.transaction_type !== undefined) updateData.transaction_type = body.transaction_type
+    if (body.family_budget_id !== undefined) updateData.family_budget_id = body.family_budget_id
+    if (body.notes !== undefined) updateData.notes = body.notes
+
+    const oldBudgetId = existingTransaction.family_budget_id
+    const oldAmount = existingTransaction.amount
+    const oldType = existingTransaction.transaction_type
+
+    if (oldBudgetId) {
+      const { data: oldUserBudget } = await supabase
+        .from('user_budgets')
+        .select('id, spent_amount')
+        .eq('user_id', user.id)
+        .eq('family_budget_id', oldBudgetId)
+        .single()
+
+      if (oldUserBudget && oldType === 'expense') {
+        await supabase
+          .from('user_budgets')
+          .update({ spent_amount: Math.max(0, (oldUserBudget.spent_amount || 0) - oldAmount) })
+          .eq('id', oldUserBudget.id)
       }
-      updateData.amount = newAmount
     }
 
-    if ('date' in updates) {
-      updateData.date = updates.date
-    }
-
-    if ('concept' in updates) {
-      updateData.concept = updates.concept
-    }
-
-    if ('family_budget_id' in updates) {
-      const newBudgetId = updates.family_budget_id
-      if (newBudgetId) {
-        // Verificar que el presupuesto pertenezca a la familia
-        const { data: budgetData } = await admin
-          .from('family_budgets')
-          .select('family_id')
-          .eq('id', newBudgetId)
-          .single()
-
-        if (budgetData) {
-          const { data: userData } = await admin
-            .from('users')
-            .select('family_id')
-            .eq('id', authUser.id)
-            .single()
-
-          if (userData?.family_id !== budgetData.family_id) {
-            return NextResponse.json(
-              { detail: 'No tienes acceso a este presupuesto' },
-              { status: 403 }
-            )
-          }
-        }
-      }
-      updateData.family_budget_id = newBudgetId
-    }
-
-    // Actualizar transacci?n
-    const { data: updatedTransaction, error: updateError } = await admin
+    const { data: transaction, error } = await supabase
       .from('transactions')
       .update(updateData)
-      .eq('id', transactionId)
+      .eq('id', parseInt(id))
       .select()
       .single()
 
-    if (updateError) {
-      console.error('Error actualizando transacci?n:', updateError)
-      return NextResponse.json(
-        { detail: `Error al actualizar transacci?n: ${updateError.message}` },
-        { status: 500 }
-      )
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Crear log de actividad
-    try {
-      await admin.from('activity_logs').insert({
-        user_id: authUser.id,
-        action_type: 'transaction_updated',
-        entity_type: 'transaction',
-        description: `Transacci?n actualizada: ${updatedTransaction.transaction_type} de $${updatedTransaction.amount}`,
-        entity_id: updatedTransaction.id,
-        details: updates,
-      })
-    } catch (logError) {
-      console.error('Error creando log:', logError)
+    const newBudgetId = transaction.family_budget_id
+    if (newBudgetId && transaction.transaction_type === 'expense') {
+      const { data: newUserBudget } = await supabase
+        .from('user_budgets')
+        .select('id, spent_amount')
+        .eq('user_id', user.id)
+        .eq('family_budget_id', newBudgetId)
+        .single()
+
+      if (newUserBudget) {
+        await supabase
+          .from('user_budgets')
+          .update({ spent_amount: (newUserBudget.spent_amount || 0) + transaction.amount })
+          .eq('id', newUserBudget.id)
+      }
     }
 
-    return NextResponse.json(updatedTransaction, { status: 200 })
-  } catch (error: any) {
-    console.error('Error en PUT /api/transactions/[id]:', error)
-    return NextResponse.json(
-      { detail: `Error al actualizar transacci?n: ${error.message}` },
-      { status: 500 }
-    )
+    await supabase.from('activity_logs').insert({
+      user_id: user.id,
+      action_type: 'transaction_updated',
+      entity_type: 'transaction',
+      entity_id: transaction.id,
+      description: `Transaction updated: ${transaction.transaction_type} $${transaction.amount}`,
+      details: updateData,
+    })
+
+    return NextResponse.json(transaction)
+  } catch (error) {
+    console.error('Error updating transaction:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { data: existingTransaction } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('id', parseInt(id))
+      .eq('user_id', user.id)
+      .single()
+
+    if (!existingTransaction) {
+      return NextResponse.json({ error: 'Transaction not found' }, { status: 404 })
+    }
+
+    if (existingTransaction.family_budget_id && existingTransaction.transaction_type === 'expense') {
+      const { data: userBudget } = await supabase
+        .from('user_budgets')
+        .select('id, spent_amount')
+        .eq('user_id', user.id)
+        .eq('family_budget_id', existingTransaction.family_budget_id)
+        .single()
+
+      if (userBudget) {
+        await supabase
+          .from('user_budgets')
+          .update({ spent_amount: Math.max(0, (userBudget.spent_amount || 0) - existingTransaction.amount) })
+          .eq('id', userBudget.id)
+      }
+    }
+
+    const { error } = await supabase
+      .from('transactions')
+      .delete()
+      .eq('id', parseInt(id))
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    await supabase.from('activity_logs').insert({
+      user_id: user.id,
+      action_type: 'transaction_deleted',
+      entity_type: 'transaction',
+      entity_id: parseInt(id),
+      description: `Transaction deleted: ${existingTransaction.transaction_type} $${existingTransaction.amount}`,
+    })
+
+    return NextResponse.json({ message: 'Transaction deleted successfully' })
+  } catch (error) {
+    console.error('Error deleting transaction:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

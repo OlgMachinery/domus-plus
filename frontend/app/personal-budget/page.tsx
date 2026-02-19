@@ -5,11 +5,9 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import type { User } from '@/lib/types'
 import { PlusIcon, XIcon, CameraIcon } from '@/lib/icons'
-import SAPLayout from '@/components/SAPLayout'
+import AppLayout from "@/components/AppLayout"
 import { formatCurrency } from '@/lib/currency'
 import { getLanguage, setLanguage, useTranslation, type Language } from '@/lib/i18n'
-import { safePushLogin, setReceiptProcessing } from '@/lib/receiptProcessing'
-import { getAuthHeaders, getToken } from '@/lib/auth'
 import { format } from 'date-fns'
 import { es, enUS } from 'date-fns/locale'
 
@@ -38,8 +36,6 @@ export default function PersonalBudgetPage() {
   const [language, setLanguageState] = useState<Language>('es')
   const [mounted, setMounted] = useState(false)
   const t = useTranslation(language)
-  const backendUrl = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_URL) || ''
-  const apiBase = backendUrl.replace(/\/$/, '')
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [budgets, setBudgets] = useState<PersonalBudget[]>([])
@@ -49,7 +45,6 @@ export default function PersonalBudgetPage() {
   const [selectedBudgetForUpload, setSelectedBudgetForUpload] = useState<PersonalBudget | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadFiles, setUploadFiles] = useState<File[]>([])
-  const [receiptExtractMode, setReceiptExtractMode] = useState<'precise' | 'fast' | 'text'>('precise')
   const [filterYear, setFilterYear] = useState(new Date().getFullYear())
   const [newBudget, setNewBudget] = useState({
     category: '',
@@ -71,33 +66,9 @@ export default function PersonalBudgetPage() {
 
   const loadUser = async () => {
     try {
-      const headers = await getAuthHeaders()
-      const hasAuth = typeof headers === 'object' && headers !== null && 'Authorization' in (headers as Record<string, string>)
-      if (hasAuth) {
-        const meRes = await fetch(`${apiBase}/api/users/me`, {
-          headers: headers as Record<string, string>,
-          credentials: 'include',
-        })
-        if (meRes.ok) {
-          const me = (await meRes.json()) as User
-          setUser(me)
-          const token = getToken()
-          if (token) {
-            await Promise.all([
-              loadCategories(token),
-              loadBudgets(token),
-            ])
-          }
-          return
-        }
-        if (meRes.status === 401) {
-          localStorage.removeItem('domus_token')
-        }
-      }
-
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (!authUser) {
-        safePushLogin(router, 'personal-budget: no supabase user')
+        router.push('/login')
         return
       }
       
@@ -123,74 +94,70 @@ export default function PersonalBudgetPage() {
       }
     } catch (error: any) {
       console.error('Error cargando usuario:', error)
-      // Si hay token backend, NO expulsar al usuario por fallas temporales.
-      const token = getToken()
-      if (!token) safePushLogin(router, 'personal-budget: loadUser error')
+      router.push('/login')
     } finally {
       setLoading(false)
     }
   }
 
-  const loadCategories = async (tokenOverride?: string) => {
+  const loadCategories = async () => {
     try {
-      const token = tokenOverride || getToken()
-      if (token) {
-        const response = await fetch(`${apiBase}/api/personal-budgets/categories`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (!response.ok) throw new Error('Error al cargar categorías')
-        const data = await response.json()
-        const list = (data && (data.categories || data)) || []
-        setCategories(list || [])
-        return
-      }
-
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (!authUser) return
-
-      // Usar la API route de Next.js
-      const response = await fetch('/api/personal-budgets/categories', {
-        credentials: 'include',
-      })
-
-      if (!response.ok) {
-        throw new Error('Error al cargar categorías')
+      
+      // Obtener categorías únicas de las transacciones del usuario
+      const { data: transactions } = await supabase
+        .from('transactions')
+        .select('category, subcategory')
+        .eq('user_id', authUser.id)
+      
+      if (transactions) {
+        // Agrupar por categoría y subcategorías
+        const categoryMap = new Map<string, Set<string>>()
+        transactions.forEach(t => {
+          if (t.category) {
+            if (!categoryMap.has(t.category)) {
+              categoryMap.set(t.category, new Set())
+            }
+            if (t.subcategory) {
+              categoryMap.get(t.category)!.add(t.subcategory)
+            }
+          }
+        })
+        
+        const categoriesList: CategoryOption[] = Array.from(categoryMap.entries()).map(([category, subcategories]) => ({
+          category,
+          subcategories: Array.from(subcategories).sort()
+        }))
+        
+        setCategories(categoriesList)
+      } else {
+        setCategories([])
       }
-
-      const data = await response.json()
-      setCategories(data || [])
     } catch (error: any) {
       console.error('Error cargando categorías:', error)
       setCategories([])
     }
   }
 
-  const loadBudgets = async (tokenOverride?: string) => {
+  const loadBudgets = async () => {
     try {
-      const token = tokenOverride || getToken()
-      if (token) {
-        const response = await fetch(`${apiBase}/api/personal-budgets?year=${filterYear}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (!response.ok) throw new Error('Error al cargar presupuestos')
-        const budgetsData = await response.json()
-        setBudgets((budgetsData || []) as PersonalBudget[])
-        return
-      }
-
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (!authUser) return
-
-      // Usar la API route de Next.js
-      const response = await fetch(`/api/personal-budgets?year=${filterYear}`, {
-        credentials: 'include',
-      })
-
-      if (!response.ok) {
-        throw new Error('Error al cargar presupuestos')
+      
+      const { data: budgetsData, error } = await supabase
+        .from('personal_budgets')
+        .select('*')
+        .eq('user_id', authUser.id)
+        .eq('year', filterYear)
+        .order('created_at', { ascending: false })
+      
+      if (error) {
+        console.error('Error cargando presupuestos:', error)
+        setBudgets([])
+        return
       }
-
-      const budgetsData = await response.json()
+      
       setBudgets((budgetsData || []) as PersonalBudget[])
     } catch (error: any) {
       console.error('Error cargando presupuestos personales:', error)
@@ -217,36 +184,6 @@ export default function PersonalBudgetPage() {
     }
 
     try {
-      const token = getToken()
-      if (token) {
-        const response = await fetch(`${apiBase}/api/personal-budgets`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            category: newBudget.category,
-            subcategory: newBudget.subcategory,
-            year: newBudget.year,
-            total_amount: newBudget.total_amount,
-            monthly_amounts: newBudget.monthly_amounts,
-          }),
-        })
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}))
-          throw new Error(errorData.detail || 'Error al crear presupuesto')
-        }
-        await loadBudgets(token)
-        setShowCreateModal(false)
-        setNewBudget({
-          category: '',
-          subcategory: '',
-          year: new Date().getFullYear(),
-          total_amount: 0,
-          monthly_amounts: {},
-        })
-        alert(language === 'es' ? 'Presupuesto creado exitosamente' : 'Budget created successfully')
-        return
-      }
-
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (!authUser) {
         alert(language === 'es' ? 'No autenticado' : 'Not authenticated')
@@ -264,25 +201,22 @@ export default function PersonalBudgetPage() {
         return
       }
       
-      // Usar la API route de Next.js
-      const response = await fetch('/api/personal-budgets', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
+      const { error } = await supabase
+        .from('personal_budgets')
+        .insert({
+          family_id: userData.family_id,
+          user_id: authUser.id,
           category: newBudget.category,
           subcategory: newBudget.subcategory,
           year: newBudget.year,
           total_amount: newBudget.total_amount,
           monthly_amounts: newBudget.monthly_amounts,
-        }),
-      })
+          budget_type: 'personal',
+          target_user_id: authUser.id
+        })
       
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.detail || 'Error al crear presupuesto')
+      if (error) {
+        throw error
       }
       
       await loadBudgets()
@@ -307,20 +241,16 @@ export default function PersonalBudgetPage() {
     }
 
     try {
-      const token = getToken()
-      const url = token ? `${apiBase}/api/personal-budgets/${budgetId}` : `/api/personal-budgets/${budgetId}`
-      const response = await fetch(url, {
-        method: 'DELETE',
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        credentials: token ? undefined : 'include',
-      })
+      const { error } = await supabase
+        .from('personal_budgets')
+        .delete()
+        .eq('id', budgetId)
       
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.detail || 'Error al eliminar presupuesto')
+      if (error) {
+        throw error
       }
       
-      await loadBudgets(token || undefined)
+      await loadBudgets()
       alert(language === 'es' ? 'Presupuesto eliminado exitosamente' : 'Budget deleted successfully')
     } catch (error: any) {
       console.error('Error eliminando presupuesto:', error)
@@ -335,20 +265,23 @@ export default function PersonalBudgetPage() {
     }
 
     setUploading(true)
-    setReceiptProcessing(true)
     try {
-      const token = getToken()
       const formData = new FormData()
       uploadFiles.forEach((f) => formData.append('files', f))
       formData.append('target_user_id', user?.id?.toString() || '')
-      formData.append('mode', receiptExtractMode)
 
-      const processUrl = token ? `${apiBase}/api/receipts/process` : '/api/receipts/process'
-      const response = await fetch(processUrl, {
+      // Usar la API Route de Next.js para procesar recibos
+      // Obtener el token de acceso de Supabase para enviarlo como header
+      const { data: { session } } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+      
+      const response = await fetch('/api/receipts/process', {
         method: 'POST',
         body: formData,
-        credentials: token ? undefined : 'include',
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        credentials: 'include', // IMPORTANTE: Incluir cookies en la petición
+        headers: accessToken ? {
+          'Authorization': `Bearer ${accessToken}`
+        } : undefined,
       })
 
       if (!response.ok) {
@@ -360,21 +293,36 @@ export default function PersonalBudgetPage() {
       const receipt = responseData.receipt
       
       if (receipt) {
-        if (token) {
-          // Asignar recibo al presupuesto (backend crea la transacción)
-          await fetch(`${apiBase}/api/receipts/${receipt.id}/assign`, {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+        // Asignar el recibo al presupuesto creando una transacción
+        const { data: { user: authUser } } = await supabase.auth.getUser()
+        if (authUser) {
+          const { data: transactionData } = await supabase
+            .from('transactions')
+            .insert({
+              user_id: authUser.id,
+              amount: receipt.amount,
+              date: receipt.date || new Date().toISOString().split('T')[0],
+              transaction_type: 'expense',
               family_budget_id: selectedBudgetForUpload.id,
-              target_user_id: user?.id || null,
-              percentage: 100,
-            }),
-          }).catch(() => {})
+              merchant_or_beneficiary: receipt.merchant_or_beneficiary,
+              category: receipt.category,
+              subcategory: receipt.subcategory,
+              concept: `Recibo #${receipt.id}`,
+              currency: receipt.currency || 'MXN'
+            })
+            .select()
+            .single()
+          
+          if (transactionData) {
+            await supabase
+              .from('receipts')
+              .update({ assigned_transaction_id: transactionData.id })
+              .eq('id', receipt.id)
+          }
         }
       }
 
-      await loadBudgets(token || undefined)
+      await loadBudgets()
       setShowUploadModal(false)
       setUploadFiles([])
       setSelectedBudgetForUpload(null)
@@ -384,7 +332,6 @@ export default function PersonalBudgetPage() {
       alert(error.message || (language === 'es' ? 'Error al subir recibo' : 'Error uploading receipt'))
     } finally {
       setUploading(false)
-      setReceiptProcessing(false)
     }
   }
 
@@ -406,11 +353,11 @@ export default function PersonalBudgetPage() {
 
   if (loading) {
     return (
-      <SAPLayout user={user} title={language === 'es' ? 'Mi Presupuesto Personal' : 'My Personal Budget'} toolbar={null}>
+      <AppLayout user={user} title={language === 'es' ? 'Mi Presupuesto Personal' : 'My Personal Budget'} toolbar={null}>
         <div className="flex items-center justify-center py-12">
-          <div className="text-sap-text-secondary">{language === 'es' ? 'Cargando...' : 'Loading...'}</div>
+          <div className="text-muted-foreground">{language === 'es' ? 'Cargando...' : 'Loading...'}</div>
         </div>
-      </SAPLayout>
+      </AppLayout>
     )
   }
 
@@ -429,7 +376,7 @@ export default function PersonalBudgetPage() {
   }, 0)
 
   return (
-    <SAPLayout
+    <AppLayout
       user={user}
       title={language === 'es' ? 'Mi Presupuesto Personal' : 'My Personal Budget'}
       subtitle={language === 'es' ? 'Gestiona tus presupuestos personales (colegiaturas, gasolina, reparaciones, vida social)' : 'Manage your personal budgets (tuition, gas, repairs, social life)'}
@@ -439,15 +386,15 @@ export default function PersonalBudgetPage() {
         {/* Resumen */}
         <div className="grid md:grid-cols-3 gap-4">
           <div className="sap-card p-5">
-            <div className="text-xs text-sap-text-secondary mb-1">
+            <div className="text-xs text-muted-foreground mb-1">
               {language === 'es' ? 'Presupuesto Total' : 'Total Budget'}
             </div>
-            <div className="text-xl font-bold text-sap-text">
+            <div className="text-xl font-bold text-foreground">
               {formatCurrency(totalBudget, language, false)}
             </div>
           </div>
           <div className="sap-card p-5">
-            <div className="text-xs text-sap-text-secondary mb-1">
+            <div className="text-xs text-muted-foreground mb-1">
               {language === 'es' ? 'Gastado' : 'Spent'}
             </div>
             <div className="text-xl font-bold text-sap-danger">
@@ -455,7 +402,7 @@ export default function PersonalBudgetPage() {
             </div>
           </div>
           <div className="sap-card p-5">
-            <div className="text-xs text-sap-text-secondary mb-1">
+            <div className="text-xs text-muted-foreground mb-1">
               {language === 'es' ? 'Disponible' : 'Available'}
             </div>
             <div className="text-xl font-bold text-sap-success">
@@ -468,7 +415,7 @@ export default function PersonalBudgetPage() {
         <div className="sap-card p-4">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-4">
-              <label className="text-sm font-medium text-sap-text-secondary">
+              <label className="text-sm font-medium text-muted-foreground">
                 {language === 'es' ? 'Año:' : 'Year:'}
               </label>
               <select
@@ -495,7 +442,7 @@ export default function PersonalBudgetPage() {
         <div className="sap-card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-sap-bgSecondary sticky top-0 z-10">
+              <thead className="bg-backgroundSecondary sticky top-0 z-10">
                 <tr>
                   <th className="sap-table-header">{language === 'es' ? 'Categoría' : 'Category'}</th>
                   <th className="sap-table-header">{language === 'es' ? 'Subcategoría' : 'Subcategory'}</th>
@@ -515,7 +462,7 @@ export default function PersonalBudgetPage() {
               <tbody>
                 {budgets.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="sap-table-cell text-center py-8 text-sap-text-secondary">
+                    <td colSpan={7} className="sap-table-cell text-center py-8 text-muted-foreground">
                       {language === 'es' ? 'No hay presupuestos personales' : 'No personal budgets'}
                     </td>
                   </tr>
@@ -525,7 +472,7 @@ export default function PersonalBudgetPage() {
                     const spent = userBudget?.spent_amount || 0
                     const available = budget.total_amount - spent
                     return (
-                      <tr key={budget.id} className="border-b border-sap-border hover:bg-sap-bgHover">
+                      <tr key={budget.id} className="border-b border-border hover:bg-backgroundHover">
                         <td className="sap-table-cell">{budget.category}</td>
                         <td className="sap-table-cell">{budget.subcategory}</td>
                         <td className="sap-table-cell">{budget.year}</td>
@@ -562,12 +509,12 @@ export default function PersonalBudgetPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-sap-text">
+                <h3 className="text-lg font-semibold text-foreground">
                   {language === 'es' ? 'Crear Presupuesto Personal' : 'Create Personal Budget'}
                 </h3>
                 <button
                   onClick={() => setShowCreateModal(false)}
-                  className="text-sap-text-secondary hover:text-sap-text"
+                  className="text-muted-foreground hover:text-foreground"
                 >
                   <XIcon className="w-5 h-5" />
                 </button>
@@ -575,7 +522,7 @@ export default function PersonalBudgetPage() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-1">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">
                     {language === 'es' ? 'Categoría:' : 'Category:'}
                   </label>
                   <select
@@ -591,7 +538,7 @@ export default function PersonalBudgetPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-1">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">
                     {language === 'es' ? 'Subcategoría:' : 'Subcategory:'}
                   </label>
                   <select
@@ -608,7 +555,7 @@ export default function PersonalBudgetPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-1">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">
                     {language === 'es' ? 'Año:' : 'Year:'}
                   </label>
                   <select
@@ -623,7 +570,7 @@ export default function PersonalBudgetPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-1">
+                  <label className="block text-sm font-medium text-muted-foreground mb-1">
                     {language === 'es' ? 'Monto Total:' : 'Total Amount:'}
                   </label>
                   <input
@@ -661,7 +608,7 @@ export default function PersonalBudgetPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-sap-text">
+                <h3 className="text-lg font-semibold text-foreground">
                   {language === 'es' ? 'Subir Recibo' : 'Upload Receipt'}
                 </h3>
                 <button
@@ -672,44 +619,22 @@ export default function PersonalBudgetPage() {
                   }}
                   className="sap-button-ghost p-2"
                 >
-                  <XIcon size={18} className="text-sap-text-secondary" />
+                  <XIcon size={18} className="text-muted-foreground" />
                 </button>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-2">
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
                     {language === 'es' ? 'Presupuesto:' : 'Budget:'}
                   </label>
-                  <div className="sap-input bg-sap-bgSecondary">
+                  <div className="sap-input bg-backgroundSecondary">
                     {selectedBudgetForUpload.category} - {selectedBudgetForUpload.subcategory}
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-2">
-                    {language === 'es' ? 'Modo de extracción:' : 'Extraction mode:'}
-                  </label>
-                  <select
-                    value={receiptExtractMode}
-                    onChange={(e) => setReceiptExtractMode(e.target.value as 'precise' | 'fast' | 'text')}
-                    className="sap-input"
-                    disabled={uploading}
-                  >
-                    <option value="precise">
-                      {language === 'es' ? 'Preciso (más lento, mejor total)' : 'Precise (slower, better total)'}
-                    </option>
-                    <option value="fast">
-                      {language === 'es' ? 'Rápido (puede requerir correcciones)' : 'Fast (may need corrections)'}
-                    </option>
-                    <option value="text">
-                      {language === 'es' ? 'Texto (transcribir completo, más estable)' : 'Text (full transcription, more stable)'}
-                    </option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-sap-text-secondary mb-2">
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
                     {language === 'es' ? 'Archivos del recibo:' : 'Receipt files:'}
                   </label>
                   <input
@@ -721,7 +646,7 @@ export default function PersonalBudgetPage() {
                     disabled={uploading}
                   />
                   {uploadFiles.length > 0 && (
-                    <p className="text-xs text-sap-text-tertiary mt-2">
+                    <p className="text-xs text-muted-foreground mt-2">
                       {uploadFiles.length === 1
                         ? `${language === 'es' ? 'Archivo seleccionado' : 'Selected file'}: ${uploadFiles[0].name}`
                         : `${uploadFiles.length} ${language === 'es' ? 'archivos seleccionados' : 'files selected'}`}
@@ -764,6 +689,6 @@ export default function PersonalBudgetPage() {
           </div>
         )}
       </div>
-    </SAPLayout>
+    </AppLayout>
   )
 }

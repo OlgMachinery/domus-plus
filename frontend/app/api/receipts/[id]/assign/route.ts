@@ -3,154 +3,193 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createClient(request)
-    const receiptId = parseInt(params.id)
+    const { id } = await params
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const body = await request.json()
 
-    // Verificar autenticación
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
-    if (authError || !authUser) {
-      return NextResponse.json(
-        { detail: 'No autenticado' },
-        { status: 401 }
-      )
+    if (!body.family_budget_id) {
+      return NextResponse.json({ error: 'family_budget_id is required' }, { status: 400 })
     }
 
-    // Obtener usuario completo
-    const { data: userData } = await supabase
-      .from('users')
-      .select('family_id')
-      .eq('id', authUser.id)
-      .single()
-
-    if (!userData?.family_id) {
-      return NextResponse.json(
-        { detail: 'Usuario no pertenece a una familia' },
-        { status: 400 }
-      )
-    }
-
-    // Obtener recibo
     const { data: receipt } = await supabase
       .from('receipts')
       .select('*')
-      .eq('id', receiptId)
-      .eq('user_id', authUser.id)
+      .eq('id', parseInt(id))
+      .eq('user_id', user.id)
       .single()
 
     if (!receipt) {
-      return NextResponse.json(
-        { detail: 'Recibo no encontrado' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Receipt not found' }, { status: 404 })
     }
 
-    // Validar que se haya proporcionado family_budget_id
-    if (!body.family_budget_id) {
-      return NextResponse.json(
-        { detail: 'Debes seleccionar una cuenta del presupuesto' },
-        { status: 400 }
-      )
-    }
-
-    // Verificar que el presupuesto exista y pertenezca a la familia
-    const { data: familyBudget } = await supabase
-      .from('family_budgets')
-      .select('*')
-      .eq('id', body.family_budget_id)
+    const { data: userData } = await supabase
+      .from('users')
+      .select('family_id')
+      .eq('id', user.id)
       .single()
 
-    if (!familyBudget || familyBudget.family_id !== userData.family_id) {
-      return NextResponse.json(
-        { detail: 'Presupuesto no encontrado o no pertenece a tu familia' },
-        { status: 404 }
-      )
+    const { data: familyBudget } = await supabase
+      .from('family_budgets')
+      .select('id, family_id')
+      .eq('id', body.family_budget_id)
+      .eq('family_id', userData?.family_id)
+      .single()
+
+    if (!familyBudget) {
+      return NextResponse.json({ error: 'Budget not found or access denied' }, { status: 404 })
     }
 
-    // Determinar usuarios a los que se asignará
-    let usersToAssign: any[] = []
+    let usersToAssign: { id: string }[] = []
+
     if (body.assign_to_all || !body.target_user_id) {
-      // Asignar a todos los usuarios de la familia
       const { data: familyUsers } = await supabase
         .from('users')
         .select('id')
-        .eq('family_id', userData.family_id)
+        .eq('family_id', userData?.family_id)
         .eq('is_active', true)
 
       usersToAssign = familyUsers || []
     } else {
-      // Asignar a un usuario específico
       const { data: targetUser } = await supabase
         .from('users')
         .select('id')
         .eq('id', body.target_user_id)
-        .eq('family_id', userData.family_id)
+        .eq('family_id', userData?.family_id)
         .single()
 
       if (!targetUser) {
-        return NextResponse.json(
-          { detail: 'Usuario objetivo no encontrado o no pertenece a tu familia' },
-          { status: 404 }
-        )
+        return NextResponse.json({ error: 'Target user not found' }, { status: 404 })
       }
       usersToAssign = [targetUser]
     }
 
-    // Actualizar recibo
-    const { error: updateError } = await supabase
-      .from('receipts')
-      .update({
-        family_budget_id: body.family_budget_id,
-        status: 'assigned',
-      })
-      .eq('id', receiptId)
-
-    if (updateError) {
-      console.error('Error actualizando recibo:', updateError)
-      return NextResponse.json(
-        { detail: `Error al asignar recibo: ${updateError.message}` },
-        { status: 500 }
-      )
+    if (usersToAssign.length === 0) {
+      return NextResponse.json({ error: 'No users to assign' }, { status: 400 })
     }
 
-    // Crear transacciones si no se proporciona transaction_id
-    if (!body.transaction_id && receipt.total_amount) {
-      const transactions = usersToAssign.map((user: any) => ({
-        user_id: user.id,
-        family_budget_id: body.family_budget_id,
-        date: receipt.date || new Date().toISOString(),
-        amount: receipt.total_amount / usersToAssign.length,
-        transaction_type: 'expense',
-        currency: receipt.currency || 'MXN',
-        merchant_or_beneficiary: receipt.merchant_name || null,
-        concept: receipt.concept || 'Recibo asignado',
-        reference: receipt.reference || null,
-        notes: `Asignado desde recibo #${receiptId}`,
-        status: 'processed',
-      }))
+    const percentage = body.percentage || 100
+    const amountPerUser = (receipt.amount * percentage / 100) / usersToAssign.length
+    const createdTransactions: number[] = []
 
-      const { error: transError } = await supabase
-        .from('transactions')
-        .insert(transactions)
-
-      if (transError) {
-        console.error('Error creando transacciones:', transError)
-        // No fallar, solo loggear
+    let transactionDate = new Date()
+    if (receipt.date) {
+      try {
+        const dateStr = receipt.time
+          ? `${receipt.date}T${receipt.time}`
+          : receipt.date
+        transactionDate = new Date(dateStr)
+      } catch {
+        transactionDate = new Date()
       }
     }
 
-    return NextResponse.json(
-      { message: 'Recibo asignado exitosamente' },
-      { status: 200 }
-    )
-  } catch (error: any) {
-    console.error('Error en POST /api/receipts/[id]/assign:', error)
-    return NextResponse.json(
-      { detail: `Error al asignar recibo: ${error.message}` },
-      { status: 500 }
-    )
+    for (const assignUser of usersToAssign) {
+      const { data: transaction, error: txError } = await supabase
+        .from('transactions')
+        .insert({
+          user_id: assignUser.id,
+          family_budget_id: body.family_budget_id,
+          date: transactionDate.toISOString(),
+          amount: Math.round(amountPerUser * 100) / 100,
+          transaction_type: 'expense',
+          currency: receipt.currency || 'MXN',
+          merchant_or_beneficiary: receipt.merchant_or_beneficiary,
+          category: receipt.category,
+          subcategory: receipt.subcategory,
+          concept: receipt.concept || `Receipt ${receipt.merchant_or_beneficiary || 'unknown'}`,
+          reference: receipt.reference,
+          operation_id: receipt.operation_id,
+          tracking_key: receipt.tracking_key,
+          notes: receipt.notes,
+          status: 'processed',
+        })
+        .select('id')
+        .single()
+
+      if (!txError && transaction) {
+        createdTransactions.push(transaction.id)
+
+        const { data: userBudget } = await supabase
+          .from('user_budgets')
+          .select('id, spent_amount')
+          .eq('user_id', assignUser.id)
+          .eq('family_budget_id', body.family_budget_id)
+          .single()
+
+        if (userBudget) {
+          await supabase
+            .from('user_budgets')
+            .update({ spent_amount: (userBudget.spent_amount || 0) + amountPerUser })
+            .eq('id', userBudget.id)
+        }
+      }
+    }
+
+    if (createdTransactions.length > 0) {
+      await supabase
+        .from('receipts')
+        .update({
+          assigned_transaction_id: createdTransactions[0],
+          status: 'assigned',
+        })
+        .eq('id', parseInt(id))
+
+      const { data: items } = await supabase
+        .from('receipt_items')
+        .select('id')
+        .eq('receipt_id', parseInt(id))
+
+      if (items && items.length > 0) {
+        const itemsPerTx = Math.ceil(items.length / createdTransactions.length)
+        for (let i = 0; i < items.length; i++) {
+          const txIndex = Math.min(Math.floor(i / itemsPerTx), createdTransactions.length - 1)
+          await supabase
+            .from('receipt_items')
+            .update({ assigned_transaction_id: createdTransactions[txIndex] })
+            .eq('id', items[i].id)
+        }
+      }
+    }
+
+    const { data: updatedReceipt } = await supabase
+      .from('receipts')
+      .select(`
+        *,
+        items:receipt_items(*)
+      `)
+      .eq('id', parseInt(id))
+      .single()
+
+    await supabase.from('activity_logs').insert({
+      user_id: user.id,
+      action_type: 'receipt_assigned',
+      entity_type: 'receipt',
+      entity_id: parseInt(id),
+      description: `Receipt assigned to budget ${body.family_budget_id}`,
+      details: {
+        family_budget_id: body.family_budget_id,
+        users_count: usersToAssign.length,
+        amount_per_user: amountPerUser,
+        transactions_created: createdTransactions.length,
+      },
+    })
+
+    return NextResponse.json({
+      message: 'Receipt assigned successfully',
+      receipt: updatedReceipt,
+      transactions_created: createdTransactions.length,
+    })
+  } catch (error) {
+    console.error('Error assigning receipt:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

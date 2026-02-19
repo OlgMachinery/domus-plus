@@ -1,18 +1,16 @@
 'use client'
 // Updated: Export buttons changed to Excel, PDF, HTML - Spacing improved
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { format } from 'date-fns'
 import { es, enUS } from 'date-fns/locale'
 import type { User } from '@/lib/types'
-import SAPLayout from '@/components/SAPLayout'
+import AppLayout from "@/components/AppLayout"
 import { formatCurrency } from '@/lib/currency'
 import { getLanguage, setLanguage, useTranslation, type Language } from '@/lib/i18n'
 import { XIcon, PlusIcon } from '@/lib/icons'
-import { safePushLogin } from '@/lib/receiptProcessing'
-import { getAuthHeaders, getToken } from '@/lib/auth'
 
 interface ReceiptItem {
   id: number
@@ -54,99 +52,11 @@ interface Receipt {
   items: ReceiptItem[]
 }
 
-const FOOD_MERCHANT_KEYWORDS = [
-  'heb', 'walmart', 'soriana', 'chedraui', 'costco', 'sams', 'superama', 'aurrera',
-  'super', 'market', 'mercado', 'comercial', 'grocery'
-]
-
-const FOOD_ITEM_KEYWORDS = [
-  'leche', 'pollo', 'carne', 'huevo', 'arroz', 'pan', 'tortilla', 'queso', 'yogurt',
-  'fruta', 'verdura', 'tomate', 'cebolla', 'jamon', 'pasta', 'cereal', 'agua',
-  'atun', 'azucar', 'sal', 'harina', 'aceite', 'galleta', 'frijol', 'lenteja',
-  'chile', 'sopa', 'cafe', 'te', 'mantequilla', 'leche', 'platan', 'manzan'
-]
-
-const normalizeText = (value: string) =>
-  value
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-
-const receiptLooksFood = (receipt: Receipt | null) => {
-  if (!receipt) return false
-  const merchant = normalizeText(receipt.merchant_or_beneficiary || '')
-  if (FOOD_MERCHANT_KEYWORDS.some((keyword) => merchant.includes(keyword))) return true
-
-  const items = receipt.items || []
-  let hits = 0
-  for (const item of items) {
-    const desc = normalizeText(item.description || '')
-    if (FOOD_ITEM_KEYWORDS.some((keyword) => desc.includes(keyword))) {
-      hits += 1
-      if (hits >= 2) return true
-    }
-  }
-  return false
-}
-
-const getReceiptYear = (receipt: Receipt) => {
-  const rawDate = receipt.date || receipt.created_at
-  const parsed = rawDate ? new Date(rawDate) : new Date()
-  return Number.isNaN(parsed.getTime()) ? new Date().getFullYear() : parsed.getFullYear()
-}
-
-const getBudgetId = (budget: any) => budget?.id || budget?.family_budget_id || budget?.family_budget?.id
-const getBudgetCategory = (budget: any) => budget?.category || budget?.family_budget?.category || ''
-const getBudgetSubcategory = (budget: any) => budget?.subcategory || budget?.family_budget?.subcategory || ''
-const getBudgetYear = (budget: any) => budget?.year || budget?.family_budget?.year
-
 export default function ReceiptsPage() {
   const router = useRouter()
   const [language, setLanguageState] = useState<Language>('es')
   const [mounted, setMounted] = useState(false)
   const t = useTranslation(language)
-  const backendUrl = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_URL) || ''
-  const apiBase = backendUrl.replace(/\/$/, '')
-  const getAuthToken = async () => {
-    await getAuthHeaders()
-    return getToken() ?? undefined
-  }
-  const parseNotes = (notes?: string) => {
-    if (!notes) return null as any
-    try {
-      return JSON.parse(notes)
-    } catch {
-      return null as any
-    }
-  }
-  const displayAmount = (item: ReceiptItem) => {
-    const n = parseNotes(item.notes)
-    if (n?.amount_legible === false) return language === 'es' ? 'No legible' : 'Illegible'
-    return formatCurrency(item.amount || 0, language, false)
-  }
-  const exportAmountCell = (item: ReceiptItem) => {
-    const n = parseNotes(item.notes)
-    if (n?.amount_legible === false) return 'no legible'
-    return item.amount ?? 0
-  }
-  const apiErrorToMessage = (data: any, fallback: string) => {
-    if (!data) return fallback
-    const detail = data?.detail
-    if (typeof detail === 'string') return detail
-    if (Array.isArray(detail)) {
-      const parts = detail
-        .map((e: any) => {
-          if (!e) return ''
-          const msg = e.msg || e.message || ''
-          const loc = Array.isArray(e.loc) ? e.loc.filter(Boolean).join('.') : ''
-          return loc && msg ? `${loc}: ${msg}` : (msg || '')
-        })
-        .filter(Boolean)
-      if (parts.length) return parts.join('\n')
-    }
-    if (typeof data?.message === 'string') return data.message
-    return fallback
-  }
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [receipts, setReceipts] = useState<Receipt[]>([])
@@ -164,123 +74,28 @@ export default function ReceiptsPage() {
     assignment_mode: 'percentage' as 'percentage' | 'by_item' // Modo de asignación
   })
 
-  const receiptIsFood = useMemo(() => receiptLooksFood(selectedReceipt), [selectedReceipt])
-  const preferredCategories = useMemo(
-    () => (receiptIsFood ? ['Mercado', 'Alimentos', 'Comida', 'Supermercado', 'Despensa'] : []),
-    [receiptIsFood]
-  )
-  const preferredSet = useMemo(
-    () => new Set(preferredCategories.map((value) => normalizeText(value))),
-    [preferredCategories]
-  )
-  const sortedBudgets = useMemo(() => {
-    const list = [...budgets]
-    const score = (budget: any) => {
-      const category = normalizeText(getBudgetCategory(budget))
-      const subcategory = normalizeText(getBudgetSubcategory(budget))
-      let value = 0
-      if (preferredSet.has(category)) value += 2
-      if (preferredSet.has(subcategory)) value += 1
-      return value
-    }
-    return list.sort((a, b) => {
-      const scoreA = score(a)
-      const scoreB = score(b)
-      if (scoreA !== scoreB) return scoreB - scoreA
-      const catA = getBudgetCategory(a)
-      const catB = getBudgetCategory(b)
-      if (catA !== catB) return catA.localeCompare(catB)
-      return getBudgetSubcategory(a).localeCompare(getBudgetSubcategory(b))
-    })
-  }, [budgets, preferredSet])
-  const suggestedBudgetId = useMemo(() => {
-    if (!preferredSet.size) return null
-    const match = sortedBudgets.find((budget) => {
-      const category = normalizeText(getBudgetCategory(budget))
-      const subcategory = normalizeText(getBudgetSubcategory(budget))
-      return preferredSet.has(category) || preferredSet.has(subcategory)
-    })
-    return match ? getBudgetId(match) : null
-  }, [sortedBudgets, preferredSet])
-
   useEffect(() => {
     setMounted(true)
     setLanguageState(getLanguage())
   }, [])
 
   useEffect(() => {
-    if (!selectedReceipt) return
-    const receiptYear = getReceiptYear(selectedReceipt)
-    loadBudgets(getToken(), receiptYear).catch((err) =>
-      console.error('Error cargando presupuestos para recibo:', err)
-    )
-  }, [selectedReceipt])
-
-  useEffect(() => {
-    if (!selectedReceipt) return
-    if (!suggestedBudgetId) return
-    setAssignForm((prev) =>
-      prev.family_budget_id ? prev : { ...prev, family_budget_id: suggestedBudgetId }
-    )
-  }, [selectedReceipt, suggestedBudgetId])
-
-  useEffect(() => {
     if (typeof window === 'undefined') return
-
-    let cancelled = false
-    const init = async () => {
-      try {
-        const headers = await getAuthHeaders()
-        const hasAuth = typeof headers === 'object' && headers !== null && 'Authorization' in (headers as Record<string, string>)
-        if (hasAuth) {
-          const meRes = await fetch(`${apiBase}/api/users/me`, {
-            headers: headers as Record<string, string>,
-            credentials: 'include',
-          })
-          if (meRes.ok && !cancelled) {
-            const me = (await meRes.json()) as User
-            setUser(me)
-            const token = getToken()
-            if (token) {
-              await Promise.all([
-                loadReceipts(token).catch((err) => console.error('Error cargando recibos (backend):', err)),
-                loadTransactions(token).catch((err) => console.error('Error cargando transacciones (backend):', err)),
-                loadFamilyMembers(token, me.family_id ?? null).catch((err) => console.error('Error cargando miembros (backend):', err)),
-                loadBudgets(token).catch((err) => console.error('Error cargando presupuestos (backend):', err)),
-              ])
-            }
-            return
-          }
-          if (meRes.status === 401) {
-            localStorage.removeItem('domus_token')
-          }
-        }
-
-        // Fallback a Supabase
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) {
-          safePushLogin(router, 'receipts: no supabase session')
-          return
-        }
-        await loadUserSupabase()
-      } catch (err) {
-        console.error('Error inicializando recibos:', err)
-      } finally {
-        if (!cancelled) setLoading(false)
+    
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        router.push('/login')
+        return
       }
-    }
-
-    init()
-    return () => {
-      cancelled = true
-    }
+      loadUser()
+    })
   }, [router])
 
-  const loadUserSupabase = async () => {
+  const loadUser = async () => {
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (!authUser) {
-        safePushLogin(router, 'receipts: no supabase user')
+        router.push('/login')
         return
       }
       
@@ -314,43 +129,27 @@ export default function ReceiptsPage() {
       }
     } catch (error: any) {
       console.error('Error cargando usuario:', error)
-      const token = getToken()
-      if (!token) safePushLogin(router, 'receipts: loadUser error')
+      router.push('/login')
     } finally {
       setLoading(false)
     }
   }
 
-  const loadReceipts = async (tokenOverride?: string) => {
+  const loadReceipts = async () => {
     try {
-      const token = tokenOverride || getToken()
-      if (token) {
-        const statusParam = filterStatus !== 'all' ? `&status=${encodeURIComponent(filterStatus)}` : ''
-        const res = await fetch(`${apiBase}/api/receipts/?skip=0&limit=200${statusParam}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (!res.ok) {
-          setReceipts([])
-          return
-        }
-        const data = await res.json()
-        setReceipts((data || []) as Receipt[])
-        return
-      }
-
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (!authUser) return
-
+      
       let query = supabase
         .from('receipts')
         .select('*, items:receipt_items(*)')
         .eq('user_id', authUser.id)
         .order('created_at', { ascending: false })
-
+      
       if (filterStatus !== 'all') {
         query = query.eq('status', filterStatus)
       }
-
+      
       const { data: receiptsData } = await query
       setReceipts((receiptsData || []) as Receipt[])
     } catch (error) {
@@ -358,46 +157,25 @@ export default function ReceiptsPage() {
     }
   }
 
-  const loadTransactions = async (tokenOverride?: string) => {
+  const loadTransactions = async () => {
     try {
-      const token = tokenOverride || getToken()
-      if (token) {
-        const res = await fetch(`${apiBase}/api/transactions/?limit=1000`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        const data = res.ok ? await res.json() : []
-        setTransactions(data || [])
-        return
-      }
-
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (!authUser) return
-
+      
       const { data: transactionsData } = await supabase
         .from('transactions')
         .select('*')
         .eq('user_id', authUser.id)
         .order('date', { ascending: false })
-
+      
       setTransactions(transactionsData || [])
     } catch (error) {
       console.error('Error cargando transacciones:', error)
     }
   }
 
-  const loadFamilyMembers = async (tokenOverride?: string, familyIdOverride?: number | null) => {
+  const loadFamilyMembers = async () => {
     try {
-      const token = tokenOverride || getToken()
-      const familyId = familyIdOverride ?? user?.family_id ?? null
-      if (token && familyId) {
-        const res = await fetch(`${apiBase}/api/families/${familyId}/members`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        const data = res.ok ? await res.json() : []
-        setFamilyMembers((data || []) as User[])
-        return
-      }
-
       if (user?.family_id) {
         const { data: familyData } = await supabase
           .from('families')
@@ -418,66 +196,28 @@ export default function ReceiptsPage() {
     }
   }
 
-  const loadBudgets = async (tokenOverride?: string, yearOverride?: number) => {
+  const loadBudgets = async () => {
     try {
-      const token = tokenOverride || getToken()
-      const currentYear = new Date().getFullYear()
-      const years = [currentYear]
-      if (yearOverride && yearOverride !== currentYear) years.push(yearOverride)
-
-      const mergeBudgets = (lists: any[][]) => {
-        const map = new Map<number, any>()
-        lists.flat().forEach((budget) => {
-          const id = getBudgetId(budget)
-          if (id != null) map.set(id, budget)
-        })
-        return Array.from(map.values())
-      }
-
-      if (token) {
-        const results: any[][] = []
-        for (const year of years) {
-          const res = await fetch(`${apiBase}/api/budgets/family?year=${year}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          })
-          const data = res.ok ? await res.json() : []
-          results.push(data || [])
-        }
-        setBudgets(mergeBudgets(results))
-        return
-      }
-
       const { data: { user: authUser } } = await supabase.auth.getUser()
       if (!authUser) return
-
+      
       const { data: userData } = await supabase
         .from('users')
         .select('family_id')
         .eq('id', authUser.id)
         .single()
-
+      
       if (!userData?.family_id) {
         setBudgets([])
         return
       }
-
-      const results: any[][] = []
-      for (const year of years) {
-        const { data: budgetsData } = await supabase
-          .from('family_budgets')
-          .select('*')
-          .eq('family_id', userData.family_id)
-          .eq('year', year)
-        results.push(budgetsData || [])
-      }
-
-      const merged = results.flat().filter(Boolean)
-      const map = new Map<number, any>()
-      merged.forEach((budget) => {
-        const id = getBudgetId(budget)
-        if (id != null) map.set(id, budget)
-      })
-      setBudgets(Array.from(map.values()))
+      
+      const { data: budgetsData } = await supabase
+        .from('family_budgets')
+        .select('*')
+        .eq('family_id', userData.family_id)
+      
+      setBudgets(budgetsData || [])
     } catch (error: any) {
       console.error('Error cargando presupuestos:', error)
       setBudgets([])
@@ -499,14 +239,6 @@ export default function ReceiptsPage() {
 
   const handleAssignReceipt = (receipt: Receipt) => {
     setSelectedReceipt(receipt)
-    // Default: asignar al usuario actual para evitar “asignar a todos” por omisión.
-    setAssignForm({
-      family_budget_id: null,
-      target_user_id: user?.id ?? null,
-      percentage: 100,
-      user_percentages: {},
-      assignment_mode: 'percentage',
-    })
     setShowAssignModal(true)
   }
 
@@ -518,78 +250,6 @@ export default function ReceiptsPage() {
       const item = selectedReceipt.items?.find(i => i.id === itemId)
       if (!item) {
         alert(language === 'es' ? 'Item no encontrado' : 'Item not found')
-        return
-      }
-
-      const token = await getAuthToken()
-      if (token) {
-        const receiptDate = selectedReceipt.date || new Date().toISOString().split('T')[0]
-        const receiptTime = selectedReceipt.time || '00:00'
-        const txDate = `${receiptDate}T${receiptTime}:00`
-
-        const budgetMeta = (budgets || []).find((b: any) => {
-          const bid = b?.id || b?.family_budget_id || b?.family_budget?.id
-          return bid === budgetId
-        })
-        const resolvedCategory =
-          budgetMeta?.category || budgetMeta?.family_budget?.category || item.category || selectedReceipt.category
-        const resolvedSubcategory =
-          budgetMeta?.subcategory || budgetMeta?.family_budget?.subcategory || item.subcategory || selectedReceipt.subcategory
-
-        if (!resolvedCategory || !resolvedSubcategory) {
-          throw new Error(
-            language === 'es'
-              ? 'No se pudo determinar la categoría/subcategoría para crear la transacción. Selecciona una cuenta del presupuesto válida.'
-              : 'Could not determine category/subcategory to create the transaction. Please select a valid budget account.'
-          )
-        }
-
-        const txRes = await fetch(`${apiBase}/api/transactions/`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            amount: item.amount,
-            date: txDate,
-            transaction_type: 'expense',
-            family_budget_id: budgetId,
-            merchant_or_beneficiary: selectedReceipt.merchant_or_beneficiary || item.description,
-            category: resolvedCategory,
-            subcategory: resolvedSubcategory,
-            concept: item.description,
-            currency: selectedReceipt.currency || 'MXN',
-          }),
-        })
-
-        if (!txRes.ok) {
-          const err = await txRes.json().catch(() => ({}))
-          throw new Error(apiErrorToMessage(err, language === 'es' ? 'Error al crear transacción' : 'Error creating transaction'))
-        }
-        const tx = await txRes.json()
-
-        const assignRes = await fetch(
-          `${apiBase}/api/receipts/items/${itemId}/assign?transaction_id=${encodeURIComponent(String(tx.id))}`,
-          {
-            method: 'PUT',
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        )
-        if (!assignRes.ok) {
-          const err = await assignRes.json().catch(() => ({}))
-          throw new Error(apiErrorToMessage(err, language === 'es' ? 'Error al asignar item' : 'Error assigning item'))
-        }
-
-        await loadReceipts(token)
-        await loadTransactions(token)
-
-        const updatedRes = await fetch(`${apiBase}/api/receipts/${selectedReceipt.id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (updatedRes.ok) {
-          const updatedReceipt = await updatedRes.json()
-          setSelectedReceipt(updatedReceipt as Receipt)
-        }
-
-        alert(language === 'es' ? 'Item asignado exitosamente' : 'Item assigned successfully')
         return
       }
 
@@ -662,8 +322,6 @@ export default function ReceiptsPage() {
     }
 
     try {
-      const token = await getAuthToken()
-
       // Si el modo es "by_item", asignar cada item individualmente
       if (assignForm.assignment_mode === 'by_item') {
         const itemsToAssign = selectedReceipt.items?.filter(item => !item.assigned_transaction_id) || []
@@ -687,49 +345,6 @@ export default function ReceiptsPage() {
           assignment_mode: 'percentage'
         })
         alert(language === 'es' ? `Recibo asignado: ${itemsToAssign.length} items asignados individualmente` : `Receipt assigned: ${itemsToAssign.length} items assigned individually`)
-        return
-      }
-
-      // Modo porcentaje: backend (si hay token)
-      if (token) {
-        const body = {
-          transaction_id: transactionId,
-          family_budget_id: assignForm.family_budget_id,
-          target_user_id: assignForm.target_user_id && assignForm.target_user_id !== -1 ? assignForm.target_user_id : null,
-          percentage: assignForm.percentage,
-          user_percentages: assignForm.user_percentages,
-          assign_to_all: assignForm.target_user_id === -1,
-        }
-        const res = await fetch(`${apiBase}/api/receipts/${selectedReceipt.id}/assign`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        })
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}))
-          throw new Error(apiErrorToMessage(err, language === 'es' ? 'Error al asignar recibo' : 'Error assigning receipt'))
-        }
-
-        await loadReceipts(token)
-        await loadTransactions(token)
-
-        const updatedRes = await fetch(`${apiBase}/api/receipts/${selectedReceipt.id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        if (updatedRes.ok) {
-          const updatedReceipt = await updatedRes.json()
-          setSelectedReceipt(updatedReceipt as Receipt)
-        }
-
-        setShowAssignModal(false)
-        setAssignForm({
-          family_budget_id: null,
-          target_user_id: null,
-          percentage: 100,
-          user_percentages: {},
-          assignment_mode: 'percentage',
-        })
-        alert(language === 'es' ? 'Recibo asignado exitosamente.' : 'Receipt assigned successfully.')
         return
       }
 
@@ -791,22 +406,6 @@ export default function ReceiptsPage() {
 
   const handleAddItem = async (receiptId: number, description: string, amount: number) => {
     try {
-      const token = getToken()
-      if (token) {
-        const res = await fetch(`${apiBase}/api/receipts/${receiptId}/items`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ description, amount }),
-        })
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}))
-          throw new Error(err.detail || 'Error al agregar item')
-        }
-        await loadReceipts(token)
-        alert(language === 'es' ? 'Item agregado exitosamente' : 'Item added successfully')
-        return
-      }
-
       const { error: insertError } = await supabase
         .from('receipt_items')
         .insert({
@@ -839,7 +438,7 @@ export default function ReceiptsPage() {
         item.description.replace(/"/g, '""'),
         item.quantity ?? '',
         item.unit_price ?? '',
-        exportAmountCell(item),
+        item.amount ?? 0,
       ])
 
       let csv = headers.join(',') + '\n'
@@ -871,7 +470,7 @@ export default function ReceiptsPage() {
           <td>${item.description}</td>
           <td style="text-align: right;">${item.quantity ?? '-'}</td>
           <td style="text-align: right;">${item.unit_price != null ? formatCurrency(item.unit_price, language, false) : '-'}</td>
-          <td style="text-align: right;">${displayAmount(item)}</td>
+          <td style="text-align: right;">${formatCurrency(item.amount || 0, language, false)}</td>
         </tr>
       `).join('')
 
@@ -942,7 +541,7 @@ export default function ReceiptsPage() {
           <td>${item.description}</td>
           <td style="text-align: right;">${item.quantity ?? '-'}</td>
           <td style="text-align: right;">${item.unit_price != null ? formatCurrency(item.unit_price, language, false) : '-'}</td>
-          <td style="text-align: right;">${displayAmount(item)}</td>
+          <td style="text-align: right;">${formatCurrency(item.amount || 0, language, false)}</td>
         </tr>
       `).join('')
 
@@ -1018,11 +617,11 @@ export default function ReceiptsPage() {
 
   if (loading) {
     return (
-      <SAPLayout user={user} title={language === 'es' ? 'Recibos' : 'Receipts'} toolbar={null}>
+      <AppLayout user={user} title={language === 'es' ? 'Recibos' : 'Receipts'} toolbar={null}>
         <div className="flex items-center justify-center py-12">
-          <div className="text-sap-text-secondary">{language === 'es' ? 'Cargando...' : 'Loading...'}</div>
+          <div className="text-muted-foreground">{language === 'es' ? 'Cargando...' : 'Loading...'}</div>
         </div>
-      </SAPLayout>
+      </AppLayout>
     )
   }
 
@@ -1035,7 +634,7 @@ export default function ReceiptsPage() {
     .join('\n')
 
   return (
-    <SAPLayout
+    <AppLayout
       user={user}
       title={language === 'es' ? 'Recibos Procesados' : 'Processed Receipts'}
       subtitle={language === 'es' ? 'Gestiona y asigna conceptos de recibos a transacciones' : 'Manage and assign receipt items to transactions'}
@@ -1045,7 +644,7 @@ export default function ReceiptsPage() {
         {/* Filtros */}
         <div className="sap-card p-4">
           <div className="flex items-center gap-4">
-            <label className="text-sm font-medium text-sap-text-secondary">
+            <label className="text-sm font-medium text-muted-foreground">
               {language === 'es' ? 'Estado:' : 'Status:'}
             </label>
             <select
@@ -1065,7 +664,7 @@ export default function ReceiptsPage() {
         <div className="sap-card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-sap-bgSecondary sticky top-0 z-10">
+              <thead className="bg-backgroundSecondary sticky top-0 z-10">
                 <tr>
                   <th className="sap-table-header">{language === 'es' ? 'Fecha' : 'Date'}</th>
                   <th className="sap-table-header">{language === 'es' ? 'Comercio' : 'Merchant'}</th>
@@ -1080,13 +679,13 @@ export default function ReceiptsPage() {
               <tbody>
                 {filteredReceipts.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="sap-table-cell text-center py-8 text-sap-text-secondary">
+                    <td colSpan={8} className="sap-table-cell text-center py-8 text-muted-foreground">
                       {language === 'es' ? 'No hay recibos' : 'No receipts'}
                     </td>
                   </tr>
                 ) : (
                   filteredReceipts.map((receipt) => (
-                    <tr key={receipt.id} className="border-b border-sap-border hover:bg-sap-bgHover">
+                    <tr key={receipt.id} className="border-b border-border hover:bg-backgroundHover">
                       <td className="sap-table-cell">
                         {receipt.date 
                           ? format(new Date(receipt.date + 'T' + (receipt.time || '00:00')), 'dd/MM/yyyy HH:mm', { locale: language === 'es' ? es : enUS })
@@ -1134,99 +733,56 @@ export default function ReceiptsPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-sap-text">
+                <h3 className="text-lg font-semibold text-foreground">
                   {language === 'es' ? 'Asignar Recibo' : 'Assign Receipt'}
                 </h3>
                 <button
                   onClick={() => setShowAssignModal(false)}
-                  className="text-sap-text-secondary hover:text-sap-text"
+                  className="text-muted-foreground hover:text-foreground"
                 >
                   <XIcon className="w-5 h-5" />
                 </button>
               </div>
 
               {/* Información del recibo */}
-              <div className="mb-8 p-6 bg-sap-bgSecondary rounded">
-                <h4 className="font-semibold text-sap-text mb-4">
+              <div className="mb-8 p-6 bg-backgroundSecondary rounded">
+                <h4 className="font-semibold text-foreground mb-4">
                   {language === 'es' ? 'Información del Recibo' : 'Receipt Information'}
                 </h4>
-                {(() => {
-                  const itemsSum = (selectedReceipt.items || []).reduce((sum, it) => sum + (it.amount || 0), 0)
-                  const diff = (selectedReceipt.amount || 0) - itemsSum
-                  const diffAbs = Math.abs(diff)
-                  const lineMismatches = (selectedReceipt.items || []).filter((it) => {
-                    if (it.quantity == null || it.unit_price == null) return false
-                    const expected = (it.quantity || 0) * (it.unit_price || 0)
-                    // Tolerancia por redondeos
-                    return Math.abs(expected - (it.amount || 0)) > 0.05
-                  }).length
-
-                  return (
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div className="space-y-1">
-                        <span className="text-sap-text-secondary block">{language === 'es' ? 'Fecha:' : 'Date:'}</span>
-                        <span className="text-sap-text">
-                          {selectedReceipt.date
-                            ? format(new Date(selectedReceipt.date + 'T' + (selectedReceipt.time || '00:00')), 'dd/MM/yyyy HH:mm', {
-                                locale: language === 'es' ? es : enUS,
-                              })
-                            : format(new Date(selectedReceipt.created_at), 'dd/MM/yyyy', { locale: language === 'es' ? es : enUS })}
-                        </span>
-                      </div>
-                      <div className="space-y-1">
-                        <span className="text-sap-text-secondary block">{language === 'es' ? 'Comercio:' : 'Merchant:'}</span>
-                        <span className="text-sap-text">{selectedReceipt.merchant_or_beneficiary || '-'}</span>
-                      </div>
-                      <div className="space-y-1">
-                        <span className="text-sap-text-secondary block">{language === 'es' ? 'Monto Total:' : 'Total Amount:'}</span>
-                        <span className="text-sap-text font-semibold">{formatCurrency(selectedReceipt.amount, language, false)}</span>
-                      </div>
-                      <div className="space-y-1">
-                        <span className="text-sap-text-secondary block">{language === 'es' ? 'Categoría:' : 'Category:'}</span>
-                        <span className="text-sap-text">{selectedReceipt.category || '-'}</span>
-                      </div>
-                      {receiptIsFood && (
-                        <div className="space-y-1">
-                          <span className="text-sap-text-secondary block">
-                            {language === 'es' ? 'Tipo detectado:' : 'Detected type:'}
-                          </span>
-                          <span className="text-sap-success font-semibold">
-                            {language === 'es' ? 'Alimentos' : 'Food'}
-                          </span>
-                        </div>
-                      )}
-
-                      <div className="space-y-1">
-                        <span className="text-sap-text-secondary block">{language === 'es' ? 'Suma de items:' : 'Items sum:'}</span>
-                        <span className="text-sap-text font-semibold">{formatCurrency(itemsSum, language, false)}</span>
-                      </div>
-                      <div className="space-y-1">
-                        <span className="text-sap-text-secondary block">{language === 'es' ? 'Diferencia (Total - Items):' : 'Difference (Total - Items):'}</span>
-                        <span className={`font-semibold ${diffAbs < 0.01 ? 'text-sap-success' : 'text-sap-danger'}`}>
-                          {formatCurrency(diff, language, false)}
-                        </span>
-                        {lineMismatches > 0 && (
-                          <div className="text-xs text-sap-danger mt-1">
-                            {language === 'es'
-                              ? `Renglones con aritmética inconsistente: ${lineMismatches}`
-                              : `Lines with inconsistent arithmetic: ${lineMismatches}`}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })()}
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground block">{language === 'es' ? 'Fecha:' : 'Date:'}</span>
+                    <span className="text-foreground">
+                      {selectedReceipt.date 
+                        ? format(new Date(selectedReceipt.date + 'T' + (selectedReceipt.time || '00:00')), 'dd/MM/yyyy HH:mm', { locale: language === 'es' ? es : enUS })
+                        : format(new Date(selectedReceipt.created_at), 'dd/MM/yyyy', { locale: language === 'es' ? es : enUS })
+                      }
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground block">{language === 'es' ? 'Comercio:' : 'Merchant:'}</span>
+                    <span className="text-foreground">{selectedReceipt.merchant_or_beneficiary || '-'}</span>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground block">{language === 'es' ? 'Monto Total:' : 'Total Amount:'}</span>
+                    <span className="text-foreground font-semibold">{formatCurrency(selectedReceipt.amount, language, false)}</span>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground block">{language === 'es' ? 'Categoría:' : 'Category:'}</span>
+                    <span className="text-foreground">{selectedReceipt.category || '-'}</span>
+                  </div>
+                </div>
               </div>
 
               {/* Asignar recibo completo */}
               <div className="mb-8 space-y-6">
-                <h4 className="font-semibold text-sap-text mb-4">
+                <h4 className="font-semibold text-foreground mb-4">
                   {language === 'es' ? 'Asignar Recibo' : 'Assign Receipt'}
                 </h4>
                 
                 {/* Paso 1: Cuenta del Presupuesto (OBLIGATORIO) */}
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-sap-text-secondary">
+                  <label className="block text-sm font-medium text-muted-foreground">
                     <span className="text-red-500">*</span> {language === 'es' ? 'Cuenta del Presupuesto:' : 'Budget Account:'}
                   </label>
                   <select
@@ -1240,33 +796,31 @@ export default function ReceiptsPage() {
                     required
                   >
                     <option value="">{language === 'es' ? 'Selecciona una cuenta del presupuesto' : 'Select a budget account'}</option>
-                    {sortedBudgets.length === 0 ? (
+                    {budgets.length === 0 ? (
                       <option value="" disabled>{language === 'es' ? 'No hay presupuestos disponibles' : 'No budgets available'}</option>
                     ) : (
-                      sortedBudgets.map((b) => {
-                        const budgetId = getBudgetId(b)
-                        const category = getBudgetCategory(b) || 'N/A'
-                        const subcategory = getBudgetSubcategory(b) || 'N/A'
-                        const yearLabel = getBudgetYear(b)
-                        const isPreferred =
-                          preferredSet.size > 0 &&
-                          (preferredSet.has(normalizeText(category)) || preferredSet.has(normalizeText(subcategory)))
+                      budgets.map((b) => {
+                        // FamilyBudget tiene id, category, subcategory directamente
+                        // UserBudget tiene family_budget_id y family_budget relación
+                        const budgetId = b.id || b.family_budget_id || b.family_budget?.id
+                        const category = b.category || b.family_budget?.category || 'N/A'
+                        const subcategory = b.subcategory || b.family_budget?.subcategory || 'N/A'
                         return (
-                          <option key={budgetId} value={budgetId}>
-                            {category} - {subcategory}{yearLabel ? ` (${yearLabel})` : ''}{isPreferred ? ' · Sugerido' : ''}
+                          <option key={b.id} value={budgetId}>
+                            {category} - {subcategory}
                           </option>
                         )
                       })
                     )}
                   </select>
-                  <p className="text-xs text-sap-text-secondary">
+                  <p className="text-xs text-muted-foreground">
                     {language === 'es' ? 'Primero debes seleccionar una cuenta del presupuesto' : 'You must first select a budget account'}
                   </p>
                 </div>
 
                 {/* Paso 2: Usuario o Todos */}
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-sap-text-secondary">
+                  <label className="block text-sm font-medium text-muted-foreground">
                     {language === 'es' ? 'Asignar a:' : 'Assign to:'}
                   </label>
                   <select
@@ -1289,14 +843,14 @@ export default function ReceiptsPage() {
                       <option key={m.id} value={m.id}>{m.name}</option>
                     ))}
                   </select>
-                  <p className="text-xs text-sap-text-secondary">
+                  <p className="text-xs text-muted-foreground">
                     {language === 'es' ? 'Selecciona un usuario específico o "Todos" para distribuir entre todos' : 'Select a specific user or "All" to distribute among all'}
                   </p>
                 </div>
 
                 {/* Modo de asignación */}
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-sap-text-secondary">
+                  <label className="block text-sm font-medium text-muted-foreground">
                     {language === 'es' ? 'Modo de Asignación:' : 'Assignment Mode:'}
                   </label>
                   <select
@@ -1308,7 +862,7 @@ export default function ReceiptsPage() {
                     <option value="percentage">{language === 'es' ? 'Por Porcentaje (del monto total)' : 'By Percentage (of total amount)'}</option>
                     <option value="by_item">{language === 'es' ? 'Por Item (cada item individualmente)' : 'By Item (each item individually)'}</option>
                   </select>
-                  <p className="text-xs text-sap-text-secondary">
+                  <p className="text-xs text-muted-foreground">
                     {assignForm.assignment_mode === 'percentage' 
                       ? (language === 'es' ? 'Asigna el monto total del recibo según el porcentaje seleccionado' : 'Assigns the total receipt amount according to the selected percentage')
                       : (language === 'es' ? 'Cada item se asignará individualmente a transacciones separadas' : 'Each item will be assigned individually to separate transactions')}
@@ -1318,7 +872,7 @@ export default function ReceiptsPage() {
                 {/* Porcentaje (solo si modo es porcentaje y se selecciona un usuario específico) */}
                 {assignForm.assignment_mode === 'percentage' && assignForm.target_user_id && assignForm.target_user_id !== -1 && (
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-sap-text-secondary">
+                    <label className="block text-sm font-medium text-muted-foreground">
                       {language === 'es' ? 'Porcentaje (100% = completo):' : 'Percentage (100% = full):'}
                     </label>
                     <input
@@ -1353,10 +907,10 @@ export default function ReceiptsPage() {
               {/* Items del recibo */}
               <div className="mt-6">
                 <div className="sap-card p-4 mb-4">
-                  <h4 className="font-semibold text-sap-text mb-2">
+                  <h4 className="font-semibold text-foreground mb-2">
                     {language === 'es' ? 'Prueba de extracción de datos con IA' : 'AI extraction test'}
                   </h4>
-                  <p className="text-sm text-sap-text-secondary mb-2">
+                  <p className="text-sm text-muted-foreground mb-2">
                     {language === 'es'
                       ? 'Texto plano extraído (raw_line) para validar rapidez y contenido.'
                       : 'Plain extracted text (raw_line) to validate speed and content.'}
@@ -1369,7 +923,7 @@ export default function ReceiptsPage() {
                   />
                 </div>
                 <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-semibold text-sap-text">
+                  <h4 className="font-semibold text-foreground">
                     {language === 'es' ? 'Items del Recibo' : 'Receipt Items'} ({selectedReceipt.items?.length || 0})
                   </h4>
                   <div className="flex gap-2">
@@ -1399,10 +953,10 @@ export default function ReceiptsPage() {
                     </button>
                   </div>
                 </div>
-                <div className="border border-sap-border rounded max-h-[400px] overflow-y-auto">
+                <div className="border border-border rounded max-h-[400px] overflow-y-auto">
                   <table className="min-w-full text-sm">
-                    <thead className="bg-sap-bgSecondary sticky top-0">
-                      <tr className="text-left text-sap-text-secondary">
+                    <thead className="bg-backgroundSecondary sticky top-0">
+                      <tr className="text-left text-muted-foreground">
                         <th className="px-3 py-2 text-right" style={{width: '50px'}}>#</th>
                         <th className="px-3 py-2">{language === 'es' ? 'Descripción' : 'Description'}</th>
                         <th className="px-3 py-2 text-right" style={{width: '100px'}}>{language === 'es' ? 'Cantidad' : 'Quantity'}</th>
@@ -1412,74 +966,53 @@ export default function ReceiptsPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-sap-border">
-                      {selectedReceipt.items?.map((item, idx) => {
-                        const n = parseNotes(item.notes)
-                        const isPlaceholder = n?.line_type === 'placeholder' || n?.is_placeholder === true
-                        const isAdjustment = n?.line_type === 'adjustment' || n?.is_adjustment === true
-                        const amountLegible = n?.amount_legible
-                        const rowClass = isAdjustment
-                          ? 'bg-sap-bgSecondary'
-                          : (isPlaceholder ? 'opacity-75 italic' : '')
-                        const placeholderIdx = typeof n?.placeholder_idx === 'number' ? n.placeholder_idx : null
-                        const placeholderTotal = typeof n?.placeholder_total === 'number' ? n.placeholder_total : null
-                        const description = isPlaceholder && placeholderIdx && placeholderTotal
-                          ? (language === 'es'
-                              ? `No legible (faltante ${placeholderIdx}/${placeholderTotal})`
-                              : `Illegible (missing ${placeholderIdx}/${placeholderTotal})`)
-                          : item.description
-
-                        return (
-                          <tr key={item.id ?? idx} className={`hover:bg-sap-bgHover ${rowClass}`}>
-                            <td className="px-3 py-2 text-right text-sap-text-tertiary">#{idx + 1}</td>
-                            <td className="px-3 py-2 text-sap-text break-words">{description}</td>
-                            <td className="px-3 py-2 text-right text-sap-text">{item.quantity ?? '-'}</td>
-                            <td className="px-3 py-2 text-right text-sap-text">
-                              {item.unit_price != null ? formatCurrency(item.unit_price, language, false) : '-'}
-                            </td>
-                            <td className="px-3 py-2 text-right text-sap-text font-semibold">
-                              {amountLegible === false ? (language === 'es' ? 'No legible' : 'Illegible') : formatCurrency(item.amount || 0, language, false)}
-                            </td>
-                            <td className="px-3 py-2 text-right">
-                              {assignForm.assignment_mode === 'by_item' && !item.assigned_transaction_id ? (
-                                <select
-                                  className="sap-input text-xs min-w-[150px]"
-                                  onChange={(e) => {
-                                    if (e.target.value) {
-                                      handleAssignItem(item.id, parseInt(e.target.value))
-                                    }
-                                  }}
-                                >
-                                  <option value="">{language === 'es' ? 'Asignar...' : 'Assign...'}</option>
-                                  {sortedBudgets.length > 0 ? (
-                                    sortedBudgets.map((b) => {
-                                      const budgetId = getBudgetId(b)
-                                      const category = getBudgetCategory(b) || 'N/A'
-                                      const subcategory = getBudgetSubcategory(b) || 'N/A'
-                                      const yearLabel = getBudgetYear(b)
-                                      const isPreferred =
-                                        preferredSet.size > 0 &&
-                                        (preferredSet.has(normalizeText(category)) || preferredSet.has(normalizeText(subcategory)))
-                                      return (
-                                        <option key={budgetId} value={budgetId}>
-                                          {category} - {subcategory}{yearLabel ? ` (${yearLabel})` : ''}{isPreferred ? ' · Sugerido' : ''}
-                                        </option>
-                                      )
-                                    })
-                                  ) : (
-                                    <option value="" disabled>{language === 'es' ? 'No hay presupuestos disponibles' : 'No budgets available'}</option>
-                                  )}
-                                </select>
-                              ) : (
-                                item.assigned_transaction_id && (
-                                  <span className="text-xs text-green-600">
-                                    {language === 'es' ? 'Asignado a #' : 'Assigned to #'}{item.assigned_transaction_id}
-                                  </span>
-                                )
-                              )}
-                            </td>
-                          </tr>
-                        )
-                      })}
+                      {selectedReceipt.items?.map((item, idx) => (
+                        <tr key={item.id ?? idx} className="hover:bg-backgroundHover">
+                          <td className="px-3 py-2 text-right text-muted-foreground">#{idx + 1}</td>
+                          <td className="px-3 py-2 text-foreground break-words">{item.description}</td>
+                          <td className="px-3 py-2 text-right text-foreground">{item.quantity ?? '-'}</td>
+                          <td className="px-3 py-2 text-right text-foreground">
+                            {item.unit_price != null ? formatCurrency(item.unit_price, language, false) : '-'}
+                          </td>
+                          <td className="px-3 py-2 text-right text-foreground font-semibold">
+                            {formatCurrency(item.amount || 0, language, false)}
+                          </td>
+                          <td className="px-3 py-2 text-right">
+                            {assignForm.assignment_mode === 'by_item' && !item.assigned_transaction_id ? (
+                              <select
+                                className="sap-input text-xs min-w-[150px]"
+                                onChange={(e) => {
+                                  if (e.target.value) {
+                                    handleAssignItem(item.id, parseInt(e.target.value))
+                                  }
+                                }}
+                              >
+                                <option value="">{language === 'es' ? 'Asignar...' : 'Assign...'}</option>
+                                {budgets.length > 0 ? (
+                                  budgets.map((b) => {
+                                    const budgetId = b.id || b.family_budget_id || b.family_budget?.id
+                                    const category = b.category || b.family_budget?.category || 'N/A'
+                                    const subcategory = b.subcategory || b.family_budget?.subcategory || 'N/A'
+                                    return (
+                                      <option key={b.id} value={budgetId}>
+                                        {category} - {subcategory}
+                                      </option>
+                                    )
+                                  })
+                                ) : (
+                                  <option value="" disabled>{language === 'es' ? 'No hay presupuestos disponibles' : 'No budgets available'}</option>
+                                )}
+                              </select>
+                            ) : (
+                              item.assigned_transaction_id && (
+                                <span className="text-xs text-green-600">
+                                  {language === 'es' ? 'Asignado a #' : 'Assigned to #'}{item.assigned_transaction_id}
+                                </span>
+                              )
+                            )}
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -1488,6 +1021,6 @@ export default function ReceiptsPage() {
           </div>
         )}
       </div>
-    </SAPLayout>
+    </AppLayout>
   )
 }

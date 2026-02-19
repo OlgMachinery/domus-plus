@@ -1,34 +1,40 @@
-import { createServerClient } from '@supabase/ssr'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import type { NextRequest } from 'next/server'
 
-export function createClient(request?: NextRequest) {
-  const cookieStore = cookies()
-
-  const authHeader = request?.headers.get('authorization')
+export async function createClient() {
+  const cookieStore = await cookies()
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY!,
     {
       cookies: {
-        get(name) {
-          return cookieStore.get(name)?.value
+        getAll() {
+          return cookieStore.getAll()
         },
-        set(name, value, options) {
-          cookieStore.set({ name, value, ...options })
-        },
-        remove(name, options) {
-          cookieStore.set({ name, value: '', ...options })
-        }
-      },
-      global: authHeader
-        ? {
-            headers: {
-              Authorization: authHeader
-            }
+        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          } catch {
+            // Server Component context - middleware handles session refresh
           }
-        : undefined
+        },
+      },
     }
   )
+}
+
+export async function getServerUser() {
+  const supabase = await createClient()
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error || !user) return null
+  return user
+}
+
+export async function requireUser() {
+  const user = await getServerUser()
+  if (!user) throw new Error('Unauthorized')
+  return user
 }
