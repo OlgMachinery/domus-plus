@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-const DEPLOY_ID = 'd84254d-budget-overview'
+const DEPLOY_ID = 'trigger-redeploy-2026-02-19'
 const ROUTES_CHECK = ['/', '/budget-overview', '/login']
 
 export async function GET() {
