@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import type { User } from '@/lib/types'
-import AppLayout from "@/components/AppLayout"
+import SAPLayout from "@/components/SAPLayout"
+import { useTranslation, getLanguage } from '@/lib/i18n'
+import type { Language } from '@/lib/i18n'
 
 interface ActivityLog {
   id: number
@@ -26,8 +28,14 @@ interface ActivityLog {
 
 export default function LogsPage() {
   const router = useRouter()
+  const [language, setLanguage] = useState<Language>('es')
   const [logs, setLogs] = useState<ActivityLog[]>([])
   const [loading, setLoading] = useState(true)
+  const t = useTranslation(language)
+
+  useEffect(() => {
+    setLanguage(getLanguage())
+  }, [])
   const [user, setUser] = useState<User | null>(null)
   const [filters, setFilters] = useState({
     action_type: '',
@@ -161,10 +169,10 @@ export default function LogsPage() {
   )
 
   return (
-    <AppLayout
+    <SAPLayout
       user={user}
-      title="Log de Actividad"
-      subtitle="Registro de todos los movimientos del sistema"
+      title={t.nav.logs}
+      subtitle={t.logs.subtitle}
       toolbar={toolbar}
     >
       {/* Filtros */}
@@ -310,6 +318,6 @@ export default function LogsPage() {
           </p>
         </div>
       )}
-    </AppLayout>
+    </SAPLayout>
   )
 }

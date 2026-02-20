@@ -269,7 +269,7 @@ export interface Translations {
 const translations: Record<Language, Translations> = {
   es: {
     nav: {
-      dashboard: 'Dashboard',
+      dashboard: 'Panel',
       budgets: 'Presupuestos',
       transactions: 'Transacciones',
       logs: 'Log de Actividad',

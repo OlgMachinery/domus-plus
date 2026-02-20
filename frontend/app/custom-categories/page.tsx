@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import type { User } from '@/lib/types'
 import { PlusIcon, XIcon, EditIcon, TrashIcon } from '@/lib/icons'
-import AppLayout from "@/components/AppLayout"
+import SAPLayout from "@/components/SAPLayout"
 import { getLanguage, setLanguage, useTranslation, type Language } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -262,16 +262,16 @@ export default function CustomCategoriesPage() {
 
   if (loading) {
     return (
-      <AppLayout user={user} title={language === 'es' ? 'Categorías Personalizadas' : 'Custom Categories'} toolbar={null}>
+      <SAPLayout user={user} title={language === 'es' ? 'Categorías Personalizadas' : 'Custom Categories'} toolbar={null}>
         <div className="flex items-center justify-center py-12">
           <div className="text-muted-foreground">{language === 'es' ? 'Cargando...' : 'Loading...'}</div>
         </div>
-      </AppLayout>
+      </SAPLayout>
     )
   }
 
   return (
-    <AppLayout
+    <SAPLayout
       user={user}
       title={language === 'es' ? 'Categorías Personalizadas' : 'Custom Categories'}
       subtitle={language === 'es' ? 'Crea y gestiona tus propias categorías y subcategorías para presupuestos' : 'Create and manage your own categories and subcategories for budgets'}
@@ -454,6 +454,6 @@ export default function CustomCategoriesPage() {
           </DialogContent>
         </Dialog>
       </div>
-    </AppLayout>
+    </SAPLayout>
   )
 }

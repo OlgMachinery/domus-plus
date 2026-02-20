@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
-import AppLayout from '@/components/AppLayout'
+import SAPLayout from '@/components/SAPLayout'
+import { useTranslation, getLanguage } from '@/lib/i18n'
+import type { Language } from '@/lib/i18n'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
@@ -29,10 +31,16 @@ interface User {
 
 export default function BudgetSummaryPage() {
   const router = useRouter()
+  const [language, setLanguage] = useState<Language>('es')
   const [user, setUser] = useState<User | null>(null)
   const [accounts, setAccounts] = useState<BudgetAccount[]>([])
   const [loading, setLoading] = useState(true)
   const [year, setYear] = useState(new Date().getFullYear())
+  const t = useTranslation(language)
+
+  useEffect(() => {
+    setLanguage(getLanguage())
+  }, [])
 
   useEffect(() => {
     loadData()
@@ -124,19 +132,19 @@ export default function BudgetSummaryPage() {
 
   if (loading) {
     return (
-      <AppLayout user={null} title="Budget Summary" toolbar={toolbar}>
+      <SAPLayout user={null} title={t.budgetSummary.title} subtitle={t.budgetSummary.subtitle} toolbar={toolbar}>
         <div className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-32" />)}
           </div>
           <Skeleton className="h-96" />
         </div>
-      </AppLayout>
+      </SAPLayout>
     )
   }
 
   return (
-    <AppLayout user={user} title="Budget Summary" toolbar={toolbar}>
+    <SAPLayout user={user} title={t.budgetSummary.title} subtitle={t.budgetSummary.subtitle} toolbar={toolbar}>
       <div className="space-y-6">
         {/* Summary Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -236,6 +244,6 @@ export default function BudgetSummaryPage() {
           </CardContent>
         </Card>
       </div>
-    </AppLayout>
+    </SAPLayout>
   )
 }

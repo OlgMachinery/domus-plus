@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase/client'
 import { format } from 'date-fns'
 import { es, enUS } from 'date-fns/locale'
 import type { User } from '@/lib/types'
-import AppLayout from "@/components/AppLayout"
+import SAPLayout from "@/components/SAPLayout"
 import { formatCurrency } from '@/lib/currency'
 import { getLanguage, setLanguage, useTranslation, type Language } from '@/lib/i18n'
 import { XIcon, PlusIcon } from '@/lib/icons'
@@ -617,11 +617,11 @@ export default function ReceiptsPage() {
 
   if (loading) {
     return (
-      <AppLayout user={user} title={language === 'es' ? 'Recibos' : 'Receipts'} toolbar={null}>
+      <SAPLayout user={user} title={language === 'es' ? 'Recibos' : 'Receipts'} toolbar={null}>
         <div className="flex items-center justify-center py-12">
           <div className="text-muted-foreground">{language === 'es' ? 'Cargando...' : 'Loading...'}</div>
         </div>
-      </AppLayout>
+      </SAPLayout>
     )
   }
 
@@ -634,7 +634,7 @@ export default function ReceiptsPage() {
     .join('\n')
 
   return (
-    <AppLayout
+    <SAPLayout
       user={user}
       title={language === 'es' ? 'Recibos Procesados' : 'Processed Receipts'}
       subtitle={language === 'es' ? 'Gestiona y asigna conceptos de recibos a transacciones' : 'Manage and assign receipt items to transactions'}
@@ -1021,6 +1021,6 @@ export default function ReceiptsPage() {
           </div>
         )}
       </div>
-    </AppLayout>
+    </SAPLayout>
   )
 }

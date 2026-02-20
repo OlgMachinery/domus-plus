@@ -25,7 +25,7 @@ import {
 
 interface SAPLayoutProps {
   children: ReactNode
-  user?: User | null
+  user?: Partial<User> | null
   title: string
   subtitle?: string
   toolbar?: ReactNode
@@ -47,8 +47,7 @@ export default function SAPLayout({ children, user, title, subtitle, toolbar }: 
 
   useEffect(() => {
     setMounted(true)
-    const initialLang = getLanguage()
-    setLanguage(initialLang)
+    setLanguage(getLanguage())
   }, [])
 
   useEffect(() => {

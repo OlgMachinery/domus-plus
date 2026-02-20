@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import type { User } from '@/lib/types'
 import { PlusIcon, XIcon, CameraIcon } from '@/lib/icons'
-import AppLayout from "@/components/AppLayout"
+import SAPLayout from "@/components/SAPLayout"
 import { formatCurrency } from '@/lib/currency'
 import { getLanguage, setLanguage, useTranslation, type Language } from '@/lib/i18n'
 import { format } from 'date-fns'
@@ -353,11 +353,11 @@ export default function PersonalBudgetPage() {
 
   if (loading) {
     return (
-      <AppLayout user={user} title={language === 'es' ? 'Mi Presupuesto Personal' : 'My Personal Budget'} toolbar={null}>
+      <SAPLayout user={user} title={language === 'es' ? 'Mi Presupuesto Personal' : 'My Personal Budget'} toolbar={null}>
         <div className="flex items-center justify-center py-12">
           <div className="text-muted-foreground">{language === 'es' ? 'Cargando...' : 'Loading...'}</div>
         </div>
-      </AppLayout>
+      </SAPLayout>
     )
   }
 
@@ -376,7 +376,7 @@ export default function PersonalBudgetPage() {
   }, 0)
 
   return (
-    <AppLayout
+    <SAPLayout
       user={user}
       title={language === 'es' ? 'Mi Presupuesto Personal' : 'My Personal Budget'}
       subtitle={language === 'es' ? 'Gestiona tus presupuestos personales (colegiaturas, gasolina, reparaciones, vida social)' : 'Manage your personal budgets (tuition, gas, repairs, social life)'}
@@ -689,6 +689,6 @@ export default function PersonalBudgetPage() {
           </div>
         )}
       </div>
-    </AppLayout>
+    </SAPLayout>
   )
 }

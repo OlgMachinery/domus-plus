@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase/client'
 import { format } from 'date-fns'
 import { es, enUS } from 'date-fns/locale'
 import type { User } from '@/lib/types'
-import AppLayout from "@/components/AppLayout"
+import SAPLayout from "@/components/SAPLayout"
 import { formatCurrency } from '@/lib/currency'
 import { getLanguage, setLanguage, useTranslation, type Language } from '@/lib/i18n'
 
@@ -137,16 +137,16 @@ export default function UserRecordsPage() {
 
   if (loading) {
     return (
-      <AppLayout user={user} title={language === 'es' ? 'Registros de Usuario' : 'User Records'} toolbar={null}>
+      <SAPLayout user={user} title={language === 'es' ? 'Registros de Usuario' : 'User Records'} toolbar={null}>
         <div className="flex items-center justify-center py-12">
           <div className="text-muted-foreground">{language === 'es' ? 'Cargando...' : 'Loading...'}</div>
         </div>
-      </AppLayout>
+      </SAPLayout>
     )
   }
 
   return (
-    <AppLayout
+    <SAPLayout
       user={user}
       title={language === 'es' ? 'Registros de Usuario' : 'User Records'}
       subtitle={language === 'es' ? 'Visualiza todos tus tickets y recibos procesados' : 'View all your processed tickets and receipts'}
@@ -378,6 +378,6 @@ export default function UserRecordsPage() {
           </div>
         )}
       </div>
-    </AppLayout>
+    </SAPLayout>
   )
 }

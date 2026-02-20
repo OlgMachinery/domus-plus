@@ -4,11 +4,12 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import type { User, FamilyBudget, AnnualBudgetMatrix, GlobalBudgetSummary } from '@/lib/types'
 import { PlusIcon, XIcon } from '@/lib/icons'
-import AppLayout from "@/components/AppLayout"
+import SAPLayout from "@/components/SAPLayout"
 import { useTranslation, getLanguage, setLanguage, type Language } from '@/lib/i18n'
 import { formatCurrency } from '@/lib/currency'
 
@@ -112,6 +113,15 @@ export default function BudgetsPage() {
       clearTimeout(timeout)
     }
   }, [router])
+
+  // Bloquear scroll del body cuando el modal Crear Presupuesto está abierto
+  useEffect(() => {
+    if (showCreateModal) {
+      const prev = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return () => { document.body.style.overflow = prev }
+    }
+  }, [showCreateModal])
 
   const loadUser = async () => {
     try {
@@ -723,11 +733,11 @@ export default function BudgetsPage() {
 
   if (loading) {
   return (
-      <AppLayout user={user} title={t.budgets.title} toolbar={null}>
+      <SAPLayout user={user} title={t.budgets.title} subtitle={t.budgets.subtitle} toolbar={null}>
         <div className="flex items-center justify-center py-12">
           <div className="text-muted-foreground">{t.common.loading}</div>
             </div>
-      </AppLayout>
+      </SAPLayout>
     )
   }
 
@@ -768,7 +778,7 @@ export default function BudgetsPage() {
   )
 
   return (
-    <AppLayout
+    <SAPLayout
       user={user}
       title={t.budgets.title}
       subtitle={t.budgets.subtitle}
@@ -1111,12 +1121,17 @@ export default function BudgetsPage() {
 
       {/* Modal de creación estilo SAP */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="sap-card max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto shadow-lg">
-            <div className="p-6">
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-create-budget-title"
+        >
+          <div className="sap-card max-w-2xl w-full max-h-[90vh] flex flex-col shadow-lg bg-card">
+              <div className="p-6 flex-1 min-h-0 overflow-y-auto">
               <div className="flex justify-between items-center mb-6 border-b border-border pb-4">
               <div>
-                  <h2 className="text-lg font-semibold text-foreground">Crear Presupuesto Anual</h2>
+                  <h2 id="modal-create-budget-title" className="text-lg font-semibold text-foreground">Crear Presupuesto Anual</h2>
                   <p className="text-xs text-muted-foreground mt-1">
                     {newBudget.step === 'account' && 'Paso 1: Selecciona la cuenta del catálogo'}
                     {newBudget.step === 'contributors' && 'Paso 2: Selecciona los integrantes que contribuyen'}
@@ -1124,6 +1139,7 @@ export default function BudgetsPage() {
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={() => {
                     setShowCreateModal(false)
                     setNewBudget({ 
@@ -1229,7 +1245,10 @@ export default function BudgetsPage() {
                             className="sap-input"
                   >
                     <option value="">Selecciona una subcategoría</option>
-                    {subcategories[newBudget.category]?.map(sub => (
+                    {(subcategories[newBudget.category] && subcategories[newBudget.category].length > 0
+                      ? subcategories[newBudget.category]
+                      : [newBudget.category]
+                    ).map((sub: string) => (
                       <option key={sub} value={sub}>{sub}</option>
                     ))}
                   </select>
@@ -1277,6 +1296,16 @@ export default function BudgetsPage() {
                 {newBudget.step === 'contributors' && (
                   <div className="space-y-4">
               <div>
+                      {familyMembers.length === 0 ? (
+                        <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-4 text-amber-800 dark:text-amber-200">
+                          <p className="font-medium mb-1">{language === 'es' ? 'No hay integrantes en tu familia' : 'No family members'}</p>
+                          <p className="text-sm mb-3">{language === 'es' ? 'Agrega al menos un integrante en la sección Familia para poder crear presupuestos por integrante.' : 'Add at least one member in the Family section to create budgets.'}</p>
+                          <Link href="/family" className="sap-button-primary text-sm inline-flex" onClick={() => setShowCreateModal(false)}>
+                            {language === 'es' ? 'Ir a Familia' : 'Go to Family'}
+                          </Link>
+                        </div>
+                      ) : (
+                        <>
                       <label className="block text-sm font-medium text-muted-foreground mb-3">
                         ¿Qué integrantes contribuyen a esta cuenta?
                       </label>
@@ -1391,6 +1420,8 @@ export default function BudgetsPage() {
                       >
                         ← Volver
                       </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}
@@ -2584,6 +2615,6 @@ export default function BudgetsPage() {
           </div>
         </div>
       )}
-    </AppLayout>
+    </SAPLayout>
   )
 }
