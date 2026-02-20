@@ -1,4 +1,5 @@
 'use client'
+// Trigger deployment from Git (Vercel connected to OlgMachinery/domus-plus)
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
