@@ -100,13 +100,10 @@ export default function BudgetsPage() {
       setLoading(false)
     })
     
-    // Timeout de seguridad: si después de 10 segundos sigue cargando, desactivar loading
+    // Timeout de seguridad: si después de 15 s sigue cargando, desactivar loading para que la página sea usable
     const timeout = setTimeout(() => {
-      if (mounted) {
-        console.warn('Timeout de carga - desactivando loading')
-        setLoading(false)
-      }
-    }, 10000)
+      if (mounted) setLoading(false)
+    }, 15000)
     
     return () => {
       mounted = false
@@ -140,8 +137,8 @@ export default function BudgetsPage() {
       if (userData) {
         setUser(userData as User)
         if (userData.family_id) {
-          loadFamilyMembers(userData.family_id)
-          loadCustomCategories()
+          await loadFamilyMembers(userData.family_id)
+          loadCustomCategories() // en segundo plano, no bloquea
         }
       }
     } catch (error: any) {

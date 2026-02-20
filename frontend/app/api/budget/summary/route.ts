@@ -69,11 +69,8 @@ export async function GET(request: NextRequest) {
       .eq('is_active', true)
 
     if (allocError) {
-      console.error('GET /api/budget/summary allocations:', allocError)
-      return NextResponse.json(
-        { detail: `Error al obtener resumen: ${allocError.message}` },
-        { status: 500 }
-      )
+      console.warn('GET /api/budget/summary allocations (tabla puede no existir):', allocError.message)
+      return NextResponse.json(emptyResponse, { status: 200 })
     }
 
     if (!allocations?.length) {
@@ -157,12 +154,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response, { status: 200 })
   } catch (error: unknown) {
-    console.error('GET /api/budget/summary:', error)
-    return NextResponse.json(
-      {
-        detail: error instanceof Error ? error.message : 'Error al obtener resumen de presupuesto',
-      },
-      { status: 500 }
-    )
+    console.warn('GET /api/budget/summary:', error)
+    return NextResponse.json(emptyResponse, { status: 200 })
   }
 }

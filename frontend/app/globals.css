@@ -46,14 +46,14 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
-  /* Domus verde: paleta principal (sidebar, botones, acentos) */
-  --color-sap-primary: #0d7d4a;
-  --color-sap-primary-dark: #0a6339;
-  --color-sap-primary-hover: #0e8f52;
+  /* Domus verde: paleta principal (sidebar, botones, acentos) — verde estándar más claro */
+  --color-sap-primary: #047857;
+  --color-sap-primary-dark: #065f46;
+  --color-sap-primary-hover: #059669;
   --color-sap-bg: #f5f7f8;
   --color-sap-bg-secondary: #eef1f3;
   --color-sap-bg-hover: #e4e8eb;
-  --color-sap-sidebar: #0d7d4a;
+  --color-sap-sidebar: #047857;
   --color-sap-border: #d1d9e0;
   --color-sap-text: #1a2332;
   --color-sap-text-secondary: #4a5568;
