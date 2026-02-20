@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 
+export const dynamic = 'force-dynamic'
+
 const getAuthUser = async (supabase: Awaited<ReturnType<typeof createClient>>, request: NextRequest) => {
   const authHeader = request.headers.get('authorization') || ''
   const token = authHeader.toLowerCase().startsWith('bearer ') ? authHeader.slice(7) : null
