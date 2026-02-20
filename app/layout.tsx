@@ -5,6 +5,9 @@ import { Inter } from 'next/font/google'
 
 const inter = Inter({ subsets: ['latin'] })
 
+// Evita que el build intente pre-renderizar páginas que usan cookies/headers (Supabase).
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: 'DOMUS+',
   description: 'Family Budget Management System',
