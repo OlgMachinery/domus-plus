@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { PREDEFINED_CATEGORIES, PREDEFINED_SUBCATEGORIES } from '@/lib/category-defaults'
 
+export const dynamic = 'force-dynamic'
+
 const getAuthUser = async (supabase: Awaited<ReturnType<typeof createClient>>, request: NextRequest) => {
   const authHeader = request.headers.get('authorization') || ''
   const token = authHeader.toLowerCase().startsWith('bearer ') ? authHeader.slice(7) : null

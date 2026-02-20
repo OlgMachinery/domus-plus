@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+export const dynamic = 'force-dynamic'
+
 // Esta API route crea automáticamente el usuario en la tabla users si no existe
 export async function POST(request: NextRequest) {
   try {
