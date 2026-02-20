@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase/client'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,6 +19,12 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
+
+    if (!isSupabaseConfigured) {
+      setError('Supabase no está configurado en este entorno. En Vercel: añade NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY (Production) y vuelve a desplegar.')
+      setLoading(false)
+      return
+    }
 
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -44,7 +50,11 @@ export default function LoginPage() {
         setError('Login failed. Please try again.')
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Connection error'
+      const raw = err instanceof Error ? err.message : 'Connection error'
+      const isNetwork = /load failed|failed to fetch|network error/i.test(raw)
+      const message = isNetwork
+        ? 'No se pudo conectar con Supabase. Revisa: 1) Vercel → Environment Variables (NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY para Production). 2) Redeploy. 3) Supabase → Authentication → URL Configuration: Site URL y Redirect URLs con https://domus-fam.com'
+        : raw
       setError(message)
     } finally {
       setLoading(false)
