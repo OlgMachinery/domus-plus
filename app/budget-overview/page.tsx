@@ -10,6 +10,8 @@ import { getAuthHeaders } from '@/lib/auth'
 import { safePushLogin } from '@/lib/receiptProcessing'
 import SAPLayout from '@/components/SAPLayout'
 
+export const dynamic = 'force-dynamic'
+
 interface BudgetSummaryCategory {
   category_id: string
   category_name: string

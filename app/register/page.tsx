@@ -18,6 +18,8 @@ function apiErrorToMessage(detail: unknown): string {
   return 'Error al registrar usuario'
 }
 
+export const dynamic = 'force-dynamic'
+
 export default function Register() {
   const router = useRouter()
   const [name, setName] = useState('')

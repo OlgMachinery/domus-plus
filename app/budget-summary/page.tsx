@@ -27,6 +27,8 @@ interface User {
   email?: string
 }
 
+export const dynamic = 'force-dynamic'
+
 export default function BudgetSummaryPage() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)

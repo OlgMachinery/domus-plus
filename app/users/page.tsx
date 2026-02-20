@@ -8,6 +8,8 @@ import SAPLayout from '@/components/SAPLayout'
 import { PlusIcon, XIcon } from '@/lib/icons'
 import { safePushLogin } from '@/lib/receiptProcessing'
 
+export const dynamic = 'force-dynamic'
+
 export default function UsersPage() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)

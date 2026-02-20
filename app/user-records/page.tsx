@@ -48,6 +48,8 @@ interface Receipt {
   user?: User
 }
 
+export const dynamic = 'force-dynamic'
+
 export default function UserRecordsPage() {
   const router = useRouter()
   const [language, setLanguageState] = useState<Language>('es')

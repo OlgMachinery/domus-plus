@@ -11,6 +11,8 @@ import AppLayout from "@/components/AppLayout"
 import { useTranslation, getLanguage, setLanguage, type Language } from '@/lib/i18n'
 import { formatCurrency } from '@/lib/currency'
 
+export const dynamic = 'force-dynamic'
+
 export default function TransactionsPage() {
   const router = useRouter()
   const [language, setLanguageState] = useState<Language>(getLanguage())

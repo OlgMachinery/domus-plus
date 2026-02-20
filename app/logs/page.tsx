@@ -24,6 +24,8 @@ interface ActivityLog {
   } | null
 }
 
+export const dynamic = 'force-dynamic'
+
 export default function LogsPage() {
   const router = useRouter()
   const [logs, setLogs] = useState<ActivityLog[]>([])

@@ -8,6 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton'
 import { Wallet, TrendingUp, Receipt, CreditCard } from 'lucide-react'
 
+export const dynamic = 'force-dynamic'
+
 export default function Dashboard() {
   const router = useRouter()
   const [user, setUser] = useState<{ name?: string; email?: string } | null>(null)

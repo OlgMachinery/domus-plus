@@ -30,6 +30,8 @@ interface CustomCategory {
   subcategories: CustomSubcategory[]
 }
 
+export const dynamic = 'force-dynamic'
+
 export default function CustomCategoriesPage() {
   const router = useRouter()
   const [language, setLanguageState] = useState<Language>('es')

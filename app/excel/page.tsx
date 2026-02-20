@@ -30,6 +30,8 @@ interface ParsedBudget extends ExcelBudget {
   selected: boolean
 }
 
+export const dynamic = 'force-dynamic'
+
 export default function ExcelPage() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)

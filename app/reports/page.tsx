@@ -12,6 +12,8 @@ import { getLanguage, setLanguage, useTranslation, type Language } from '@/lib/i
 import { safePushLogin } from '@/lib/receiptProcessing'
 import { getAuthHeaders, getToken } from '@/lib/auth'
 
+export const dynamic = 'force-dynamic'
+
 type ReportType = 'transactions' | 'budgets' | 'income_expense' | 'category' | 'annual_budget'
 type ExportFormat = 'html' | 'pdf' | 'excel'
 

@@ -52,6 +52,8 @@ interface Receipt {
   items: ReceiptItem[]
 }
 
+export const dynamic = 'force-dynamic'
+
 export default function ReceiptsPage() {
   const router = useRouter()
   const [language, setLanguageState] = useState<Language>('es')

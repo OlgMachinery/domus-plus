@@ -11,6 +11,8 @@ import { getLanguage, setLanguage, useTranslation, type Language } from '@/lib/i
 import { format } from 'date-fns'
 import { es, enUS } from 'date-fns/locale'
 
+export const dynamic = 'force-dynamic'
+
 interface PersonalBudget {
   id: number
   family_id: number

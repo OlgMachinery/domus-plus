@@ -19,7 +19,9 @@ import { getAuthHeaders } from '@/lib/auth'
   country?: string | null
    members?: User[]
  }
- 
+
+ export const dynamic = 'force-dynamic'
+
  export default function FamilyPage() {
    const router = useRouter()
    const [user, setUser] = useState<User | null>(null)
