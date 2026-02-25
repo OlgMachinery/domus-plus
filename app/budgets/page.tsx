@@ -43,6 +43,10 @@ export default function BudgetsPage() {
   const [adminPassword, setAdminPassword] = useState('')
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingBudget, setEditingBudget] = useState<FamilyBudget | null>(null)
+  const [budgetQuickPersonId, setBudgetQuickPersonId] = useState<string>('')
+  const [budgetQuickTransportSub, setBudgetQuickTransportSub] = useState<string>('Gasolina')
+  const [budgetDuplicateMode, setBudgetDuplicateMode] = useState<'individual' | 'shared'>('individual')
+  const [budgetDuplicatePersonId, setBudgetDuplicatePersonId] = useState<string>('')
   const [newBudget, setNewBudget] = useState({
     step: 'account' as 'account' | 'contributors' | 'amounts', // Paso actual del formulario
     category: '',
@@ -112,6 +116,12 @@ export default function BudgetsPage() {
       clearTimeout(timeout)
     }
   }, [router])
+
+  useEffect(() => {
+    if (!familyMembers || familyMembers.length === 0) return
+    if (!budgetQuickPersonId) setBudgetQuickPersonId(String(familyMembers[0]!.id))
+    if (!budgetDuplicatePersonId) setBudgetDuplicatePersonId(String(familyMembers[0]!.id))
+  }, [familyMembers, budgetQuickPersonId, budgetDuplicatePersonId])
 
   const loadUser = async () => {
     try {
@@ -720,6 +730,88 @@ export default function BudgetsPage() {
     }
   })
   
+  const startQuickPersonalVehicle = () => {
+    if (!budgetQuickPersonId) {
+      alert('Selecciona una persona')
+      return
+    }
+    const transportSubs = subcategories['Transporte'] || []
+    const safeSub = transportSubs.includes(budgetQuickTransportSub) ? budgetQuickTransportSub : (transportSubs[0] || 'Gasolina')
+    setNewBudget((prev) => ({
+      ...prev,
+      step: 'amounts',
+      category: 'Transporte',
+      subcategory: safeSub,
+      selected_members: [budgetQuickPersonId],
+      member_amounts: { [budgetQuickPersonId]: 0 },
+      distribution_mode: 'total',
+      total_budget_amount: 0,
+      total_amount: 0,
+      manually_adjusted_percentages: {},
+    }))
+  }
+
+  const startDuplicateFromSelectedBudget = () => {
+    if (!selectedBudget) return
+    const cat = String((selectedBudget as any)?.category || '')
+    const sub = String((selectedBudget as any)?.subcategory || '')
+    if (!cat || !sub) {
+      alert('No se puede duplicar: falta categoría o subcategoría')
+      return
+    }
+
+    const allIds = familyMembers.map((m) => String(m.id))
+    const isGlobal = globalCategories.includes(cat)
+
+    const mode: 'individual' | 'shared' = isGlobal ? 'shared' : budgetDuplicateMode
+    const memberIds =
+      mode === 'individual'
+        ? budgetDuplicatePersonId
+          ? [String(budgetDuplicatePersonId)]
+          : []
+        : allIds
+
+    if (memberIds.length === 0) {
+      alert('Selecciona una persona destino')
+      return
+    }
+
+    const total = Number((selectedBudget as any)?.total_amount || 0) || 0
+    const nextAmounts: Record<string, number> = {}
+    if (mode === 'individual') {
+      nextAmounts[memberIds[0]!] = total
+    } else {
+      const per = memberIds.length ? total / memberIds.length : 0
+      memberIds.forEach((id) => (nextAmounts[id] = per))
+    }
+
+    setShowBudgetDetailModal(false)
+    setSelectedBudget(null)
+    setShowPasswordModal(false)
+    setAdminPassword('')
+
+    setNewBudget((prev) => ({
+      ...prev,
+      step: isGlobal ? 'amounts' : mode === 'shared' ? 'contributors' : 'amounts',
+      year: selectedBudget.year,
+      category: cat,
+      subcategory: sub,
+      selected_members: memberIds,
+      member_amounts: nextAmounts,
+      distribution_mode: 'total',
+      total_budget_amount: total,
+      total_amount: total,
+      manually_adjusted_percentages: {},
+      frequency: 'mensual',
+      same_all_months: true,
+      selected_months: [],
+      daily_days: [],
+      variable_monthly_amounts: {},
+      daily_month: 1,
+    }))
+    setShowCreateModal(true)
+  }
+
 
   if (loading) {
   return (
@@ -1166,6 +1258,52 @@ export default function BudgetsPage() {
                       <p className="text-xs text-muted-foreground mb-3">
                         Primero selecciona la categoría y subcategoría. Luego definirás qué integrantes contribuyen a esta cuenta.
                       </p>
+
+                      <div className="sap-card p-4 bg-primary/5 border border-sap-primary/20 mb-4">
+                        <div className="text-sm font-semibold text-foreground">Asistente rápido: Auto personal</div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Para casos como “Mamá tiene carro → Gasolina”. Esto prepara una cuenta <b>Individual</b> (1 integrante) dentro de <b>Transporte</b>.
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                          <div>
+                            <div className="text-xs text-muted-foreground mb-1.5">Persona</div>
+                            <select
+                              value={budgetQuickPersonId}
+                              onChange={(e) => setBudgetQuickPersonId(e.target.value)}
+                              className="sap-input w-full"
+                            >
+                              <option value="">Selecciona…</option>
+                              {familyMembers.map((m) => (
+                                <option key={m.id} value={String(m.id)}>
+                                  {m.name || m.email}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <div className="text-xs text-muted-foreground mb-1.5">Subcuenta (Transporte)</div>
+                            <select
+                              value={budgetQuickTransportSub}
+                              onChange={(e) => setBudgetQuickTransportSub(e.target.value)}
+                              className="sap-input w-full"
+                            >
+                              {(subcategories['Transporte'] || []).map((s) => (
+                                <option key={s} value={s}>
+                                  {s}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center gap-3 mt-3 flex-wrap">
+                          <div className="text-xs text-muted-foreground">
+                            Tip: si también existe “Gasolina de Casa”, duplica la cuenta desde <b>Detalles → Dividir</b>.
+                          </div>
+                          <button type="button" onClick={startQuickPersonalVehicle} className="sap-button-secondary">
+                            Usar plantilla
+                          </button>
+                        </div>
+                      </div>
                       
                       <div className="mb-4">
                         <label className="block text-sm font-medium text-muted-foreground mb-1.5">
@@ -2117,6 +2255,9 @@ export default function BudgetsPage() {
                         </span>
                       )}
                     </div>
+                    <div className="text-[11px] text-muted-foreground mt-1">
+                      Regla: <b>1 integrante</b> = Individual; <b>2+ integrantes</b> = Compartido. Algunas categorías son siempre globales (Compartidas).
+                    </div>
                   </div>
                   <div>
                     <div className="text-xs text-muted-foreground mb-1">Método de Distribución</div>
@@ -2128,6 +2269,71 @@ export default function BudgetsPage() {
                   </div>
                 </div>
               </div>
+
+              {user?.is_family_admin && (
+                <div className="sap-card p-4">
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground">Dividir / duplicar</h3>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Útil para separar “Casa” vs “Personal” (ej. <b>Gasolina</b> de Casa y <b>Gasolina</b> de Mamá) sin mezclar.
+                      </p>
+                    </div>
+                    <button type="button" onClick={startDuplicateFromSelectedBudget} className="sap-button-secondary">
+                      Duplicar
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                    {(() => {
+                      const cat = String((selectedBudget as any)?.category || '')
+                      const isGlobal = !!cat && globalCategories.includes(cat)
+                      return (
+                        <>
+                          <div>
+                            <div className="text-xs text-muted-foreground mb-1.5">Nuevo tipo</div>
+                            <select
+                              className="sap-input w-full"
+                              value={isGlobal ? 'shared' : budgetDuplicateMode}
+                              onChange={(e) => setBudgetDuplicateMode(e.target.value as any)}
+                              disabled={isGlobal}
+                            >
+                              <option value="shared">Compartido (varios)</option>
+                              <option value="individual">Individual (1 integrante)</option>
+                            </select>
+                            {isGlobal ? (
+                              <div className="text-[11px] text-primary mt-1">
+                                Categoría global: se duplica como <b>Compartido</b>.
+                              </div>
+                            ) : null}
+                          </div>
+
+                          <div>
+                            <div className="text-xs text-muted-foreground mb-1.5">Persona (si es Individual)</div>
+                            <select
+                              className="sap-input w-full"
+                              value={budgetDuplicatePersonId}
+                              onChange={(e) => setBudgetDuplicatePersonId(e.target.value)}
+                              disabled={isGlobal || budgetDuplicateMode !== 'individual'}
+                            >
+                              <option value="">Selecciona…</option>
+                              {familyMembers.map((m) => (
+                                <option key={m.id} value={String(m.id)}>
+                                  {m.name || m.email}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </>
+                      )
+                    })()}
+                  </div>
+
+                  <div className="text-xs text-muted-foreground mt-3">
+                    Se abrirá “Crear Presupuesto” con la misma cuenta y monto, para que ajustes integrantes si lo necesitas.
+                  </div>
+                </div>
+              )}
 
               {/* Lista de integrantes que contribuyen */}
               <div>
