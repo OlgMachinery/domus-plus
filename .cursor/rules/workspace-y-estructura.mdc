@@ -24,3 +24,9 @@ alwaysApply: true
 - **Página del diagrama:** la única fuente es `domus-beta-dbe/src/app/ui/system-architecture/page.tsx`. Tras editarla, ejecutar desde la raíz `npm run sync:diagram` para copiar a `app/` y `frontend/`.
 - No confundir **domus-beta-dbe** con **frontend** ni con la app en la raíz (`app/`): son apps distintas.
 - Referencia rápida: ver también `docs/WORKSPACE_Y_PROYECTO.md` si hace falta comprobar la estructura o indicar el workspace a otro chat.
+
+## Si otro chat no identifica el proyecto
+
+1. Abrir el **workspace correcto:** `/Users/gonzalomontanofimbres/domus-plus` (repo raíz).
+2. Verificar que se vean carpetas como **domus-beta-dbe**, **frontend**, **mobile**, **supabase**, etc.
+3. Si sigue diciendo que "no encuentra el proyecto", está en un workspace distinto: pedir que **cambie al path anterior** o que abra la carpeta **domus-plus** (raíz).

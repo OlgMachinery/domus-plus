@@ -29,6 +29,8 @@ En la raíz del repo deberías ver, entre otras:
 
 Si no ves esas carpetas, estás en otro workspace (por ejemplo solo dentro de `frontend/` o `domus-beta-dbe/`). Cambia a la raíz del repo: **domus-plus**.
 
+**Si en otro chat la IA dice que "no encuentra el proyecto":** pide que abra el workspace **`/Users/gonzalomontanofimbres/domus-plus`** y que compruebe que ve carpetas como domus-beta-dbe, frontend, mobile, supabase. Si sigue fallando, está en un workspace distinto; que cambie al path anterior.
+
 ## Página del diagrama (una sola fuente)
 
 La página **Arquitectura del sistema** (`/ui/system-architecture`) existe en tres apps (domus-beta-dbe, app, frontend) pero **solo se edita en un sitio**:
