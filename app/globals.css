@@ -243,3 +243,85 @@
 .sap-text-secondary {
   color: hsl(var(--muted-foreground));
 }
+
+/* Vista sistema/arquitectura (diagrama) — botones y pestañas */
+.system-arch-page .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  background: rgba(15, 23, 42, 0.05);
+  color: #0f172a;
+}
+.system-arch-page .btn:hover {
+  background: rgba(15, 23, 42, 0.07);
+}
+.system-arch-page .btnPrimary {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+.system-arch-page .btnPrimary:hover {
+  opacity: 0.9;
+}
+.system-arch-page .btnGhost {
+  background: transparent;
+  border-color: hsl(var(--border));
+}
+.system-arch-page .btnGhost:hover {
+  background: rgba(15, 23, 42, 0.03);
+}
+.system-arch-page .btnSm {
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: 9px;
+  font-weight: 700;
+}
+.system-arch-page .tabBtn {
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #64748b;
+  cursor: pointer;
+}
+.system-arch-page .tabBtn:hover {
+  background: rgba(15, 23, 42, 0.05);
+  color: #0f172a;
+}
+.system-arch-page .tabBtnActive {
+  background: #fff;
+  border-color: rgba(15, 61, 145, 0.22);
+  color: #0f172a;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+.system-arch-page .pill {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.04);
+  border: 1px solid hsl(var(--border));
+  color: #64748b;
+  white-space: nowrap;
+}
+.system-arch-page .pillWarn {
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #92400e;
+}
+.system-arch-page .pillError {
+  background: rgba(220, 38, 38, 0.12);
+  border-color: rgba(220, 38, 38, 0.26);
+  color: #991b1b;
+}
+.system-arch-page .system-arch-panel-zoom,
+.system-arch-page .system-arch-opciones-avanzadas {
+  display: none !important;
+}
