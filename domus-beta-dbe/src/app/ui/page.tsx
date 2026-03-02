@@ -3720,6 +3720,19 @@ export default function UiPage() {
               <p className="pageSubtitle">{pageInfo.subtitle}</p>
             </div>
             <div className="sectionRow">
+              <span
+                role="status"
+                style={{
+                  background: '#15803d',
+                  color: '#fff',
+                  padding: '4px 10px',
+                  borderRadius: 8,
+                  fontSize: 12,
+                  fontWeight: 700,
+                }}
+              >
+                ✓ Versión correcta (prueba)
+              </span>
               {loading ? <span className="pill pillWarn">Cargando…</span> : null}
             </div>
           </div>
