@@ -1,0 +1,21 @@
+[Unit]
+Description=DOMUS+ Beta DBE (Next.js)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/var/www/domus-beta-dbe
+Environment=NODE_ENV=production
+Environment=PORT=3001
+EnvironmentFile=/var/www/domus-beta-dbe/.env
+ExecStart=/usr/bin/npm start
+Restart=always
+RestartSec=3
+
+# Ajusta el usuario/grupo según tu VPS
+User=www-data
+Group=www-data
+
+[Install]
+WantedBy=multi-user.target
+

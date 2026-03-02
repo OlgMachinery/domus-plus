@@ -1,0 +1,127 @@
+================================================================================
+FASE 6 — SUBIR DOMUS+ BETA DBE A TU VPS (paso a paso)
+================================================================================
+
+Objetivo: que la app quede corriendo 24/7 en tu VPS y que la base (SQLite) tenga
+copias de seguridad.
+
+IMPORTANTE:
+- La app es Next.js (Node).
+- La base es un archivo (SQLite).
+- Los recibos se guardan en DigitalOcean Spaces (cuando pongas las llaves).
+
+
+1) ENTRAR A TU VPS
+------------------
+Conéctate por SSH (Hostinger te da el acceso).
+
+
+2) INSTALAR LO NECESARIO (UNA SOLA VEZ)
+---------------------------------------
+- Node.js (recomendado 22+ o 24)
+- npm
+- nginx
+- sqlite3
+
+
+3) COPIAR EL PROYECTO AL VPS
+----------------------------
+Opción A: clonar repositorio (si está en GitHub/GitLab).
+Opción B: subir carpeta por ZIP/SFTP.
+
+Recomendación de ruta:
+  /var/www/domus-beta-dbe
+
+
+4) CREAR EL ARCHIVO DE CONFIGURACIÓN (.env)
+-------------------------------------------
+En la carpeta del proyecto (por ejemplo /var/www/domus-beta-dbe), crea un archivo:
+  .env
+
+Y coloca (ejemplo):
+
+  # Puerto interno de la app
+  PORT=3001
+
+  # Base de datos (SQLite) - usa una ruta fija en VPS
+  DATABASE_URL="file:/var/lib/domus-beta-dbe/domus.db"
+
+  # Seguridad (cámbialo por algo largo)
+  JWT_SECRET="PON_AQUI_UNA_CLAVE_LARGA_Y_SECRETA"
+
+  # DigitalOcean Spaces (para recibos)
+  DO_SPACES_KEY="..."
+  DO_SPACES_SECRET="..."
+  DO_SPACES_BUCKET="..."
+  DO_SPACES_ENDPOINT="https://nyc3.digitaloceanspaces.com"
+  DO_SPACES_REGION="nyc3"
+
+
+5) CREAR CARPETA PARA LA BASE Y DAR PERMISOS
+--------------------------------------------
+Crear:
+  /var/lib/domus-beta-dbe
+
+Dar permisos al usuario que ejecuta la app (según tu VPS).
+
+
+6) INSTALAR, CREAR TABLAS Y COMPILAR
+------------------------------------
+Dentro del proyecto:
+  npm install
+  npx prisma generate
+  npx prisma db push
+  npm run build
+
+
+7) DEJARLO “PRENDIDO” SIEMPRE (systemd)
+---------------------------------------
+Usa el archivo de ejemplo:
+  domus-beta-dbe/deploy/domus-beta-dbe.service
+
+Pasos típicos:
+- Copiarlo a /etc/systemd/system/
+- Editar la ruta del proyecto y el usuario
+- systemctl enable --now domus-beta-dbe
+
+
+8) PONER DOMINIO Y HTTPS (nginx)
+--------------------------------
+Usa el ejemplo:
+  domus-beta-dbe/deploy/nginx-domus-beta-dbe.conf
+
+Se configura para que:
+  https://tu-dominio.com  ->  http://127.0.0.1:3001
+
+Luego activas SSL (por ejemplo con Certbot).
+
+
+9) BACKUP DIARIO DE LA BASE (SQLite)
+------------------------------------
+Usa el ejemplo:
+  domus-beta-dbe/deploy/backup-sqlite.sh
+
+Idea:
+- Genera una copia segura de domus.db con timestamp.
+- Guardar en /var/backups/domus-beta-dbe/
+- Programar cron 1 vez al día.
+
+
+10) CÓMO VER QUE TODO ESTÁ BIEN
+-------------------------------
+Abre en el navegador:
+- /api/health  (debe decir db connected)
+- /ui          (pantalla simple para probar todo)
+
+
+Actualizar la app (cuando haya cambios):
+----------------------------------------
+- Traer cambios (git pull o subir nueva carpeta)
+- npm install
+- npx prisma generate
+- npx prisma db push
+- npm run build
+- systemctl restart domus-beta-dbe
+
+================================================================================
+

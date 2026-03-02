@@ -1,0 +1,280 @@
+// DOMUS+ Beta DBE — Schema F1 (validado)
+// SQLite. Ajustes: WAL y busy_timeout se aplican al conectar (ver docs).
+// UUID como String para compatibilidad SQLite.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum EntityType {
+  PERSON
+  HOUSE
+  PET
+  VEHICLE
+  PROJECT
+  FUND
+  GROUP
+  OTHER
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String  @map("password_hash")
+  name         String?
+  phone        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  memberships  FamilyMember[]
+  entityOwnerships BudgetEntityOwner[]
+  transactions Transaction[]
+  receipts     Receipt[]
+  receiptExtractions ReceiptExtraction[] @relation("ReceiptExtractionUser")
+  receiptExtractionsConfirmed ReceiptExtraction[] @relation("ReceiptExtractionConfirmedBy")
+  deletionArchivesCreated DeletionArchive[] @relation("DeletionArchiveCreatedBy")
+  deletionArchivesDeleted DeletionArchive[] @relation("DeletionArchiveDeletedBy")
+}
+
+model Family {
+  id               String   @id @default(uuid())
+  name             String
+  currency         String   @default("MXN")
+  cutoffDay        Int      @default(1) @map("cutoff_day")
+  budgetStartDate  DateTime @map("budget_start_date")
+  setupComplete    Boolean  @default(false) @map("setup_complete")
+  planStatus       String   @default("DRAFT") @map("plan_status")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  members           FamilyMember[]
+  budgetEntities    BudgetEntity[]
+  entityOwners      BudgetEntityOwner[]
+  budgetCategories  BudgetCategory[]
+  allocations       EntityBudgetAllocation[]
+  transactions      Transaction[]
+  receipts          Receipt[]
+  receiptExtractions ReceiptExtraction[]
+}
+
+model FamilyMember {
+  id             String   @id @default(uuid())
+  familyId       String   @map("family_id")
+  userId         String   @map("user_id")
+  isFamilyAdmin  Boolean  @default(false) @map("is_family_admin")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([familyId, userId])
+  @@map("family_members")
+}
+
+model BudgetEntity {
+  id        String   @id @default(uuid())
+  familyId  String   @map("family_id")
+  type      EntityType
+  name      String
+  imageUrl  String?  @map("image_url")
+  isActive  Boolean  @default(true) @map("is_active")
+  participatesInBudget  Boolean @default(true) @map("participates_in_budget")
+  participatesInReports Boolean @default(true) @map("participates_in_reports")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  family      Family                   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  allocations EntityBudgetAllocation[]
+  owners      BudgetEntityOwner[]
+
+  @@map("budget_entities")
+}
+
+model BudgetEntityOwner {
+  id        String   @id @default(uuid())
+  familyId  String   @map("family_id")
+  entityId  String   @map("entity_id")
+  userId    String   @map("user_id")
+  sharePct  Int?     @map("share_pct")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  family Family      @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  entity BudgetEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([entityId, userId])
+  @@map("budget_entity_owners")
+}
+
+model BudgetCategory {
+  id        String   @id @default(uuid())
+  familyId  String   @map("family_id")
+  type      String
+  name      String
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  family      Family                   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  allocations EntityBudgetAllocation[]
+
+  @@map("budget_categories")
+}
+
+model EntityBudgetAllocation {
+  id          String   @id @default(uuid())
+  familyId    String   @map("family_id")
+  entityId    String   @map("entity_id")
+  categoryId  String   @map("category_id")
+  monthlyLimit Decimal @map("monthly_limit")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  family   Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  entity   BudgetEntity  @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  category BudgetCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@map("entity_budget_allocations")
+}
+
+model Transaction {
+  id           String   @id @default(uuid())
+  familyId     String   @map("family_id")
+  userId       String   @map("user_id")
+  allocationId String   @map("allocation_id")
+  amount       Decimal
+  date         DateTime
+  description  String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  family     Family                 @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  allocation EntityBudgetAllocation @relation(fields: [allocationId], references: [id], onDelete: Restrict)
+  receipts   Receipt[]
+
+  @@map("transactions")
+}
+
+model Receipt {
+  id            String   @id @default(uuid())
+  transactionId String   @map("transaction_id")
+  userId        String   @map("user_id")
+  familyId      String   @map("family_id")
+  fileUrl       String   @map("file_url")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family      Family     @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  images      ReceiptImage[]
+  extraction  ReceiptExtraction?
+
+  @@map("receipts")
+}
+
+model ReceiptImage {
+  id        String   @id @default(uuid())
+  receiptId String   @map("receipt_id")
+  fileUrl   String   @map("file_url")
+  sortOrder Int      @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  receipt   Receipt  @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+
+  @@unique([receiptId, sortOrder])
+  @@map("receipt_images")
+}
+
+model ReceiptExtraction {
+  id           String   @id @default(uuid())
+  receiptId    String   @unique @map("receipt_id")
+  familyId     String   @map("family_id")
+  userId       String   @map("user_id")
+  confirmedAt  DateTime? @map("confirmed_at")
+  confirmedByUserId String? @map("confirmed_by_user_id")
+
+  merchantName String?  @map("merchant_name")
+  receiptDate  DateTime? @map("receipt_date")
+  total        Decimal? // total a pagar (bloqueado; no editable)
+  currency     String?  // ISO 4217 (ej. MXN)
+  tax          Decimal?
+  tip          Decimal?
+
+  rawText      String?  @map("raw_text")
+  rawJson      String?  @map("raw_json")
+  metaJson     String?  @map("meta_json")
+
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  receipt      Receipt  @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  family       Family   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user         User     @relation("ReceiptExtractionUser", fields: [userId], references: [id], onDelete: Cascade)
+  confirmedBy  User?    @relation("ReceiptExtractionConfirmedBy", fields: [confirmedByUserId], references: [id], onDelete: SetNull)
+  items        ReceiptExtractionItem[]
+
+  @@map("receipt_extractions")
+}
+
+model ReceiptExtractionItem {
+  id           String   @id @default(uuid())
+  extractionId String   @map("extraction_id")
+  lineNumber   Int      @map("line_number")
+
+  description  String
+  rawLine      String?  @map("raw_line")
+
+  quantity     Decimal?
+  unitPrice    Decimal? @map("unit_price")
+  amount       Decimal?
+
+  isAdjustment Boolean  @default(false) @map("is_adjustment")
+  isPlaceholder Boolean @default(false) @map("is_placeholder")
+  lineType     String?  @map("line_type")
+  notesJson    String?  @map("notes_json")
+
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  extraction   ReceiptExtraction @relation(fields: [extractionId], references: [id], onDelete: Cascade)
+
+  @@unique([extractionId, lineNumber])
+  @@map("receipt_extraction_items")
+}
+
+// Respaldo oculto antes de eliminaciones (no se muestra en UI).
+model DeletionArchive {
+  id              String   @id @default(uuid())
+  kind            String
+  familyId        String?  @map("family_id")
+  familyName      String?  @map("family_name")
+  createdByUserId String?  @map("created_by_user_id")
+  deletedAt       DateTime? @map("deleted_at")
+  deletedByUserId String?  @map("deleted_by_user_id")
+
+  payloadJson     String   @map("payload_json")
+  payloadSha256   String?  @map("payload_sha256")
+
+  spacesKey       String?  @map("spaces_key")
+  spacesUrl       String?  @map("spaces_url")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  createdBy       User?    @relation("DeletionArchiveCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  deletedBy       User?    @relation("DeletionArchiveDeletedBy", fields: [deletedByUserId], references: [id], onDelete: SetNull)
+
+  @@map("deletion_archives")
+}
