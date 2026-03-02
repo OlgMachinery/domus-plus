@@ -2526,9 +2526,13 @@ textarea:focus-visible {
   overflow-x: hidden !important;
   overflow-y: hidden !important;
 }
-#diagram-wrap {
-  border: 1px solid rgba(15, 23, 42, 0.12) !important;
+#diagram-wrap,
+.diagram-canvas {
+  border: none !important;
   box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06) !important;
+  outline: none !important;
+}
+#diagram-wrap * {
   outline: none !important;
 }
 #diagram-wrap:focus,

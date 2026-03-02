@@ -1290,6 +1290,7 @@ function SystemArchitecturePageInner() {
 
         <div
           id="diagram-wrap"
+          className="diagram-canvas"
           style={{
             width: '100%',
             flex: 1,
@@ -1297,7 +1298,7 @@ function SystemArchitecturePageInner() {
             minWidth: 0,
             position: 'relative',
             borderRadius: 12,
-            border: '1px solid rgba(15,23,42,0.12)',
+            border: 'none',
             boxShadow: '0 4px 16px rgba(15,23,42,0.06)',
             background: uiCanvasBg || '#fff',
             overflow: 'hidden',
