@@ -157,6 +157,78 @@
   color: hsl(var(--muted-foreground));
 }
 
+/* Selects: no usar display:flex (rompe el nativo), aspecto de desplegable clicable */
+select.sap-input {
+  display: block;
+  cursor: pointer;
+  color: #1a2332;
+  background-color: #fff;
+  border: 1px solid #d1d5db;
+  padding: 0.5rem 2rem 0.5rem 0.75rem;
+  min-height: 2.5rem;
+  appearance: auto;
+  -webkit-appearance: menulist;
+  -moz-appearance: menulist;
+}
+select.sap-input option {
+  background-color: #fff;
+  color: #1a2332;
+}
+select.sap-input option:checked,
+select.sap-input option:hover {
+  background-color: #e5e7eb;
+  color: #1a2332;
+}
+
+/* En el modal Crear Presupuesto, selects muy visibles y clicables */
+.modal-crear-presupuesto select.sap-input {
+  border: 1px solid #9ca3af;
+  background-color: #fff;
+  color: #111827;
+  width: 100%;
+}
+.modal-crear-presupuesto select.sap-input:focus {
+  border-color: var(--color-sap-primary);
+  box-shadow: 0 0 0 2px rgba(4, 120, 87, 0.2);
+}
+
+/* Modal Crear Presupuesto: fondo opaco y todo el texto oscuro para legibilidad */
+.modal-crear-presupuesto label,
+.modal-crear-presupuesto p,
+.modal-crear-presupuesto .text-gray-600 {
+  color: #1f2937 !important;  /* gris oscuro, legible sobre blanco */
+}
+.modal-crear-presupuesto .text-muted-foreground {
+  color: #374151 !important;
+}
+.modal-crear-presupuesto h2,
+.modal-crear-presupuesto h3 {
+  color: #111827 !important;
+}
+/* Placeholder del select: texto del primer option visible */
+.modal-crear-presupuesto select.sap-input,
+.modal-crear-presupuesto select.sap-input option {
+  color: #111827;
+}
+
+/* Modal Crear Nueva Categoría: fondo blanco y contraste en inputs */
+.modal-crear-categoria,
+.modal-crear-categoria label,
+.modal-crear-categoria input {
+  color: #111827;
+}
+.modal-crear-categoria input.sap-input {
+  background-color: #fff !important;
+  border-color: #d1d5db;
+  color: #111827;
+}
+.modal-crear-categoria input::placeholder {
+  color: #6b7280;
+}
+.modal-crear-categoria h3 {
+  color: #111827;
+}
+
 .sap-button {
   display: inline-flex;
   align-items: center;
@@ -261,4 +333,86 @@
 /* Domus verde: barra lateral y utilidades */
 .sap-sidebar {
   background-color: var(--color-sap-sidebar);
+}
+
+/* Vista sistema/arquitectura (diagrama) — botones y pestañas */
+.system-arch-page .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  background: rgba(15, 23, 42, 0.05);
+  color: #0f172a;
+}
+.system-arch-page .btn:hover {
+  background: rgba(15, 23, 42, 0.07);
+}
+.system-arch-page .btnPrimary {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+.system-arch-page .btnPrimary:hover {
+  opacity: 0.9;
+}
+.system-arch-page .btnGhost {
+  background: transparent;
+  border-color: hsl(var(--border));
+}
+.system-arch-page .btnGhost:hover {
+  background: rgba(15, 23, 42, 0.03);
+}
+.system-arch-page .btnSm {
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: 9px;
+  font-weight: 700;
+}
+.system-arch-page .tabBtn {
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #64748b;
+  cursor: pointer;
+}
+.system-arch-page .tabBtn:hover {
+  background: rgba(15, 23, 42, 0.05);
+  color: #0f172a;
+}
+.system-arch-page .tabBtnActive {
+  background: #fff;
+  border-color: rgba(15, 61, 145, 0.22);
+  color: #0f172a;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+.system-arch-page .pill {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.04);
+  border: 1px solid hsl(var(--border));
+  color: #64748b;
+  white-space: nowrap;
+}
+.system-arch-page .pillWarn {
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #92400e;
+}
+.system-arch-page .pillError {
+  background: rgba(220, 38, 38, 0.12);
+  border-color: rgba(220, 38, 38, 0.26);
+  color: #991b1b;
+}
+.system-arch-page .system-arch-panel-zoom,
+.system-arch-page .system-arch-opciones-avanzadas {
+  display: none !important;
 }
