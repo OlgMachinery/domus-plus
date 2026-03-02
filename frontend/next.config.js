@@ -8,6 +8,8 @@ const nextConfig = {
   async redirects() {
     return [
       { source: '/ui/system-a', destination: '/ui/system-architecture', permanent: true },
+      { source: '/ui/syster', destination: '/ui/system-architecture', permanent: true },
+      { source: '/ui/system', destination: '/ui/system-architecture', permanent: true },
     ]
   },
 }
