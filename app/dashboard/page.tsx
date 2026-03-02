@@ -68,9 +68,22 @@ export default function Dashboard() {
   return (
     <AppLayout user={user}>
       <div className="space-y-6">
-        <div>
+        <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
+          <span
+            role="status"
+            style={{
+              background: '#15803d',
+              color: '#fff',
+              padding: '4px 10px',
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 700,
+            }}
+          >
+            ✓ Versión correcta (prueba)
+          </span>
+          <p className="w-full text-muted-foreground mt-1">
             Welcome back, {user?.name || user?.email}
           </p>
         </div>

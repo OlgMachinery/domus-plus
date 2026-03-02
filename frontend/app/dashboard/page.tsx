@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
+import { getAuthHeaders } from '@/lib/auth'
 import SAPLayout from '@/components/SAPLayout'
 import { useTranslation, getLanguage } from '@/lib/i18n'
 import type { Language } from '@/lib/i18n'
@@ -37,14 +38,33 @@ export default function Dashboard() {
 
         const { data: userData } = await supabase
           .from('users')
-          .select('name, email')
+          .select('name, email, family_id, is_family_admin')
           .eq('id', session.user.id)
           .single()
 
         if (mounted) {
           setUser(userData || { email: session.user.email })
-          setLoading(false)
         }
+
+        if (mounted && userData) {
+          if (userData.family_id == null) {
+            router.push('/setup')
+            return
+          }
+          if (userData.is_family_admin) {
+            const headers = await getAuthHeaders()
+            const statusRes = await fetch('/api/setup/status', { credentials: 'include', headers: headers as HeadersInit })
+            if (statusRes.ok) {
+              const statusData = await statusRes.json()
+              if (statusData.setupComplete === false) {
+                router.push('/setup')
+                return
+              }
+            }
+          }
+        }
+
+        if (mounted) setLoading(false)
       } catch {
         if (mounted) {
           router.push('/login')
@@ -74,9 +94,22 @@ export default function Dashboard() {
   return (
     <SAPLayout user={user} title={t.dashboard.title} subtitle={t.dashboard.subtitle}>
       <div className="space-y-6">
-        <div>
+        <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-3xl font-bold tracking-tight">{t.dashboard.title}</h1>
-          <p className="text-muted-foreground">
+          <span
+            role="status"
+            style={{
+              background: '#15803d',
+              color: '#fff',
+              padding: '4px 10px',
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 700,
+            }}
+          >
+            ✓ Versión correcta (prueba)
+          </span>
+          <p className="w-full text-muted-foreground mt-1">
             {language === 'es' ? 'Bienvenido, ' : 'Welcome back, '}{user?.name || user?.email}
           </p>
         </div>
