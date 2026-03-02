@@ -321,7 +321,15 @@
   border-color: rgba(220, 38, 38, 0.26);
   color: #991b1b;
 }
+/* Ocultar siempre opciones avanzadas y panel zoom en vista diagrama (móvil y desktop) */
 .system-arch-page .system-arch-panel-zoom,
-.system-arch-page .system-arch-opciones-avanzadas {
+.system-arch-page .system-arch-opciones-avanzadas,
+.system-arch-opciones-avanzadas,
+.system-arch-panel-zoom {
   display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  position: absolute !important;
+  left: -9999px !important;
 }

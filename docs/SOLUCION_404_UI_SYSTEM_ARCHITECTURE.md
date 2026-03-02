@@ -1,12 +1,18 @@
-# Si domus-fam.com da 404 en /ui/system-architecture (o /ui/syster)
+# Si domus-fam.com da 404 o ves la vista antigua del diagrama
 
-## 1. URL correcta
+## 1. URL que debes usar (vista compacta móvil)
 
-La ruta del diagrama es:
+**Usa esta URL:**
 
-- **https://domus-fam.com/ui/system-architecture**
+- **https://domus-fam.com/diagrama**
 
-Si escribes **/ui/syster** o **/ui/system-a** (typo o truncado), el servidor te redirige a la URL correcta. Si aun así ves 404, sigue los pasos siguientes.
+Esta ruta solo existe en el código actual. Las URLs antiguas redirigen aquí:
+
+- `/ui/system-a` → `/diagrama`
+- `/ui/system-architecture` → `/diagrama`
+- `/ui/syster` → `/diagrama`
+
+Si escribes cualquier variante anterior, el servidor te lleva a **/diagrama**. Si ves 404 o la vista antigua (muchos botones, “Opciones avanzadas”, scroll), sigue los pasos siguientes.
 
 ## 2. Confirmar qué construye Vercel
 
