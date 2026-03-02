@@ -9,6 +9,12 @@ const nextConfig: NextConfig = {
     // Evita que Next infiera el root por lockfiles externos (monorepo).
     root: rootDir,
   },
+  async redirects() {
+    return [
+      { source: '/diagram', destination: '/ui/system-architecture', permanent: true },
+      { source: '/diagrama', destination: '/ui/system-architecture', permanent: true },
+    ]
+  },
   async headers() {
     return [
       {
