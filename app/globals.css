@@ -332,4 +332,29 @@
   overflow: hidden !important;
   position: absolute !important;
   left: -9999px !important;
+  pointer-events: none !important;
+}
+
+/* Recuadro del diagrama: sin scroll; borde neutro (nunca rojo) */
+#diagram-wrap,
+#diagram-wrap .react-flow,
+#diagram-wrap .react-flow__renderer,
+#diagram-wrap .react-flow__viewport,
+#diagram-wrap .react-flow__pane {
+  overflow: hidden !important;
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
+}
+#diagram-wrap {
+  border: 1px solid rgba(15, 23, 42, 0.12) !important;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06) !important;
+  outline: none !important;
+}
+#diagram-wrap:focus,
+#diagram-wrap .react-flow__pane:focus {
+  outline: none !important;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06) !important;
+}
+#diagram-wrap .react-flow__viewport {
+  overflow: hidden !important;
 }

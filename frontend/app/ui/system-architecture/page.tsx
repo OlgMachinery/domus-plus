@@ -1,7 +1,9 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { toPng } from 'html-to-image'
+import SAPLayout from '@/components/SAPLayout'
+import { useRouter, useSearchParams } from 'next/navigation'
 import ReactFlow, {
   Background,
   Panel,
@@ -119,6 +121,8 @@ function FlowApiInjector({ onReady }: { onReady: (api: FlowApi | null) => void }
 
 function SystemArchitecturePageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const showBuildSignal = searchParams.get('signal') === '1'
   const [data, setData] = useState<DataSet | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -135,6 +139,7 @@ function SystemArchitecturePageInner() {
   const [layoutEngine, setLayoutEngine] = useState<LayoutEngine>('radial')
   const [viewportZoom, setViewportZoom] = useState(1.1)
   const [viewportSize, setViewportSize] = useState<{ w: number; h: number }>({ w: 1200, h: 700 })
+  const [recalcKey, setRecalcKey] = useState(0)
   const [uiFontScale, setUiFontScale] = useState(1)
   const [uiFontFamily, setUiFontFamily] = useState('Inter, system-ui, sans-serif')
   const [uiTextColor, setUiTextColor] = useState<string | null>(null)
@@ -152,7 +157,7 @@ function SystemArchitecturePageInner() {
   const [zoomControlEnabled, setZoomControlEnabled] = useState(true)
   const [lastViewport, setLastViewport] = useState<{ x: number; y: number; zoom: number }>({ x: 0, y: 0, zoom: 1 })
   const [lensPos, setLensPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
-  const [mobileOptionsOpen, setMobileOptionsOpen] = useState(false)
+  const [mobileOptionsOpen, setMobileOptionsOpen] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
 
   // Detección móvil en cliente para que aplique desde el primer pintado (no depender del tamaño del diagrama)
@@ -223,6 +228,7 @@ function SystemArchitecturePageInner() {
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const flowApiRef = useRef<FlowApi | null>(null)
+  const [flowApiReady, setFlowApiReady] = useState(false)
   const [initialCentered, setInitialCentered] = useState(false)
 
   // Cargar posiciones guardadas por usuario/navegador
@@ -808,7 +814,7 @@ function SystemArchitecturePageInner() {
     })
 
     return { nodes: finalNodes, edges: finalEdges }
-  }, [data, layoutMode, orderMode, collapsedIds, focusEntityId, vista, edgeKind, layoutEngine, viewportZoom, selectedNodeId])
+  }, [data, layoutMode, orderMode, collapsedIds, focusEntityId, vista, edgeKind, layoutEngine, viewportZoom, selectedNodeId, viewportSize, recalcKey])
 
   useEffect(() => {
     const applied = customMode
@@ -878,8 +884,8 @@ function SystemArchitecturePageInner() {
       skipAutoFitRef.current = false
       return
     }
-    const padding = isMobile ? 0.06 : 0.45
-    const delay = isMobile ? 350 : 150
+    const padding = isMobile ? 0.12 : 0.45
+    const delay = isMobile ? 400 : 150
     const t = setTimeout(() => {
       api.fitView({ padding, includeHiddenNodes: true, duration: 200 })
       setInitialCentered(true)
@@ -887,17 +893,29 @@ function SystemArchitecturePageInner() {
     return () => clearTimeout(t)
   }, [nodes, customMode, initialCentered, isMobile])
 
-  // En móvil: cuando el contenedor tiene ya su tamaño real, forzar fitView para que todo el canvas quepa (sin recortes)
+  // En móvil: cuando la API está lista y el contenedor tiene tamaño, forzar fitView para que TODO el diagrama quepa (sin scroll en el recuadro rojo)
   useEffect(() => {
-    if (!isMobile) return
-    if (viewportSize.w < 100 || viewportSize.w > 519) return
+    if (!isMobile || !flowApiReady || nodes.length === 0) return
     const api = flowApiRef.current
-    if (!api || nodes.length === 0) return
-    const t = setTimeout(() => {
-      api.fitView({ padding: 0.06, includeHiddenNodes: true, duration: 250 })
-    }, 400)
-    return () => clearTimeout(t)
-  }, [isMobile, viewportSize.w, nodes.length])
+    if (!api) return
+    const run = () => api.fitView({ padding: 0.12, includeHiddenNodes: true, duration: 280 })
+    run()
+    const t1 = setTimeout(run, 400)
+    const t2 = setTimeout(run, 900)
+    return () => { clearTimeout(t1); clearTimeout(t2) }
+  }, [isMobile, flowApiReady, viewportSize.w, viewportSize.h, nodes.length])
+
+  // Si en móvil cambia el tamaño del recuadro (ej. rotación), volver a encajar el diagrama
+  useEffect(() => {
+    if (!isMobile || nodes.length === 0) return
+    const wrap = document.getElementById('diagram-wrap')
+    if (!wrap) return
+    const ro = new ResizeObserver(() => {
+      flowApiRef.current?.fitView({ padding: 0.12, includeHiddenNodes: true, duration: 200 })
+    })
+    ro.observe(wrap)
+    return () => ro.disconnect()
+  }, [isMobile, nodes.length])
 
   const onNodeClick = (_: any, node: Node) => {
     setSelectedNodeId(node.id)
@@ -927,8 +945,21 @@ function SystemArchitecturePageInner() {
     })
   }
 
+  const downloadDiagramImage = useCallback(() => {
+    const el = document.getElementById('diagram-wrap')
+    if (!el) return
+    toPng(el, { cacheBust: true, pixelRatio: 2, backgroundColor: uiCanvasBg || '#fff' })
+      .then((dataUrl) => {
+        const link = document.createElement('a')
+        link.href = dataUrl
+        link.download = `diagrama-${data?.familyName?.replace(/\s+/g, '-') || 'familia'}-${new Date().toISOString().slice(0, 10)}.png`
+        link.click()
+      })
+      .catch((err) => console.error('Error al exportar diagrama:', err))
+  }, [data?.familyName, uiCanvasBg])
+
   return (
-    <div style={{ minHeight: '100vh', maxHeight: '100vh', overflow: 'hidden', background: '#f8fafc', display: 'flex', flexDirection: 'column' }}>
+    <SAPLayout title="" compact>
       <div
         className="system-arch-page"
         style={{
@@ -947,14 +978,34 @@ function SystemArchitecturePageInner() {
           display: 'flex',
           flexDirection: 'column',
           gap: 4,
-          height: '100%',
-          maxHeight: '100%',
+          height: isMobile ? '100dvh' : 'calc(100vh - 25px - 4px - 8px)',
+          maxHeight: isMobile ? '100dvh' : undefined,
           minHeight: 0,
           overflow: 'hidden',
           overflowX: 'hidden',
           WebkitOverflowScrolling: 'touch',
         }}
       >
+        {/* Señal de build: solo visible con ?signal=1 para comprobar que domus-fam.com sirve este código */}
+        {showBuildSignal && (
+          <div
+            role="status"
+            style={{
+              background: 'linear-gradient(135deg, #0f3d91 0%, #2f6fed 100%)',
+              color: '#fff',
+              padding: '10px 14px',
+              borderRadius: 8,
+              fontSize: 15,
+              fontWeight: 700,
+              textAlign: 'center',
+              boxShadow: '0 4px 14px rgba(15,61,145,0.4)',
+              flexShrink: 0,
+            }}
+          >
+            ✓ Estás viendo el build correcto: domus-beta-dbe (diagrama-ok)
+          </div>
+        )}
+
         <div
           style={{
             display: 'flex',
@@ -964,7 +1015,7 @@ function SystemArchitecturePageInner() {
             background: '#f8fafc',
             border: '1px solid rgba(15,23,42,0.08)',
             borderRadius: 8,
-            padding: 4,
+            padding: isMobile ? 4 : 4,
             position: 'sticky',
             top: 0,
             zIndex: 5,
@@ -990,9 +1041,12 @@ function SystemArchitecturePageInner() {
               <option value="layered">Layered</option>
               <option value="force">Force</option>
             </select>
-            <button type="button" className="btn btnPrimary btnSm" onClick={() => flowApiRef.current?.fitView({ padding: 0.06, includeHiddenNodes: true, duration: 200 })} style={{ padding: '6px 10px', fontSize: 13 }}>Auto ajustar</button>
+            <button type="button" className="btn btnPrimary btnSm" onClick={() => flowApiRef.current?.fitView({ padding: isMobile ? 0.12 : 0.25, includeHiddenNodes: true, duration: 200 })} style={{ padding: '6px 10px', fontSize: 13 }}>Auto ajustar</button>
+            <button type="button" className="btn btnGhost btnSm" onClick={() => { setRecalcKey((k) => k + 1); setInitialCentered(false); setUserMoved(false); setTimeout(() => flowApiRef.current?.fitView({ padding: isMobile ? 0.12 : 0.25, includeHiddenNodes: true, duration: 200 }), 220); }} style={{ padding: '6px 10px', fontSize: 13 }} title="Reaplicar el layout actual">Recalcular layout</button>
+            <button type="button" className="btn btnGhost btnSm" onClick={() => { setCustomMode(false); setSavedPositions({}); localStorage.removeItem('domus-arch-custom-positions'); setRecalcKey((k) => k + 1); setInitialCentered(false); setUserMoved(false); setTimeout(() => flowApiRef.current?.fitView({ padding: isMobile ? 0.12 : 0.25, includeHiddenNodes: true, duration: 200 }), 220); }} style={{ padding: '6px 10px', fontSize: 13 }} title="Volver al layout automático">Reset layout</button>
+            <button type="button" className="btn btnGhost btnSm" onClick={downloadDiagramImage} style={{ padding: '6px 10px', fontSize: 13 }} title="Descargar el diagrama (canvas) como imagen PNG">Descargar imagen</button>
             <button type="button" className={`btn btnGhost btnSm ${mobileOptionsOpen ? 'pill' : ''}`} onClick={() => setMobileOptionsOpen((o) => !o)} style={{ padding: '6px 10px', fontSize: 13 }}>{mobileOptionsOpen ? 'Menos' : 'Más'}</button>
-            <button type="button" className="btn btnGhost btnSm" onClick={() => router.push('/dashboard')} style={{ padding: '6px 10px', fontSize: 13, borderColor: 'rgba(239,68,68,0.4)', color: '#b91c1c' }}>Cerrar</button>
+            <button type="button" className="btn btnGhost btnSm" onClick={() => router.push('/ui')} style={{ padding: '6px 10px', fontSize: 13, borderColor: 'rgba(239,68,68,0.4)', color: '#b91c1c' }}>Cerrar</button>
             {focusEntityId ? (
               <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                 <span className="pill" style={{ fontSize: 12 }}>Entidad: {sanitize(data?.entities.find((e) => e.id === focusEntityId)?.name || '—')}</span>
@@ -1004,17 +1058,17 @@ function SystemArchitecturePageInner() {
           {/* Con "Más" abierto: Recalcular, Reset, etc. */}
           {mobileOptionsOpen && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', paddingTop: 4, borderTop: '1px solid rgba(15,23,42,0.08)' }}>
-              <button type="button" className="btn btnGhost btnSm" style={{ fontSize: 12 }} onClick={() => { setInitialCentered(false); setUserMoved(false); setNodes(buildTree.nodes); setEdges(buildTree.edges); }}>Recalcular</button>
-              <button type="button" className="btn btnGhost btnSm" style={{ fontSize: 12 }} onClick={() => { setCustomMode(false); setSavedPositions({}); localStorage.removeItem('domus-arch-custom-positions'); setInitialCentered(false); setUserMoved(false); setNodes(buildTree.nodes); setEdges(buildTree.edges); }}>Reset</button>
-              <button type="button" className={`btn btnGhost btnSm ${customMode ? 'pill' : ''}`} style={{ fontSize: 12 }} onClick={() => setCustomMode((p) => { if (p) skipAutoFitRef.current = true; return !p; })}>Personalizado</button>
-              <button type="button" className={`btn btnGhost btnSm ${viewLocked ? 'pill' : ''}`} style={{ fontSize: 12 }} onClick={() => setViewLocked((v) => !v)}>Bloquear vista</button>
-              <button type="button" className={`btn btnGhost btnSm ${zoomControlEnabled ? 'pill' : ''}`} style={{ fontSize: 12 }} onClick={() => setZoomControlEnabled((v) => !v)}>Zoom manual</button>
+              <button type="button" className="btn btnGhost btnSm" style={{ fontSize: 12 }} onClick={() => { setRecalcKey((k) => k + 1); setInitialCentered(false); setUserMoved(false); setTimeout(() => flowApiRef.current?.fitView({ padding: isMobile ? 0.12 : 0.25, includeHiddenNodes: true, duration: 200 }), 220); }}>Recalcular</button>
+              <button type="button" className="btn btnGhost btnSm" style={{ fontSize: 12 }} onClick={() => { setCustomMode(false); setSavedPositions({}); localStorage.removeItem('domus-arch-custom-positions'); setRecalcKey((k) => k + 1); setInitialCentered(false); setUserMoved(false); setTimeout(() => flowApiRef.current?.fitView({ padding: isMobile ? 0.12 : 0.25, includeHiddenNodes: true, duration: 200 }), 220); }}>Reset</button>
+              <button type="button" className={`btn btnGhost btnSm ${customMode ? 'pill' : ''}`} style={{ fontSize: 12 }} onClick={() => setCustomMode((p) => { if (p) skipAutoFitRef.current = true; return !p; })} title={customMode ? 'Modo personalizado: puedes arrastrar nodos y guardar posiciones' : 'Activar para mover nodos y guardar vista'}>{customMode ? 'Modo personalizado ON' : 'Modo personalizado OFF'}</button>
+              <button type="button" className={`btn btnGhost btnSm ${viewLocked ? 'pill' : ''}`} style={{ fontSize: 12 }} onClick={() => setViewLocked((v) => !v)} title={viewLocked ? 'Vista bloqueada: desactiva para arrastrar el canvas y hacer zoom con la rueda' : 'Vista desbloqueada: puedes arrastrar y hacer zoom'}>{viewLocked ? 'Bloqueo vista ON' : 'Bloqueo vista OFF'}</button>
+              <button type="button" className={`btn btnGhost btnSm ${zoomControlEnabled ? 'pill' : ''}`} style={{ fontSize: 12 }} onClick={() => setZoomControlEnabled((v) => !v)} title={zoomControlEnabled ? 'Zoom manual ON: el deslizador controla el zoom' : 'Zoom manual OFF'}>{zoomControlEnabled ? 'Zoom manual ON' : 'Zoom manual OFF'}</button>
               <button type="button" className="btn btnGhost btnSm" style={{ fontSize: 12 }} onClick={() => { const first = nodes.find((n) => n.id === focusEntityId) || nodes.find((n) => n.id === 'FAMILY_ROOT'); if (first) flowApiRef.current?.setCenter(first.position.x, first.position.y, { duration: 300, zoom: focusEntityId ? 2.2 : 1.8 }); }}>Centrar</button>
             </div>
           )}
 
-          {/* Oculta siempre: una sola fila de controles para que el diagrama ocupe toda la pantalla */}
-          <details className="system-arch-opciones-avanzadas" style={{ display: 'none', border: '1px solid rgba(15,23,42,0.08)', borderRadius: 10, padding: 8, background: '#fff' }}>
+          {/* Colapsable: Modo, Orden, fuentes, filtros, etc. */}
+          <details className="system-arch-opciones-avanzadas" style={{ border: '1px solid rgba(15,23,42,0.08)', borderRadius: 10, padding: 8, background: '#fff', marginTop: 4 }}>
             <summary style={{ cursor: 'pointer', fontWeight: 600 }}>Opciones avanzadas</summary>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginTop: 8 }}>
               <span className="pill">Modo</span>
@@ -1220,7 +1274,7 @@ function SystemArchitecturePageInner() {
               </button>
               <button
                 type="button"
-                onClick={() => router.push('/dashboard')}
+                onClick={() => router.push('/ui')}
                 aria-label="Cerrar"
                 className="btn btnGhost btnSm"
                 style={{ borderColor: 'rgba(239,68,68,0.4)', color: '#b91c1c' }}
@@ -1239,14 +1293,15 @@ function SystemArchitecturePageInner() {
           style={{
             width: '100%',
             flex: 1,
-            minHeight: 0,
+            minHeight: isMobile ? 120 : 0,
             minWidth: 0,
             position: 'relative',
             borderRadius: 12,
-            border: '2px solid #ef4444',
-            boxShadow: '0 10px 24px rgba(239,68,68,0.12)',
+            border: '1px solid rgba(15,23,42,0.12)',
+            boxShadow: '0 4px 16px rgba(15,23,42,0.06)',
             background: uiCanvasBg || '#fff',
             overflow: 'hidden',
+            contain: 'layout',
           }}
         >
           <ReactFlow
@@ -1287,7 +1342,7 @@ function SystemArchitecturePageInner() {
               })
             }}
           >
-            <FlowApiInjector onReady={(api) => { flowApiRef.current = api }} />
+            <FlowApiInjector onReady={(api) => { flowApiRef.current = api; setFlowApiReady(!!api) }} />
             <Background gap={18} color="#e0e7f1" />
             {/* En móvil no mostramos panel flotante para no tapar el diagrama; Auto ajustar y Centrar están en la barra */}
             <Panel position="top-right" className="system-arch-panel-zoom" style={{ display: 'none', gap: 8, flexDirection: 'column', background: '#fff', padding: 8, borderRadius: 10, border: '1px solid rgba(15,23,42,0.1)', boxShadow: '0 6px 18px rgba(15,23,42,0.08)' }}>
@@ -1310,7 +1365,7 @@ function SystemArchitecturePageInner() {
           </ReactFlow>
         </div>
       </div>
-    </div>
+    </SAPLayout>
   )
 }
 

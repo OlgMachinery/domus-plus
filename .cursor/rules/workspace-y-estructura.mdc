@@ -1,0 +1,26 @@
+---
+description: Workspace raíz y estructura del repo Domus+ (domus-plus)
+alwaysApply: true
+---
+
+# Workspace y estructura del proyecto
+
+## Workspace
+
+- El **repositorio raíz** es **`domus-plus`** (path absoluto: `/Users/gonzalomontanofimbres/domus-plus`).
+- Trabajar siempre desde esta raíz. Si se abre solo una subcarpeta (p. ej. `frontend/` o `domus-beta-dbe/`), considerar que el proyecto completo está en la raíz y usar rutas relativas a ella.
+
+## Carpetas principales
+
+- **domus-beta-dbe/** — Frontend Next.js que debe desplegarse en **domus-fam.com**. Contiene el diagrama de arquitectura (`/ui/system-architecture`), API routes de este app, etc. En Vercel, el proyecto que tenga el dominio domus-fam.com debe usar **Root Directory = `domus-beta-dbe`**.
+- **frontend/** — Otro frontend Next.js (puede ser otro deploy o entorno).
+- **mobile/** — App móvil con Expo.
+- **supabase/** — Configuración, migraciones y esquema de Supabase.
+- **app/**, **backend/**, **docs/** — Resto del monorepo.
+
+## Ajustes al trabajar
+
+- Para **cambios que deban verse en domus-fam.com** (diagrama, UI del sistema, señal de build, etc.), editar código en **domus-beta-dbe/**.
+- **Página del diagrama:** la única fuente es `domus-beta-dbe/src/app/ui/system-architecture/page.tsx`. Tras editarla, ejecutar desde la raíz `npm run sync:diagram` para copiar a `app/` y `frontend/`.
+- No confundir **domus-beta-dbe** con **frontend** ni con la app en la raíz (`app/`): son apps distintas.
+- Referencia rápida: ver también `docs/WORKSPACE_Y_PROYECTO.md` si hace falta comprobar la estructura o indicar el workspace a otro chat.

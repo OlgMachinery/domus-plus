@@ -2516,7 +2516,7 @@ textarea:focus-visible {
   pointer-events: none !important;
 }
 
-/* Recuadro del diagrama: sin scroll; el diagrama debe encajar completo */
+/* Recuadro del diagrama: sin scroll; el diagrama debe encajar completo; borde neutro (nunca rojo) */
 #diagram-wrap,
 #diagram-wrap .react-flow,
 #diagram-wrap .react-flow__renderer,
@@ -2525,6 +2525,20 @@ textarea:focus-visible {
   overflow: hidden !important;
   overflow-x: hidden !important;
   overflow-y: hidden !important;
+}
+#diagram-wrap {
+  border: 1px solid rgba(15, 23, 42, 0.12) !important;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06) !important;
+  outline: none !important;
+}
+#diagram-wrap:focus,
+#diagram-wrap .react-flow__pane:focus,
+#diagram-wrap .react-flow__pane,
+#diagram-wrap .react-flow,
+#diagram-wrap .react-flow__renderer {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 #diagram-wrap .react-flow__viewport {
   overflow: hidden !important;
