@@ -13,6 +13,8 @@ const nextConfig: NextConfig = {
     return [
       { source: '/diagram', destination: '/ui/system-architecture', permanent: true },
       { source: '/diagrama', destination: '/ui/system-architecture', permanent: true },
+      { source: '/ui/system-a', destination: '/ui/system-architecture', permanent: true },
+      { source: '/ui/syster', destination: '/ui/system-architecture', permanent: true },
     ]
   },
   async headers() {
