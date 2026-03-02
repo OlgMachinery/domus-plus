@@ -2509,10 +2509,24 @@ textarea:focus-visible {
 .system-arch-page .system-arch-mobile-toolbar {
   display: flex !important;
 }
-.system-arch-page .system-arch-panel-zoom {
-  display: none !important;
-}
+.system-arch-page .system-arch-panel-zoom,
 .system-arch-page .system-arch-opciones-avanzadas {
   display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Recuadro del diagrama: sin scroll; el diagrama debe encajar completo */
+#diagram-wrap,
+#diagram-wrap .react-flow,
+#diagram-wrap .react-flow__renderer,
+#diagram-wrap .react-flow__viewport,
+#diagram-wrap .react-flow__pane {
+  overflow: hidden !important;
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
+}
+#diagram-wrap .react-flow__viewport {
+  overflow: hidden !important;
 }
 
