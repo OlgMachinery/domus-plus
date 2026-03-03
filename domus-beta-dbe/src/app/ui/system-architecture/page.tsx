@@ -1,21 +1,47 @@
 'use client'
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { type MutableRefObject, Component, Suspense, ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { toPng } from 'html-to-image'
 import SAPLayout from '@/components/SAPLayout'
 import { useRouter, useSearchParams } from 'next/navigation'
-import ReactFlow, {
-  Background,
-  Panel,
-  ReactFlowProvider,
-  useEdgesState,
-  useNodesState,
-  useReactFlow,
-  type Edge,
-  type FitViewOptions,
-  type Node,
-} from 'reactflow'
+import ReactFlow, { Background, Panel, ReactFlowProvider, useEdgesState, useNodesState, type Edge, type FitViewOptions, type Node } from 'reactflow'
 import 'reactflow/dist/style.css'
+
+export const dynamic = 'force-dynamic'
+
+// Borde de error para atrapar excepciones de ReactFlow y mostrar aviso + mensaje real en pantalla.
+class SafeBoundary extends Component<{ fallback?: ReactNode; children?: ReactNode }, { hasError: boolean; err?: Error }> {
+  constructor(props: any) {
+    super(props)
+    this.state = { hasError: false }
+  }
+  static getDerivedStateFromError(err: any) {
+    return { hasError: true, err: err instanceof Error ? err : new Error(String(err)) }
+  }
+  componentDidCatch(err: any) {
+    console.error('Error en diagrama:', err)
+    this.setState({ err: err instanceof Error ? err : new Error(String(err)) })
+  }
+  render() {
+    if (this.state.hasError) {
+      const err = this.state.err
+      const message = err?.message ?? (err != null ? String(err) : '')
+      const stack = err instanceof Error ? err.stack : undefined
+      const detail = message || stack || (err != null ? JSON.stringify(err, null, 0).slice(0, 500) : '') || 'Revisa la consola del navegador (F12 → Console).'
+      return this.props.fallback || (
+        <div style={{ padding: 12, border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, background: '#fff0f0' }}>
+          <div style={{ fontWeight: 700, color: '#b91c1c' }}>Hubo un error al renderizar el diagrama.</div>
+          <div style={{ fontSize: 13, color: '#991b1b' }}>Recarga la página. Si persiste, avísame.</div>
+          <div style={{ marginTop: 8, fontSize: 11, fontWeight: 600, color: '#7f1d1d' }}>Error real (copia y pega esto):</div>
+          <pre style={{ marginTop: 4, fontSize: 11, whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: '#7f1d1d', background: '#fef2f2', padding: 8, borderRadius: 4, overflow: 'auto', maxHeight: 280 }}>
+            {detail}
+          </pre>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 type Vista = 'jerarquia' | 'responsables' | 'presupuesto'
 type LayoutMode = 'vertical' | 'horizontal' | 'compacto' | 'expandido'
@@ -104,19 +130,89 @@ const LAYOUT_PRESETS: Record<LayoutMode, { layer: number }> = {
   expandido: { layer: 260 },
 }
 
-type FlowApi = {
-  fitView: (opts?: FitViewOptions) => void
-  setCenter: (x: number, y: number, opts?: { duration?: number; zoom?: number }) => void
-  zoomTo: (zoom: number, opts?: { duration?: number }) => void
-}
+const sanitizePosition = (p: { x: number; y: number }) => ({
+  x: Number.isFinite(p?.x) ? p.x : 0,
+  y: Number.isFinite(p?.y) ? p.y : 0,
+})
 
-function FlowApiInjector({ onReady }: { onReady: (api: FlowApi | null) => void }) {
-  const { fitView, setCenter, zoomTo } = useReactFlow()
-  useEffect(() => {
-    onReady({ fitView, setCenter, zoomTo })
-    return () => onReady(null)
-  }, [fitView, setCenter, zoomTo, onReady])
-  return null
+/** Diagrama con estado interno; se remonta cuando cambia key. Evita efectos que llamen setState en el padre (error #185). */
+function DiagramInner(props: {
+  initialNodes: Node[]
+  initialEdges: Edge[]
+  nodesRef: MutableRefObject<Node[]>
+  flowApiRef: MutableRefObject<any>
+  onInit: (api: any) => void
+  onNodeClick: (e: any, node: Node) => void
+  onNodeDoubleClick: (e: any, node: Node) => void
+  onMoveEnd: () => void
+  onNodeDragStop: (e: any, node: Node) => void
+  customMode: boolean
+  viewLocked: boolean
+  isMobile: boolean
+  zoomSlider: number
+  zoomControlEnabled: boolean
+  applyZoomSlider: (v: number) => void
+  focusEntityId: string | null
+}) {
+  const [nodes, setNodes, onNodesChange] = useNodesState(props.initialNodes)
+  const [edges, setEdges, onEdgesChange] = useEdgesState(props.initialEdges)
+  props.nodesRef.current = nodes
+  return (
+    <ReactFlow
+      style={{ width: '100%', height: '100%', minHeight: 0 }}
+      nodes={nodes}
+      edges={edges}
+      onNodesChange={onNodesChange}
+      onEdgesChange={onEdgesChange}
+      onInit={(api) => {
+        props.flowApiRef.current = api
+        props.onInit(api)
+      }}
+      onNodeClick={props.onNodeClick}
+      onNodeDoubleClick={props.onNodeDoubleClick}
+      fitView
+      fitViewOptions={{ padding: 0.06, includeHiddenNodes: true }}
+      defaultViewport={{ x: 0, y: 0, zoom: 0.82 }}
+      minZoom={0.1}
+      maxZoom={2}
+      nodesDraggable={props.customMode && !props.viewLocked}
+      panOnDrag={props.isMobile ? [1, 2] : (props.customMode ? [1, 2] : [2])}
+      panOnScroll={props.isMobile ? false : (!props.viewLocked && props.customMode)}
+      zoomOnPinch={props.isMobile ? true : (!props.viewLocked && props.customMode)}
+      selectionOnDrag={!props.customMode}
+      onMoveEnd={props.onMoveEnd}
+      snapToGrid
+      snapGrid={[20, 20]}
+      nodesConnectable={false}
+      elementsSelectable
+      proOptions={{ hideAttribution: true }}
+      onNodeDragStop={props.onNodeDragStop}
+    >
+      <Background gap={18} color="#e0e7f1" />
+      <Panel position="top-right" className="system-arch-panel-zoom" style={{ display: 'none', gap: 8, flexDirection: 'column', background: '#fff', padding: 8, borderRadius: 10, border: '1px solid rgba(15,23,42,0.1)', boxShadow: '0 6px 18px rgba(15,23,42,0.08)' }}>
+        <label className="pill" style={{ display: 'flex', alignItems: 'center', gap: 6 }} htmlFor="arch-zoom-slider">
+          Zoom
+          <input
+            id="arch-zoom-slider"
+            name="zoomSlider"
+            type="range"
+            min={0.2}
+            max={3}
+            step={0.05}
+            value={props.zoomSlider}
+            onChange={(e) => props.applyZoomSlider(parseFloat(e.target.value))}
+            style={{ width: 140 }}
+            disabled={!props.zoomControlEnabled}
+          />
+        </label>
+        <button type="button" className="btn btnGhost btnSm" onClick={() => props.flowApiRef.current?.fitView({ padding: 0.25, includeHiddenNodes: true })}>Auto ajustar</button>
+        <button type="button" className="btn btnGhost btnSm" onClick={() => {
+          const first = props.nodesRef.current.find((n) => n.id === props.focusEntityId) || props.nodesRef.current.find((n) => n.id === 'FAMILY_ROOT')
+          if (first) props.flowApiRef.current?.setCenter(first.position.x, first.position.y, { duration: 300, zoom: props.focusEntityId ? 2.2 : 1.8 })
+        }}>Centrar selección</button>
+      </Panel>
+    </ReactFlow>
+  )
 }
 
 function SystemArchitecturePageInner() {
@@ -137,9 +233,9 @@ function SystemArchitecturePageInner() {
   const [viewLocked, setViewLocked] = useState(true)
   const [edgeKind, setEdgeKind] = useState<EdgeKind>('smooth')
   const [layoutEngine, setLayoutEngine] = useState<LayoutEngine>('radial')
-  const [viewportZoom, setViewportZoom] = useState(1.1)
   const [viewportSize, setViewportSize] = useState<{ w: number; h: number }>({ w: 1200, h: 700 })
   const [recalcKey, setRecalcKey] = useState(0)
+  const [applyVersion, setApplyVersion] = useState(0)
   const [uiFontScale, setUiFontScale] = useState(1)
   const [uiFontFamily, setUiFontFamily] = useState('Inter, system-ui, sans-serif')
   const [uiTextColor, setUiTextColor] = useState<string | null>(null)
@@ -155,10 +251,10 @@ function SystemArchitecturePageInner() {
   const [lensSize, setLensSize] = useState(140)
   const [zoomSlider, setZoomSlider] = useState(0.8)
   const [zoomControlEnabled, setZoomControlEnabled] = useState(true)
-  const [lastViewport, setLastViewport] = useState<{ x: number; y: number; zoom: number }>({ x: 0, y: 0, zoom: 1 })
   const [lensPos, setLensPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const [mobileOptionsOpen, setMobileOptionsOpen] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
+  const [allocWarning, setAllocWarning] = useState<string | null>(null)
 
   // Detección móvil en cliente para que aplique desde el primer pintado (no depender del tamaño del diagrama)
   useLayoutEffect(() => {
@@ -169,7 +265,7 @@ function SystemArchitecturePageInner() {
   }, [])
 
   const collapseAll = () => {
-    setCollapsedIds(new Set(nodes.map((n) => n.id)))
+    setCollapsedIds(new Set(nodesRef.current.map((n: Node) => n.id)))
   }
 
   const expandAll = () => {
@@ -178,7 +274,7 @@ function SystemArchitecturePageInner() {
 
   const collapseByType = (t: string | null) => {
     if (!t) return
-    const ids = nodes.filter((n) => (n.data as any)?.type === t).map((n) => n.id)
+    const ids = nodesRef.current.filter((n) => (n.data as any)?.type === t).map((n) => n.id)
     setCollapsedIds((prev) => {
       const next = new Set(prev)
       ids.forEach((id) => next.add(id))
@@ -190,7 +286,7 @@ function SystemArchitecturePageInner() {
     if (!t) return
     setCollapsedIds((prev) => {
       const next = new Set(prev)
-      nodes.forEach((n) => {
+      nodesRef.current.forEach((n) => {
         if ((n.data as any)?.type === t) next.delete(n.id)
       })
       return next
@@ -211,10 +307,10 @@ function SystemArchitecturePageInner() {
     }
     document.body.style.overflow = 'hidden'
     document.body.style.overflowX = 'hidden'
-    document.body.style.height = '100vh'
+    document.body.style.height = '100dvh'
     document.documentElement.style.overflow = 'hidden'
     document.documentElement.style.overflowX = 'hidden'
-    document.documentElement.style.height = '100vh'
+    document.documentElement.style.height = '100dvh'
     return () => {
       document.body.style.overflow = prev.bodyOverflow
       document.body.style.overflowX = prev.bodyOverflowX
@@ -225,24 +321,17 @@ function SystemArchitecturePageInner() {
     }
   }, [])
 
-  const [nodes, setNodes, onNodesChange] = useNodesState([])
-  const [edges, setEdges, onEdgesChange] = useEdgesState([])
-  const flowApiRef = useRef<FlowApi | null>(null)
+  const nodesRef = useRef<Node[]>([])
+  const flowApiRef = useRef<any | null>(null)
   const [flowApiReady, setFlowApiReady] = useState(false)
   const [initialCentered, setInitialCentered] = useState(false)
 
-  // Cargar posiciones guardadas por usuario/navegador
+  // Siempre iniciar sin posiciones guardadas para evitar vistas corruptas previas.
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const raw = localStorage.getItem('domus-arch-custom-positions')
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw)
-        if (parsed && typeof parsed === 'object') {
-          setSavedPositions(parsed)
-        }
-      } catch {}
-    }
+    localStorage.removeItem('domus-arch-custom-positions')
+    setSavedPositions({})
+    setCustomMode(false)
   }, [])
 
   useEffect(() => {
@@ -257,10 +346,23 @@ function SystemArchitecturePageInner() {
           fetch('/api/budget/allocations'),
         ])
 
+        if (!familyRes.ok || !membersRes.ok || !entitiesRes.ok) {
+          throw new Error(
+            `Fallo carga: fam=${familyRes.status} mem=${membersRes.status} ent=${entitiesRes.status}`
+          )
+        }
+
         const familyJson = await familyRes.json().catch(() => ({}))
         const membersJson = await membersRes.json().catch(() => ({}))
         const entitiesJson = await entitiesRes.json().catch(() => ({}))
-        const allocsJson = await allocsRes.json().catch(() => ({}))
+        let allocsJson: any = {}
+        if (allocsRes.ok) {
+          allocsJson = await allocsRes.json().catch(() => ({}))
+          setAllocWarning(null)
+        } else {
+          allocsJson = { allocations: [] }
+          setAllocWarning(`Allocations ${allocsRes.status} (se cargan vacías)`)
+        }
 
         const familyName = familyJson?.family?.name || familyJson?.family?.id || 'Familia'
         const members: Member[] = Array.isArray(membersJson?.members) ? membersJson.members : []
@@ -268,9 +370,14 @@ function SystemArchitecturePageInner() {
         const allocs: Allocation[] = Array.isArray(allocsJson?.allocations) ? allocsJson.allocations : []
 
         setData({ familyName, members, entities, allocs })
-      } catch (e) {
+      } catch (e: any) {
         console.error('No se pudo cargar el organigrama', e)
-        setError('No se pudo cargar el organigrama.')
+        const msg =
+          typeof e?.message === 'string' && e.message.includes('alloc=409')
+            ? 'Falta objeto presupuestal activo (alloc 409)'
+            : 'No se pudo cargar el organigrama.'
+        setError(msg)
+        setData(null)
       } finally {
         setLoading(false)
       }
@@ -312,14 +419,27 @@ function SystemArchitecturePageInner() {
     localStorage.setItem('domus-arch-ui-prefs', JSON.stringify(prefs))
   }, [uiFontScale, uiFontFamily, uiTextColor, uiNodeBg, uiCanvasBg, nodeBoxScale, typeFilter, colorEnabled])
 
+  // Debounce viewport para evitar bucle: setNodes -> layout -> ResizeObserver -> setViewportSize -> efecto aplica -> setNodes...
+  const viewportDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
+    let lastW = viewportSize.w
+    let lastH = viewportSize.h
+    const scheduleUpdate = (w: number, h: number) => {
+      lastW = w
+      lastH = h
+      if (viewportDebounceRef.current) clearTimeout(viewportDebounceRef.current)
+      viewportDebounceRef.current = setTimeout(() => {
+        viewportDebounceRef.current = null
+        setViewportSize({ w, h })
+        if (w > 0 && w < 520) setIsMobile(true)
+      }, 180)
+    }
     const measure = () => {
       const el = document.getElementById('diagram-wrap')
       if (el) {
         const w = el.clientWidth || 1200
         const h = el.clientHeight || 700
-        setViewportSize({ w, h })
-        if (w > 0 && w < 520) setIsMobile(true)
+        if (Math.abs(w - lastW) > 2 || Math.abs(h - lastH) > 2) scheduleUpdate(w, h)
       }
     }
     measure()
@@ -330,6 +450,7 @@ function SystemArchitecturePageInner() {
     if (ro && wrap) ro.observe(wrap)
     window.addEventListener('resize', measure)
     return () => {
+      if (viewportDebounceRef.current) clearTimeout(viewportDebounceRef.current)
       if (ro && wrap) ro.unobserve(wrap)
       window.removeEventListener('resize', measure)
     }
@@ -415,6 +536,12 @@ function SystemArchitecturePageInner() {
 
   const buildTree = useMemo(() => {
     if (!data) return { nodes: [] as Node[], edges: [] as Edge[] }
+    try {
+    // Garantizar arrays para no fallar si la API devolvió null/undefined
+    const members = Array.isArray(data.members) ? data.members : []
+    const entities = Array.isArray(data.entities) ? data.entities : []
+    const allocs = Array.isArray(data.allocs) ? data.allocs : []
+
     const layerHeight = LAYOUT_PRESETS[layoutMode].layer
 
     const root: TreeNode = {
@@ -426,13 +553,13 @@ function SystemArchitecturePageInner() {
 
     // Gobernanza
     const gov = [
-      { id: 'ADM', label: `Admins (${data.members.filter((m) => m.isFamilyAdmin).length})`, type: 'GOV' },
-      { id: 'MEM', label: `Miembros (${data.members.length})`, type: 'GOV' },
+      { id: 'ADM', label: `Admins (${members.filter((m) => m.isFamilyAdmin).length})`, type: 'GOV' },
+      { id: 'MEM', label: `Miembros (${members.length})`, type: 'GOV' },
     ].map((g) => ({ ...g, children: [] as TreeNode[] }))
     root.children.push(...gov)
 
     // Entidades (filtradas por foco)
-    const ents = sortEntities(data.entities)
+    const ents = sortEntities(entities)
       .filter((e) => !focusEntityId || e.id === focusEntityId)
       .map<TreeNode>((e) => ({
         id: e.id,
@@ -448,7 +575,7 @@ function SystemArchitecturePageInner() {
       ents.forEach((ent) => {
         const isCollapsed = collapsedIds.has(ent.id)
         if (isCollapsed) return
-        const cats = data.allocs.filter((a) => a.entity?.id === ent.id && a.category).slice(0, 12)
+        const cats = allocs.filter((a) => a.entity?.id === ent.id && a.category).slice(0, 12)
         cats.forEach((a) => {
           if (!a.category) return
           ent.children.push({
@@ -509,7 +636,8 @@ function SystemArchitecturePageInner() {
       const bgBase = `hsl(210, ${sat}%, ${bgLight}%)`
       const bg = uiNodeBg || bgBase
       const fgFinal = uiTextColor || fg
-      const showLabel = depth <= 2 || viewportZoom >= 1.2
+      const zoomForLabels = zoomSlider
+      const showLabel = depth <= 2 || zoomForLabels >= 1.2
       return { baseOpacity, border, bg, fg: fgFinal, showLabel }
     }
 
@@ -740,7 +868,7 @@ function SystemArchitecturePageInner() {
       const fullLabel = (n.data as any).label || ''
       const inPath = pathSet.size > 0 ? pathSet.has(n.id) : true
 
-      const zoomAllows = viewportZoom >= 1.0 || depth <= 3
+      const zoomAllows = zoomSlider >= 1.0 || depth <= 3
       const baseShow = depth <= 1
       const showLabel = baseShow || zoomAllows || inPath
 
@@ -799,7 +927,7 @@ function SystemArchitecturePageInner() {
       const targetDepth = depthMap.get(e.target) ?? depthMap.get(e.source) ?? 0
       const visuals = edgeVisuals(targetDepth)
       const inPath = pathSet.size > 0 ? pathSet.has(e.source) && pathSet.has(e.target) : true
-      const childType = (nodes.find((n) => n.id === e.target)?.data as any)?.type
+      const childType = (positionedNodes.find((n) => n.id === e.target)?.data as any)?.type
       const baseStroke = typeColor(childType)
       const passesFilter = !typeFilter || childType === typeFilter
       return {
@@ -814,22 +942,63 @@ function SystemArchitecturePageInner() {
     })
 
     return { nodes: finalNodes, edges: finalEdges }
-  }, [data, layoutMode, orderMode, collapsedIds, focusEntityId, vista, edgeKind, layoutEngine, viewportZoom, selectedNodeId, viewportSize, recalcKey])
+    } catch (err) {
+      console.error('Error construyendo diagrama:', err)
+      return { nodes: [] as Node[], edges: [] as Edge[] }
+    }
+  }, [data, layoutMode, orderMode, collapsedIds, focusEntityId, vista, edgeKind, layoutEngine, selectedNodeId, viewportSize, recalcKey])
 
-  useEffect(() => {
-    const applied = customMode
-      ? buildTree.nodes.map((n) =>
+  const builtNodes = buildTree.nodes
+  const builtEdges = buildTree.edges
+
+  // Nodos/edges iniciales para el diagrama. Sin efecto setState: el hijo se remonta con key y usa estos como estado inicial.
+  const diagramKey = `${applyVersion}-${customMode}`
+  const initialNodes = (() => {
+    const bNodes = builtNodes
+    const bEdges = builtEdges
+    const applied = (customMode
+      ? bNodes.map((n) =>
           savedPositions[n.id]
-            ? { ...n, position: savedPositions[n.id], draggable: true }
-            : { ...n, draggable: true }
+            ? { ...n, position: sanitizePosition(savedPositions[n.id]), draggable: true }
+            : { ...n, position: sanitizePosition(n.position), draggable: true }
         )
-      : buildTree.nodes.map((n) => ({ ...n, draggable: false }))
-    setNodes(applied)
-    setEdges(buildTree.edges)
-  }, [buildTree, customMode, savedPositions, setNodes, setEdges])
+      : bNodes.map((n) => ({ ...n, position: sanitizePosition(n.position), draggable: false }))
+    ).filter((n) => n.id && sanitizePosition(n.position))
+    return applied
+  })()
+  const nodeIdsForEdges = new Set(initialNodes.map((n) => n.id))
+  const initialEdges = Array.isArray(builtEdges)
+    ? builtEdges.filter((e) => e.source && e.target && nodeIdsForEdges.has(e.source) && nodeIdsForEdges.has(e.target))
+    : []
 
-  // Al cambiar de vista (Jerarquía / Responsables / Presupuesto) reiniciar foco y colapsados
+  // Bump applyVersion solo cuando la clave lógica cambia (evita #185: nunca setState en bucle).
+  const bumpKey = data === null ? '' : `${data.familyName}-${layoutMode}-${orderMode}-${vista}-${focusEntityId ?? ''}-${edgeKind}-${layoutEngine}-${selectedNodeId ?? ''}-${recalcKey}-${collapsedIds.size}`
+  const prevBumpKeyRef = useRef<string>('')
   useEffect(() => {
+    if (data === null || bumpKey === '') return
+    if (prevBumpKeyRef.current === bumpKey) return
+    prevBumpKeyRef.current = bumpKey
+    setApplyVersion((v) => v + 1)
+  }, [data, bumpKey])
+
+  // Al cambiar layout/vista/orden, invalidar posiciones guardadas (solo si realmente cambiaron).
+  const layoutVistaKey = `${layoutMode}-${orderMode}-${vista}-${focusEntityId ?? ''}-${recalcKey}`
+  const prevLayoutVistaRef = useRef<string>('')
+  useEffect(() => {
+    if (prevLayoutVistaRef.current === layoutVistaKey) return
+    prevLayoutVistaRef.current = layoutVistaKey
+    setCustomMode(false)
+    setSavedPositions({})
+    if (typeof window !== 'undefined') localStorage.removeItem('domus-arch-custom-positions')
+    setUserMoved(false)
+    setInitialCentered(false)
+  }, [layoutVistaKey])
+
+  // Al cambiar de vista, reiniciar foco y colapsados (solo cuando vista cambia de valor).
+  const prevVistaRef = useRef<Vista>(vista)
+  useEffect(() => {
+    if (prevVistaRef.current === vista) return
+    prevVistaRef.current = vista
     setFocusEntityId(null)
     setCollapsedIds(new Set())
     setInitialCentered(false)
@@ -838,8 +1007,8 @@ function SystemArchitecturePageInner() {
 
   useEffect(() => {
     const api = flowApiRef.current
+    const nodes = nodesRef.current
     if (!api || nodes.length === 0) return
-    if (customMode) return
     if (userMoved) return
     const container = document.querySelector('#diagram-wrap') as HTMLDivElement | null
 
@@ -855,14 +1024,13 @@ function SystemArchitecturePageInner() {
     })
     const cx = (minX + maxX) / 2
     const cy = (minY + maxY) / 2
-    const spanX = Math.max(200, maxX - minX)
-    const spanY = Math.max(200, maxY - minY)
+    const spanX = Math.max(240, maxX - minX)
+    const spanY = Math.max(240, maxY - minY)
     const containerW = container?.clientWidth || 1200
     const containerH = container?.clientHeight || 700
-    // Prefer encajar sin quedarse microscópico; priorizar legibilidad.
-    const fitZoomRaw = Math.min((containerW * 0.78) / spanX, (containerH * 0.78) / spanY)
-    const fitZoom = Math.min(1.8, Math.max(1.2, fitZoomRaw))
-    const desiredZoom = focusEntityId ? Math.max(1.4, fitZoom) : fitZoom
+    const fitZoomRaw = Math.min((containerW * 0.9) / spanX, (containerH * 0.9) / spanY)
+    const fitZoom = Math.min(1.6, Math.max(0.65, fitZoomRaw))
+    const desiredZoom = focusEntityId ? Math.max(1.1, fitZoom) : fitZoom
 
     const targetId = focusEntityId || 'FAMILY_ROOT'
     const target = nodes.find((n) => n.id === targetId)
@@ -871,15 +1039,14 @@ function SystemArchitecturePageInner() {
 
     api.setCenter(tx, ty, { duration: 260, zoom: desiredZoom })
     if (!initialCentered) setInitialCentered(true)
-  }, [nodes, focusEntityId, initialCentered, customMode])
+  }, [flowApiReady, applyVersion, focusEntityId, initialCentered, customMode])
 
-  // Auto ajustar al cargar o tras recalcular nodos
   useEffect(() => {
     if (customMode) return
     if (initialCentered) return
     if (userMoved) return
     const api = flowApiRef.current
-    if (!api || nodes.length === 0) return
+    if (!api || nodesRef.current.length === 0) return
     if (skipAutoFitRef.current) {
       skipAutoFitRef.current = false
       return
@@ -891,31 +1058,18 @@ function SystemArchitecturePageInner() {
       setInitialCentered(true)
     }, delay)
     return () => clearTimeout(t)
-  }, [nodes, customMode, initialCentered, isMobile])
+  }, [flowApiReady, applyVersion, customMode, initialCentered, isMobile])
 
-  // En móvil: cuando la API está lista y el contenedor tiene tamaño, forzar fitView para que TODO el diagrama quepa (sin scroll en el recuadro rojo)
   useEffect(() => {
-    if (!isMobile || !flowApiReady || nodes.length === 0) return
+    if (!flowApiReady || nodesRef.current.length === 0) return
     const api = flowApiRef.current
     if (!api) return
-    const run = () => api.fitView({ padding: 0.12, includeHiddenNodes: true, duration: 280 })
+    const run = () =>
+      api.fitView({ padding: isMobile ? 0.18 : 0.48, includeHiddenNodes: true, duration: 260 })
     run()
-    const t1 = setTimeout(run, 400)
-    const t2 = setTimeout(run, 900)
-    return () => { clearTimeout(t1); clearTimeout(t2) }
-  }, [isMobile, flowApiReady, viewportSize.w, viewportSize.h, nodes.length])
-
-  // Si en móvil cambia el tamaño del recuadro (ej. rotación), volver a encajar el diagrama
-  useEffect(() => {
-    if (!isMobile || nodes.length === 0) return
-    const wrap = document.getElementById('diagram-wrap')
-    if (!wrap) return
-    const ro = new ResizeObserver(() => {
-      flowApiRef.current?.fitView({ padding: 0.12, includeHiddenNodes: true, duration: 200 })
-    })
-    ro.observe(wrap)
-    return () => ro.disconnect()
-  }, [isMobile, nodes.length])
+    const t = setTimeout(run, 360)
+    return () => clearTimeout(t)
+  }, [flowApiReady, applyVersion, recalcKey, isMobile])
 
   const onNodeClick = (_: any, node: Node) => {
     setSelectedNodeId(node.id)
@@ -958,6 +1112,32 @@ function SystemArchitecturePageInner() {
       .catch((err) => console.error('Error al exportar diagrama:', err))
   }, [data?.familyName, uiCanvasBg])
 
+  if (error) {
+    return (
+      <SAPLayout title="" compact>
+        <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="pill pillError">No se pudo cargar el diagrama</div>
+          <div style={{ background: '#fff', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 8, padding: 14 }}>
+            <p style={{ margin: 0, fontWeight: 600 }}>{error}</p>
+            <p style={{ margin: '6px 0 0 0', fontSize: 13, color: '#475569' }}>
+              Si estás desautenticado, inicia sesión y vuelve a abrir esta vista.
+            </p>
+          </div>
+        </div>
+      </SAPLayout>
+    )
+  }
+
+  if (!data) {
+    return (
+      <SAPLayout title="" compact>
+        <div style={{ padding: 16 }}>
+          <span className="pill">Cargando…</span>
+        </div>
+      </SAPLayout>
+    )
+  }
+
   return (
     <SAPLayout title="" compact>
       <div
@@ -966,7 +1146,7 @@ function SystemArchitecturePageInner() {
           position: 'relative',
           width: '100%',
           maxWidth: '100%',
-          margin: '0 auto',
+          margin: 0,
           background: uiCanvasBg || '#ffffff',
           border: '1px solid rgba(15, 23, 42, 0.08)',
           borderRadius: 8,
@@ -978,14 +1158,21 @@ function SystemArchitecturePageInner() {
           display: 'flex',
           flexDirection: 'column',
           gap: 4,
-          height: isMobile ? '100dvh' : 'calc(100vh - 25px - 4px - 8px)',
-          maxHeight: isMobile ? '100dvh' : undefined,
+          flex: 1,
           minHeight: 0,
           overflow: 'hidden',
-          overflowX: 'hidden',
-          WebkitOverflowScrolling: 'touch',
         }}
       >
+        {allocWarning ? (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '6px 8px' }}>
+            <span className="pill pillWarn" style={{ fontSize: 12 }}>
+              {allocWarning}
+            </span>
+            <span style={{ fontSize: 12, color: '#475569' }}>
+              Crea al menos un objeto presupuestal para ver asignaciones.
+            </span>
+          </div>
+        ) : null}
         {/* Señal de build: solo visible con ?signal=1 para comprobar que domus-fam.com sirve este código */}
         {showBuildSignal && (
           <div
@@ -1024,8 +1211,22 @@ function SystemArchitecturePageInner() {
             flexShrink: 0,
           }}
         >
-          {/* Una sola barra compacta: máxima altura para el diagrama (sin barra grande ni Opciones avanzadas) */}
+          {/* Mensaje prueba de versión en verde: si lo ves, estás en el build correcto (sin línea roja) */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+            <span
+              role="status"
+              style={{
+                background: '#15803d',
+                color: '#fff',
+                padding: '4px 10px',
+                borderRadius: 8,
+                fontSize: 12,
+                fontWeight: 700,
+                flexShrink: 0,
+              }}
+            >
+              ✓ Versión correcta (prueba)
+            </span>
             <div className="tabRow" role="tablist" aria-label="Vista del diagrama" style={{ gap: 6, display: 'flex', flexWrap: 'wrap' }}>
               {(['jerarquia', 'responsables', 'presupuesto'] as Vista[]).map((v) => (
                 <button key={v} className={`tabBtn ${vista === v ? 'tabBtnActive' : ''}`} onClick={() => setVista(v)} type="button" role="tab" aria-selected={vista === v} style={{ padding: '6px 10px', fontSize: 13 }}>
@@ -1033,7 +1234,7 @@ function SystemArchitecturePageInner() {
                 </button>
               ))}
             </div>
-            <select value={layoutEngine} onChange={(e) => { setLayoutEngine(e.target.value as LayoutEngine); setInitialCentered(false); }} style={{ padding: '6px 8px', borderRadius: 10, border: '1px solid rgba(15,23,42,0.15)', background: '#fff', fontSize: 13 }} aria-label="Layout">
+            <select id="arch-layout-engine" name="layoutEngine" value={layoutEngine} onChange={(e) => { setLayoutEngine(e.target.value as LayoutEngine); setInitialCentered(false); }} style={{ padding: '6px 8px', borderRadius: 10, border: '1px solid rgba(15,23,42,0.15)', background: '#fff', fontSize: 13 }} aria-label="Layout">
               <option value="verticalTree">Vertical</option>
               <option value="horizontalTree">Horizontal</option>
               <option value="compactTidy">Compacto</option>
@@ -1063,7 +1264,7 @@ function SystemArchitecturePageInner() {
               <button type="button" className={`btn btnGhost btnSm ${customMode ? 'pill' : ''}`} style={{ fontSize: 12 }} onClick={() => setCustomMode((p) => { if (p) skipAutoFitRef.current = true; return !p; })} title={customMode ? 'Modo personalizado: puedes arrastrar nodos y guardar posiciones' : 'Activar para mover nodos y guardar vista'}>{customMode ? 'Modo personalizado ON' : 'Modo personalizado OFF'}</button>
               <button type="button" className={`btn btnGhost btnSm ${viewLocked ? 'pill' : ''}`} style={{ fontSize: 12 }} onClick={() => setViewLocked((v) => !v)} title={viewLocked ? 'Vista bloqueada: desactiva para arrastrar el canvas y hacer zoom con la rueda' : 'Vista desbloqueada: puedes arrastrar y hacer zoom'}>{viewLocked ? 'Bloqueo vista ON' : 'Bloqueo vista OFF'}</button>
               <button type="button" className={`btn btnGhost btnSm ${zoomControlEnabled ? 'pill' : ''}`} style={{ fontSize: 12 }} onClick={() => setZoomControlEnabled((v) => !v)} title={zoomControlEnabled ? 'Zoom manual ON: el deslizador controla el zoom' : 'Zoom manual OFF'}>{zoomControlEnabled ? 'Zoom manual ON' : 'Zoom manual OFF'}</button>
-              <button type="button" className="btn btnGhost btnSm" style={{ fontSize: 12 }} onClick={() => { const first = nodes.find((n) => n.id === focusEntityId) || nodes.find((n) => n.id === 'FAMILY_ROOT'); if (first) flowApiRef.current?.setCenter(first.position.x, first.position.y, { duration: 300, zoom: focusEntityId ? 2.2 : 1.8 }); }}>Centrar</button>
+              <button type="button" className="btn btnGhost btnSm" style={{ fontSize: 12 }} onClick={() => { const first = nodesRef.current.find((n) => n.id === focusEntityId) || nodesRef.current.find((n) => n.id === 'FAMILY_ROOT'); if (first) flowApiRef.current?.setCenter(first.position.x, first.position.y, { duration: 300, zoom: focusEntityId ? 2.2 : 1.8 }); }}>Centrar</button>
             </div>
           )}
 
@@ -1084,6 +1285,8 @@ function SystemArchitecturePageInner() {
               ))}
               <span className="pill">Orden</span>
               <select
+                id="arch-order-mode"
+                name="orderMode"
                 value={orderMode}
                 onChange={(e) => setOrderMode(e.target.value as OrderMode)}
                 style={{ padding: '6px 10px', borderRadius: 10, border: '1px solid rgba(15,23,42,0.15)', background: '#fff' }}
@@ -1095,9 +1298,11 @@ function SystemArchitecturePageInner() {
                 <option value="nameDesc">Nombre Z-A</option>
               </select>
 
-              <label className="pill" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <label className="pill" style={{ display: 'flex', alignItems: 'center', gap: 4 }} htmlFor="arch-ui-font-scale">
                 Tamaño
                 <input
+                  id="arch-ui-font-scale"
+                  name="uiFontScale"
                   type="range"
                   min={0.8}
                   max={1.3}
@@ -1107,9 +1312,11 @@ function SystemArchitecturePageInner() {
                   style={{ width: 120 }}
                 />
               </label>
-              <label className="pill" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <label className="pill" style={{ display: 'flex', alignItems: 'center', gap: 4 }} htmlFor="arch-node-box-scale">
                 Ancho nodos
                 <input
+                  id="arch-node-box-scale"
+                  name="nodeBoxScale"
                   type="range"
                   min={0.8}
                   max={1.3}
@@ -1119,9 +1326,11 @@ function SystemArchitecturePageInner() {
                   style={{ width: 120 }}
                 />
               </label>
-              <label className="pill" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <label className="pill" style={{ display: 'flex', alignItems: 'center', gap: 4 }} htmlFor="arch-ui-font-family">
                 Fuente
                 <select
+                  id="arch-ui-font-family"
+                  name="uiFontFamily"
                   value={uiFontFamily}
                   onChange={(e) => setUiFontFamily(e.target.value)}
                   style={{ padding: '6px 10px', borderRadius: 10, border: '1px solid rgba(15,23,42,0.15)' }}
@@ -1132,18 +1341,22 @@ function SystemArchitecturePageInner() {
                   <option value="Segoe UI, system-ui, sans-serif">Segoe UI</option>
                 </select>
               </label>
-              <label className="pill" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <label className="pill" style={{ display: 'flex', alignItems: 'center', gap: 4 }} htmlFor="arch-ui-text-color">
                 Texto
                 <input
+                  id="arch-ui-text-color"
+                  name="uiTextColor"
                   type="color"
                   value={uiTextColor || '#0b1224'}
                   onChange={(e) => setUiTextColor(e.target.value)}
                   style={{ width: 40, height: 28, padding: 0, border: '1px solid #cbd5e1', borderRadius: 6 }}
                 />
               </label>
-              <label className="pill" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <label className="pill" style={{ display: 'flex', alignItems: 'center', gap: 4 }} htmlFor="arch-ui-node-bg">
                 Fondo
                 <input
+                  id="arch-ui-node-bg"
+                  name="uiNodeBg"
                   type="color"
                   value={uiNodeBg || '#e6ebf2'}
                   onChange={(e) => setUiNodeBg(e.target.value)}
@@ -1224,9 +1437,11 @@ function SystemArchitecturePageInner() {
                 ) : null}
               </div>
 
-              <label className="pill" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <label className="pill" style={{ display: 'flex', alignItems: 'center', gap: 4 }} htmlFor="arch-ui-canvas-bg">
                 Fondo lienzo
                 <select
+                  id="arch-ui-canvas-bg"
+                  name="uiCanvasBg"
                   value={uiCanvasBg}
                   onChange={(e) => setUiCanvasBg(e.target.value)}
                   style={{ padding: '6px 10px', borderRadius: 10, border: '1px solid rgba(15,23,42,0.15)' }}
@@ -1288,82 +1503,161 @@ function SystemArchitecturePageInner() {
           {error ? <span className="pill pillError">{error}</span> : null}
         </div>
 
+        {/* Contenedor del canvas: marco azul. Layout flex estructural para iPhone/desktop sin cortes ni doble scroll. */}
         <div
-          id="diagram-wrap"
-          className="diagram-canvas"
           style={{
-            width: '100%',
-            flex: 1,
-            minHeight: isMobile ? 120 : 0,
-            minWidth: 0,
             position: 'relative',
-            borderRadius: 12,
-            border: 'none',
-            boxShadow: '0 4px 16px rgba(15,23,42,0.06)',
-            background: uiCanvasBg || '#fff',
+            width: '100%',
+            minWidth: 0,
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
             overflow: 'hidden',
-            contain: 'layout',
+            border: '6px solid #0f766e',
+            borderRadius: 12,
+            boxSizing: 'border-box',
           }}
         >
-          <ReactFlow
-            style={{ width: '100%', height: '100%' }}
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onNodeClick={onNodeClick}
-            onNodeDoubleClick={(_, n) => toggleCollapse(n.id)}
-            defaultViewport={{ x: 0, y: 0, zoom: 1.6 }}
-            minZoom={0.1}
-            maxZoom={14}
-            nodesDraggable={customMode && !viewLocked}
-            panOnDrag={isMobile ? [1, 2] : (customMode ? [1, 2] : [2])}
-            panOnScroll={isMobile ? false : (!viewLocked && customMode)}
-            zoomOnScroll={isMobile ? false : (!viewLocked && customMode)}
-            zoomOnPinch={isMobile ? true : (!viewLocked && customMode)}
-            selectionOnDrag={!customMode}
-            onMoveEnd={(_, vp) => {
-              setLastViewport(vp)
-              setUserMoved(true)
-            }}
-            snapToGrid
-            snapGrid={[20, 20]}
-            nodesConnectable={false}
-            elementsSelectable
-            proOptions={{ hideAttribution: true }}
-            onMove={(_, vp) => {
-              if (vp?.zoom) setViewportZoom(vp.zoom)
-            }}
-            onNodeDragStop={(_, n) => {
-              if (!customMode) return
-              setSavedPositions((prev) => {
-                const next = { ...prev, [n.id]: { x: n.position.x, y: n.position.y } }
-                if (typeof window !== 'undefined') localStorage.setItem('domus-arch-custom-positions', JSON.stringify(next))
-                return next
-              })
-            }}
-          >
-            <FlowApiInjector onReady={(api) => { flowApiRef.current = api; setFlowApiReady(!!api) }} />
-            <Background gap={18} color="#e0e7f1" />
-            {/* En móvil no mostramos panel flotante para no tapar el diagrama; Auto ajustar y Centrar están en la barra */}
-            <Panel position="top-right" className="system-arch-panel-zoom" style={{ display: 'none', gap: 8, flexDirection: 'column', background: '#fff', padding: 8, borderRadius: 10, border: '1px solid rgba(15,23,42,0.1)', boxShadow: '0 6px 18px rgba(15,23,42,0.08)' }}>
-                <label className="pill" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  Zoom
-                  <input
-                    type="range"
-                    min={0.2}
-                    max={3}
-                    step={0.05}
-                    value={zoomSlider}
-                    onChange={(e) => applyZoomSlider(parseFloat(e.target.value))}
-                    style={{ width: 140 }}
-                    disabled={!zoomControlEnabled}
+          <SafeBoundary>
+            <div
+              role="status"
+              aria-label="Zona de trabajo del diagrama"
+              style={{
+                position: 'absolute',
+                top: 10,
+                left: 10,
+                zIndex: 20,
+                background: '#0f766e',
+                color: '#fff',
+                padding: '6px 12px',
+                borderRadius: 8,
+                fontSize: 12,
+                fontWeight: 700,
+                boxShadow: '0 2px 8px rgba(15,118,110,0.5)',
+              }}
+            >
+              Zona de trabajo
+            </div>
+            <div
+              id="diagram-wrap"
+              className="diagram-canvas"
+              style={{
+                flex: 1,
+                minHeight: 0,
+                width: '100%',
+                position: 'relative',
+                display: 'flex',
+                flexDirection: 'column',
+                padding: isMobile ? 12 : 22,
+                borderRadius: 16,
+                border: '4px solid #0d9488',
+                boxShadow: 'inset 0 0 0 1px rgba(13,148,136,0.35), 0 18px 42px rgba(15,23,42,0.12)',
+                background: uiCanvasBg || '#fff',
+                overflow: 'auto',
+                boxSizing: 'border-box',
+              }}
+            >
+            {/* Retícula con letras (columnas) y números (filas) — detrás del diagrama, sin bloquear clics */}
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute',
+                top: isMobile ? 12 : 22,
+                left: isMobile ? 12 : 22,
+                right: isMobile ? 12 : 22,
+                bottom: isMobile ? 12 : 22,
+                zIndex: 0,
+                pointerEvents: 'none',
+                display: 'grid',
+                gridTemplateColumns: '28px repeat(12, minmax(32px, 1fr))',
+                gridTemplateRows: '24px repeat(12, minmax(32px, 1fr))',
+                border: '1px solid rgba(15,118,110,0.2)',
+                borderRadius: 8,
+                overflow: 'hidden',
+              }}
+            >
+              <div style={{ gridColumn: 1, gridRow: 1 }} />
+              {Array.from({ length: 12 }, (_, i) => (
+                <div
+                  key={`col-${i}`}
+                  style={{
+                    gridColumn: i + 2,
+                    gridRow: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: 'rgba(15,118,110,0.6)',
+                  }}
+                >
+                  {String.fromCharCode(65 + i)}
+                </div>
+              ))}
+              {Array.from({ length: 12 }, (_, i) => (
+                <div
+                  key={`row-${i}`}
+                  style={{
+                    gridColumn: 1,
+                    gridRow: i + 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: 'rgba(15,118,110,0.6)',
+                  }}
+                >
+                  {i + 1}
+                </div>
+              ))}
+              {Array.from({ length: 12 * 12 }, (_, i) => {
+                const col = (i % 12) + 2
+                const row = Math.floor(i / 12) + 2
+                return (
+                  <div
+                    key={`cell-${i}`}
+                    style={{
+                      gridColumn: col,
+                      gridRow: row,
+                      borderRight: '1px solid rgba(15,118,110,0.15)',
+                      borderBottom: '1px solid rgba(15,118,110,0.15)',
+                    }}
                   />
-                </label>
-                <button type="button" className="btn btnGhost btnSm" onClick={() => flowApiRef.current?.fitView({ padding: 0.25, includeHiddenNodes: true })}>Auto ajustar</button>
-                <button type="button" className="btn btnGhost btnSm" onClick={() => { const first = nodes.find((n) => n.id === focusEntityId) || nodes.find((n) => n.id === 'FAMILY_ROOT'); if (first) flowApiRef.current?.setCenter(first.position.x, first.position.y, { duration: 300, zoom: focusEntityId ? 2.2 : 1.8 }); }}>Centrar selección</button>
-              </Panel>
-          </ReactFlow>
+                )
+              })}
+            </div>
+            <div style={{ position: 'relative', zIndex: 1, flex: 1, minHeight: 0, width: '100%' }}>
+            <DiagramInner
+              key={diagramKey}
+              initialNodes={initialNodes}
+              initialEdges={initialEdges}
+              nodesRef={nodesRef}
+              flowApiRef={flowApiRef}
+              onInit={(api) => setFlowApiReady(!!api)}
+              onNodeClick={onNodeClick}
+              onNodeDoubleClick={(_, n) => toggleCollapse(n.id)}
+              onMoveEnd={() => setUserMoved(true)}
+              onNodeDragStop={(_, n) => {
+                if (!customMode) return
+                setSavedPositions((prev) => {
+                  const next = { ...prev, [n.id]: { x: n.position.x, y: n.position.y } }
+                  if (typeof window !== 'undefined') localStorage.setItem('domus-arch-custom-positions', JSON.stringify(next))
+                  return next
+                })
+              }}
+              customMode={customMode}
+              viewLocked={viewLocked}
+              isMobile={isMobile}
+              zoomSlider={zoomSlider}
+              zoomControlEnabled={zoomControlEnabled}
+              applyZoomSlider={applyZoomSlider}
+              focusEntityId={focusEntityId}
+            />
+            </div>
+            </div>
+          </SafeBoundary>
         </div>
       </div>
     </SAPLayout>
@@ -1372,8 +1666,10 @@ function SystemArchitecturePageInner() {
 
 export default function SystemArchitecturePage() {
   return (
-    <ReactFlowProvider>
-      <SystemArchitecturePageInner />
-    </ReactFlowProvider>
+    <Suspense fallback={null}>
+      <ReactFlowProvider>
+        <SystemArchitecturePageInner />
+      </ReactFlowProvider>
+    </Suspense>
   )
 }
