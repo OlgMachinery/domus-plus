@@ -143,6 +143,10 @@ export async function PATCH(
     if (typeof body?.is_family_admin === 'boolean') {
       updates.is_family_admin = body.is_family_admin
     }
+    if (typeof body?.can_register_expenses === 'boolean') updates.can_register_expenses = body.can_register_expenses
+    if (typeof body?.can_upload_receipts === 'boolean') updates.can_upload_receipts = body.can_upload_receipts
+    if (typeof body?.can_create_events === 'boolean') updates.can_create_events = body.can_create_events
+    if (typeof body?.can_view_global_summary === 'boolean') updates.can_view_global_summary = body.can_view_global_summary
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json(

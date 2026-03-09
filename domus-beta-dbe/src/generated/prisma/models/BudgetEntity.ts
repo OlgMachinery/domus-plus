@@ -225,6 +225,7 @@ export type BudgetEntityWhereInput = {
   family?: Prisma.XOR<Prisma.FamilyScalarRelationFilter, Prisma.FamilyWhereInput>
   allocations?: Prisma.EntityBudgetAllocationListRelationFilter
   owners?: Prisma.BudgetEntityOwnerListRelationFilter
+  moneyRequestsFor?: Prisma.MoneyRequestListRelationFilter
 }
 
 export type BudgetEntityOrderByWithRelationInput = {
@@ -241,6 +242,7 @@ export type BudgetEntityOrderByWithRelationInput = {
   family?: Prisma.FamilyOrderByWithRelationInput
   allocations?: Prisma.EntityBudgetAllocationOrderByRelationAggregateInput
   owners?: Prisma.BudgetEntityOwnerOrderByRelationAggregateInput
+  moneyRequestsFor?: Prisma.MoneyRequestOrderByRelationAggregateInput
 }
 
 export type BudgetEntityWhereUniqueInput = Prisma.AtLeast<{
@@ -260,6 +262,7 @@ export type BudgetEntityWhereUniqueInput = Prisma.AtLeast<{
   family?: Prisma.XOR<Prisma.FamilyScalarRelationFilter, Prisma.FamilyWhereInput>
   allocations?: Prisma.EntityBudgetAllocationListRelationFilter
   owners?: Prisma.BudgetEntityOwnerListRelationFilter
+  moneyRequestsFor?: Prisma.MoneyRequestListRelationFilter
 }, "id">
 
 export type BudgetEntityOrderByWithAggregationInput = {
@@ -307,6 +310,7 @@ export type BudgetEntityCreateInput = {
   family: Prisma.FamilyCreateNestedOneWithoutBudgetEntitiesInput
   allocations?: Prisma.EntityBudgetAllocationCreateNestedManyWithoutEntityInput
   owners?: Prisma.BudgetEntityOwnerCreateNestedManyWithoutEntityInput
+  moneyRequestsFor?: Prisma.MoneyRequestCreateNestedManyWithoutForEntityInput
 }
 
 export type BudgetEntityUncheckedCreateInput = {
@@ -322,6 +326,7 @@ export type BudgetEntityUncheckedCreateInput = {
   updatedAt?: Date | string
   allocations?: Prisma.EntityBudgetAllocationUncheckedCreateNestedManyWithoutEntityInput
   owners?: Prisma.BudgetEntityOwnerUncheckedCreateNestedManyWithoutEntityInput
+  moneyRequestsFor?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutForEntityInput
 }
 
 export type BudgetEntityUpdateInput = {
@@ -337,6 +342,7 @@ export type BudgetEntityUpdateInput = {
   family?: Prisma.FamilyUpdateOneRequiredWithoutBudgetEntitiesNestedInput
   allocations?: Prisma.EntityBudgetAllocationUpdateManyWithoutEntityNestedInput
   owners?: Prisma.BudgetEntityOwnerUpdateManyWithoutEntityNestedInput
+  moneyRequestsFor?: Prisma.MoneyRequestUpdateManyWithoutForEntityNestedInput
 }
 
 export type BudgetEntityUncheckedUpdateInput = {
@@ -352,6 +358,7 @@ export type BudgetEntityUncheckedUpdateInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   allocations?: Prisma.EntityBudgetAllocationUncheckedUpdateManyWithoutEntityNestedInput
   owners?: Prisma.BudgetEntityOwnerUncheckedUpdateManyWithoutEntityNestedInput
+  moneyRequestsFor?: Prisma.MoneyRequestUncheckedUpdateManyWithoutForEntityNestedInput
 }
 
 export type BudgetEntityCreateManyInput = {
@@ -446,6 +453,11 @@ export type BudgetEntityScalarRelationFilter = {
   isNot?: Prisma.BudgetEntityWhereInput
 }
 
+export type BudgetEntityNullableScalarRelationFilter = {
+  is?: Prisma.BudgetEntityWhereInput | null
+  isNot?: Prisma.BudgetEntityWhereInput | null
+}
+
 export type BudgetEntityCreateNestedManyWithoutFamilyInput = {
   create?: Prisma.XOR<Prisma.BudgetEntityCreateWithoutFamilyInput, Prisma.BudgetEntityUncheckedCreateWithoutFamilyInput> | Prisma.BudgetEntityCreateWithoutFamilyInput[] | Prisma.BudgetEntityUncheckedCreateWithoutFamilyInput[]
   connectOrCreate?: Prisma.BudgetEntityCreateOrConnectWithoutFamilyInput | Prisma.BudgetEntityCreateOrConnectWithoutFamilyInput[]
@@ -520,6 +532,22 @@ export type BudgetEntityUpdateOneRequiredWithoutAllocationsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.BudgetEntityUpdateToOneWithWhereWithoutAllocationsInput, Prisma.BudgetEntityUpdateWithoutAllocationsInput>, Prisma.BudgetEntityUncheckedUpdateWithoutAllocationsInput>
 }
 
+export type BudgetEntityCreateNestedOneWithoutMoneyRequestsForInput = {
+  create?: Prisma.XOR<Prisma.BudgetEntityCreateWithoutMoneyRequestsForInput, Prisma.BudgetEntityUncheckedCreateWithoutMoneyRequestsForInput>
+  connectOrCreate?: Prisma.BudgetEntityCreateOrConnectWithoutMoneyRequestsForInput
+  connect?: Prisma.BudgetEntityWhereUniqueInput
+}
+
+export type BudgetEntityUpdateOneWithoutMoneyRequestsForNestedInput = {
+  create?: Prisma.XOR<Prisma.BudgetEntityCreateWithoutMoneyRequestsForInput, Prisma.BudgetEntityUncheckedCreateWithoutMoneyRequestsForInput>
+  connectOrCreate?: Prisma.BudgetEntityCreateOrConnectWithoutMoneyRequestsForInput
+  upsert?: Prisma.BudgetEntityUpsertWithoutMoneyRequestsForInput
+  disconnect?: Prisma.BudgetEntityWhereInput | boolean
+  delete?: Prisma.BudgetEntityWhereInput | boolean
+  connect?: Prisma.BudgetEntityWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.BudgetEntityUpdateToOneWithWhereWithoutMoneyRequestsForInput, Prisma.BudgetEntityUpdateWithoutMoneyRequestsForInput>, Prisma.BudgetEntityUncheckedUpdateWithoutMoneyRequestsForInput>
+}
+
 export type BudgetEntityCreateWithoutFamilyInput = {
   id?: string
   type: $Enums.EntityType
@@ -532,6 +560,7 @@ export type BudgetEntityCreateWithoutFamilyInput = {
   updatedAt?: Date | string
   allocations?: Prisma.EntityBudgetAllocationCreateNestedManyWithoutEntityInput
   owners?: Prisma.BudgetEntityOwnerCreateNestedManyWithoutEntityInput
+  moneyRequestsFor?: Prisma.MoneyRequestCreateNestedManyWithoutForEntityInput
 }
 
 export type BudgetEntityUncheckedCreateWithoutFamilyInput = {
@@ -546,6 +575,7 @@ export type BudgetEntityUncheckedCreateWithoutFamilyInput = {
   updatedAt?: Date | string
   allocations?: Prisma.EntityBudgetAllocationUncheckedCreateNestedManyWithoutEntityInput
   owners?: Prisma.BudgetEntityOwnerUncheckedCreateNestedManyWithoutEntityInput
+  moneyRequestsFor?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutForEntityInput
 }
 
 export type BudgetEntityCreateOrConnectWithoutFamilyInput = {
@@ -601,6 +631,7 @@ export type BudgetEntityCreateWithoutOwnersInput = {
   updatedAt?: Date | string
   family: Prisma.FamilyCreateNestedOneWithoutBudgetEntitiesInput
   allocations?: Prisma.EntityBudgetAllocationCreateNestedManyWithoutEntityInput
+  moneyRequestsFor?: Prisma.MoneyRequestCreateNestedManyWithoutForEntityInput
 }
 
 export type BudgetEntityUncheckedCreateWithoutOwnersInput = {
@@ -615,6 +646,7 @@ export type BudgetEntityUncheckedCreateWithoutOwnersInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   allocations?: Prisma.EntityBudgetAllocationUncheckedCreateNestedManyWithoutEntityInput
+  moneyRequestsFor?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutForEntityInput
 }
 
 export type BudgetEntityCreateOrConnectWithoutOwnersInput = {
@@ -645,6 +677,7 @@ export type BudgetEntityUpdateWithoutOwnersInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   family?: Prisma.FamilyUpdateOneRequiredWithoutBudgetEntitiesNestedInput
   allocations?: Prisma.EntityBudgetAllocationUpdateManyWithoutEntityNestedInput
+  moneyRequestsFor?: Prisma.MoneyRequestUpdateManyWithoutForEntityNestedInput
 }
 
 export type BudgetEntityUncheckedUpdateWithoutOwnersInput = {
@@ -659,6 +692,7 @@ export type BudgetEntityUncheckedUpdateWithoutOwnersInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   allocations?: Prisma.EntityBudgetAllocationUncheckedUpdateManyWithoutEntityNestedInput
+  moneyRequestsFor?: Prisma.MoneyRequestUncheckedUpdateManyWithoutForEntityNestedInput
 }
 
 export type BudgetEntityCreateWithoutAllocationsInput = {
@@ -673,6 +707,7 @@ export type BudgetEntityCreateWithoutAllocationsInput = {
   updatedAt?: Date | string
   family: Prisma.FamilyCreateNestedOneWithoutBudgetEntitiesInput
   owners?: Prisma.BudgetEntityOwnerCreateNestedManyWithoutEntityInput
+  moneyRequestsFor?: Prisma.MoneyRequestCreateNestedManyWithoutForEntityInput
 }
 
 export type BudgetEntityUncheckedCreateWithoutAllocationsInput = {
@@ -687,6 +722,7 @@ export type BudgetEntityUncheckedCreateWithoutAllocationsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   owners?: Prisma.BudgetEntityOwnerUncheckedCreateNestedManyWithoutEntityInput
+  moneyRequestsFor?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutForEntityInput
 }
 
 export type BudgetEntityCreateOrConnectWithoutAllocationsInput = {
@@ -717,6 +753,7 @@ export type BudgetEntityUpdateWithoutAllocationsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   family?: Prisma.FamilyUpdateOneRequiredWithoutBudgetEntitiesNestedInput
   owners?: Prisma.BudgetEntityOwnerUpdateManyWithoutEntityNestedInput
+  moneyRequestsFor?: Prisma.MoneyRequestUpdateManyWithoutForEntityNestedInput
 }
 
 export type BudgetEntityUncheckedUpdateWithoutAllocationsInput = {
@@ -730,6 +767,83 @@ export type BudgetEntityUncheckedUpdateWithoutAllocationsInput = {
   participatesInReports?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  owners?: Prisma.BudgetEntityOwnerUncheckedUpdateManyWithoutEntityNestedInput
+  moneyRequestsFor?: Prisma.MoneyRequestUncheckedUpdateManyWithoutForEntityNestedInput
+}
+
+export type BudgetEntityCreateWithoutMoneyRequestsForInput = {
+  id?: string
+  type: $Enums.EntityType
+  name: string
+  imageUrl?: string | null
+  isActive?: boolean
+  participatesInBudget?: boolean
+  participatesInReports?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  family: Prisma.FamilyCreateNestedOneWithoutBudgetEntitiesInput
+  allocations?: Prisma.EntityBudgetAllocationCreateNestedManyWithoutEntityInput
+  owners?: Prisma.BudgetEntityOwnerCreateNestedManyWithoutEntityInput
+}
+
+export type BudgetEntityUncheckedCreateWithoutMoneyRequestsForInput = {
+  id?: string
+  familyId: string
+  type: $Enums.EntityType
+  name: string
+  imageUrl?: string | null
+  isActive?: boolean
+  participatesInBudget?: boolean
+  participatesInReports?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  allocations?: Prisma.EntityBudgetAllocationUncheckedCreateNestedManyWithoutEntityInput
+  owners?: Prisma.BudgetEntityOwnerUncheckedCreateNestedManyWithoutEntityInput
+}
+
+export type BudgetEntityCreateOrConnectWithoutMoneyRequestsForInput = {
+  where: Prisma.BudgetEntityWhereUniqueInput
+  create: Prisma.XOR<Prisma.BudgetEntityCreateWithoutMoneyRequestsForInput, Prisma.BudgetEntityUncheckedCreateWithoutMoneyRequestsForInput>
+}
+
+export type BudgetEntityUpsertWithoutMoneyRequestsForInput = {
+  update: Prisma.XOR<Prisma.BudgetEntityUpdateWithoutMoneyRequestsForInput, Prisma.BudgetEntityUncheckedUpdateWithoutMoneyRequestsForInput>
+  create: Prisma.XOR<Prisma.BudgetEntityCreateWithoutMoneyRequestsForInput, Prisma.BudgetEntityUncheckedCreateWithoutMoneyRequestsForInput>
+  where?: Prisma.BudgetEntityWhereInput
+}
+
+export type BudgetEntityUpdateToOneWithWhereWithoutMoneyRequestsForInput = {
+  where?: Prisma.BudgetEntityWhereInput
+  data: Prisma.XOR<Prisma.BudgetEntityUpdateWithoutMoneyRequestsForInput, Prisma.BudgetEntityUncheckedUpdateWithoutMoneyRequestsForInput>
+}
+
+export type BudgetEntityUpdateWithoutMoneyRequestsForInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  type?: Prisma.EnumEntityTypeFieldUpdateOperationsInput | $Enums.EntityType
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  imageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  participatesInBudget?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  participatesInReports?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  family?: Prisma.FamilyUpdateOneRequiredWithoutBudgetEntitiesNestedInput
+  allocations?: Prisma.EntityBudgetAllocationUpdateManyWithoutEntityNestedInput
+  owners?: Prisma.BudgetEntityOwnerUpdateManyWithoutEntityNestedInput
+}
+
+export type BudgetEntityUncheckedUpdateWithoutMoneyRequestsForInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  familyId?: Prisma.StringFieldUpdateOperationsInput | string
+  type?: Prisma.EnumEntityTypeFieldUpdateOperationsInput | $Enums.EntityType
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  imageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  participatesInBudget?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  participatesInReports?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  allocations?: Prisma.EntityBudgetAllocationUncheckedUpdateManyWithoutEntityNestedInput
   owners?: Prisma.BudgetEntityOwnerUncheckedUpdateManyWithoutEntityNestedInput
 }
 
@@ -757,6 +871,7 @@ export type BudgetEntityUpdateWithoutFamilyInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   allocations?: Prisma.EntityBudgetAllocationUpdateManyWithoutEntityNestedInput
   owners?: Prisma.BudgetEntityOwnerUpdateManyWithoutEntityNestedInput
+  moneyRequestsFor?: Prisma.MoneyRequestUpdateManyWithoutForEntityNestedInput
 }
 
 export type BudgetEntityUncheckedUpdateWithoutFamilyInput = {
@@ -771,6 +886,7 @@ export type BudgetEntityUncheckedUpdateWithoutFamilyInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   allocations?: Prisma.EntityBudgetAllocationUncheckedUpdateManyWithoutEntityNestedInput
   owners?: Prisma.BudgetEntityOwnerUncheckedUpdateManyWithoutEntityNestedInput
+  moneyRequestsFor?: Prisma.MoneyRequestUncheckedUpdateManyWithoutForEntityNestedInput
 }
 
 export type BudgetEntityUncheckedUpdateManyWithoutFamilyInput = {
@@ -793,11 +909,13 @@ export type BudgetEntityUncheckedUpdateManyWithoutFamilyInput = {
 export type BudgetEntityCountOutputType = {
   allocations: number
   owners: number
+  moneyRequestsFor: number
 }
 
 export type BudgetEntityCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   allocations?: boolean | BudgetEntityCountOutputTypeCountAllocationsArgs
   owners?: boolean | BudgetEntityCountOutputTypeCountOwnersArgs
+  moneyRequestsFor?: boolean | BudgetEntityCountOutputTypeCountMoneyRequestsForArgs
 }
 
 /**
@@ -824,6 +942,13 @@ export type BudgetEntityCountOutputTypeCountOwnersArgs<ExtArgs extends runtime.T
   where?: Prisma.BudgetEntityOwnerWhereInput
 }
 
+/**
+ * BudgetEntityCountOutputType without action
+ */
+export type BudgetEntityCountOutputTypeCountMoneyRequestsForArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.MoneyRequestWhereInput
+}
+
 
 export type BudgetEntitySelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -839,6 +964,7 @@ export type BudgetEntitySelect<ExtArgs extends runtime.Types.Extensions.Internal
   family?: boolean | Prisma.FamilyDefaultArgs<ExtArgs>
   allocations?: boolean | Prisma.BudgetEntity$allocationsArgs<ExtArgs>
   owners?: boolean | Prisma.BudgetEntity$ownersArgs<ExtArgs>
+  moneyRequestsFor?: boolean | Prisma.BudgetEntity$moneyRequestsForArgs<ExtArgs>
   _count?: boolean | Prisma.BudgetEntityCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["budgetEntity"]>
 
@@ -888,6 +1014,7 @@ export type BudgetEntityInclude<ExtArgs extends runtime.Types.Extensions.Interna
   family?: boolean | Prisma.FamilyDefaultArgs<ExtArgs>
   allocations?: boolean | Prisma.BudgetEntity$allocationsArgs<ExtArgs>
   owners?: boolean | Prisma.BudgetEntity$ownersArgs<ExtArgs>
+  moneyRequestsFor?: boolean | Prisma.BudgetEntity$moneyRequestsForArgs<ExtArgs>
   _count?: boolean | Prisma.BudgetEntityCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type BudgetEntityIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -903,6 +1030,7 @@ export type $BudgetEntityPayload<ExtArgs extends runtime.Types.Extensions.Intern
     family: Prisma.$FamilyPayload<ExtArgs>
     allocations: Prisma.$EntityBudgetAllocationPayload<ExtArgs>[]
     owners: Prisma.$BudgetEntityOwnerPayload<ExtArgs>[]
+    moneyRequestsFor: Prisma.$MoneyRequestPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1312,6 +1440,7 @@ export interface Prisma__BudgetEntityClient<T, Null = never, ExtArgs extends run
   family<T extends Prisma.FamilyDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.FamilyDefaultArgs<ExtArgs>>): Prisma.Prisma__FamilyClient<runtime.Types.Result.GetResult<Prisma.$FamilyPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   allocations<T extends Prisma.BudgetEntity$allocationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.BudgetEntity$allocationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EntityBudgetAllocationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   owners<T extends Prisma.BudgetEntity$ownersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.BudgetEntity$ownersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BudgetEntityOwnerPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  moneyRequestsFor<T extends Prisma.BudgetEntity$moneyRequestsForArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.BudgetEntity$moneyRequestsForArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MoneyRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1790,6 +1919,30 @@ export type BudgetEntity$ownersArgs<ExtArgs extends runtime.Types.Extensions.Int
   take?: number
   skip?: number
   distinct?: Prisma.BudgetEntityOwnerScalarFieldEnum | Prisma.BudgetEntityOwnerScalarFieldEnum[]
+}
+
+/**
+ * BudgetEntity.moneyRequestsFor
+ */
+export type BudgetEntity$moneyRequestsForArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the MoneyRequest
+   */
+  select?: Prisma.MoneyRequestSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the MoneyRequest
+   */
+  omit?: Prisma.MoneyRequestOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.MoneyRequestInclude<ExtArgs> | null
+  where?: Prisma.MoneyRequestWhereInput
+  orderBy?: Prisma.MoneyRequestOrderByWithRelationInput | Prisma.MoneyRequestOrderByWithRelationInput[]
+  cursor?: Prisma.MoneyRequestWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.MoneyRequestScalarFieldEnum | Prisma.MoneyRequestScalarFieldEnum[]
 }
 
 /**

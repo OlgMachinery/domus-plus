@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-const DEPLOY_ID = 'trigger-redeploy-2026-02-19'
+const DEPLOY_ID = 'trigger-redeploy-2026-02-24-tx-fallback'
 const ROUTES_CHECK = ['/', '/budget-overview', '/login']
 
 export async function GET() {

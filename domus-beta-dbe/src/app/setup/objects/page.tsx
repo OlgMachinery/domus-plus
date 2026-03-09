@@ -20,14 +20,14 @@ function isMeOk(value: MeResponse | null): value is Extract<MeResponse, { ok: tr
 type EntityType = 'PERSON' | 'HOUSE' | 'PET' | 'VEHICLE' | 'PROJECT' | 'FUND' | 'GROUP' | 'OTHER'
 
 const ENTITY_TYPE_OPTIONS: { value: EntityType; label: string }[] = [
-  { value: 'PERSON', label: 'PERSON (Persona)' },
-  { value: 'HOUSE', label: 'HOUSE (Casa)' },
-  { value: 'PET', label: 'PET (Mascota)' },
-  { value: 'VEHICLE', label: 'VEHICLE (Vehículo)' },
-  { value: 'PROJECT', label: 'PROJECT (Proyecto)' },
-  { value: 'FUND', label: 'FUND (Fondo)' },
-  { value: 'GROUP', label: 'GROUP (Grupo)' },
-  { value: 'OTHER', label: 'OTHER (Otro)' },
+  { value: 'PERSON', label: 'Persona' },
+  { value: 'HOUSE', label: 'Casa' },
+  { value: 'PET', label: 'Mascota' },
+  { value: 'VEHICLE', label: 'Vehículo' },
+  { value: 'PROJECT', label: 'Proyecto' },
+  { value: 'FUND', label: 'Fondo' },
+  { value: 'GROUP', label: 'Grupo' },
+  { value: 'OTHER', label: 'Otro' },
 ]
 
 export default function SetupObjectsPage() {
@@ -170,7 +170,13 @@ export default function SetupObjectsPage() {
       if (!res.ok) throw new Error(data.detail || 'No se pudieron cargar datos ficticios')
       setDemoUsers(Array.isArray(data.demoUsers) ? data.demoUsers : null)
       await refreshEntities()
-      setMessage('Datos ficticios cargados. Ya puedes continuar.')
+      const n12 = data.createdTransactions12M ?? 0
+      const msg = n12 > 0
+        ? `Datos ficticios cargados. Se añadieron ${data.createdTransactions} transacciones (${n12} del historial de 12 meses). En Transacciones/Reportes cambia el filtro de fechas a "Todo" o "Últimos 6 meses" para verlas.`
+        : data.seedHint
+          ? `Datos ficticios cargados. ${data.seedHint}`
+          : 'Datos ficticios cargados. Ya puedes continuar.'
+      setMessage(msg)
     } catch (e: any) {
       setMessage(e?.message || 'No se pudieron cargar datos ficticios')
     } finally {
@@ -180,14 +186,14 @@ export default function SetupObjectsPage() {
 
   return (
     <main className="sapRoot">
-      <div className="sapHeader">
+      <div className="sapHeader setupObjectsHeader">
+        <button className="btn btnGhost btnSm" type="button" onClick={() => router.push('/ui')} aria-label="Menú" style={{ marginRight: 12 }}>
+          Menú
+        </button>
         <div className="sapBrand" style={{ cursor: 'pointer' }} onClick={() => router.push('/ui')}>
           DOMUS+
         </div>
         <div className="sapHeaderRight">
-          <button className="btn btnSm btnSuccess" type="button" onClick={() => router.push('/ui')}>
-            Volver
-          </button>
           <span className="pill">{activeFamily ? `Familia: ${activeFamily.name}` : 'Familia: —'}</span>
           <span className={`pill ${meOk ? 'pillOk' : 'pillBad'}`}>{meOk ? 'Sesión activa' : 'Sin sesión'}</span>
         </div>

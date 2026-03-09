@@ -54,15 +54,24 @@ export const ModelName = {
   User: 'User',
   Family: 'Family',
   FamilyMember: 'FamilyMember',
+  FamilyInvite: 'FamilyInvite',
+  PasswordResetToken: 'PasswordResetToken',
   BudgetEntity: 'BudgetEntity',
   BudgetEntityOwner: 'BudgetEntityOwner',
   BudgetCategory: 'BudgetCategory',
+  FamilyCategoryPreference: 'FamilyCategoryPreference',
   EntityBudgetAllocation: 'EntityBudgetAllocation',
+  CategorySuggestion: 'CategorySuggestion',
+  BudgetAdjustmentSuggestion: 'BudgetAdjustmentSuggestion',
+  UserBudgetSubdivision: 'UserBudgetSubdivision',
   Transaction: 'Transaction',
   Receipt: 'Receipt',
   ReceiptImage: 'ReceiptImage',
   ReceiptExtraction: 'ReceiptExtraction',
   ReceiptExtractionItem: 'ReceiptExtractionItem',
+  MoneyRequest: 'MoneyRequest',
+  FamilyCalendarEvent: 'FamilyCalendarEvent',
+  ReceiptConfirmationMessage: 'ReceiptConfirmationMessage',
   DeletionArchive: 'DeletionArchive'
 } as const
 
@@ -85,6 +94,8 @@ export const UserScalarFieldEnum = {
   passwordHash: 'passwordHash',
   name: 'name',
   phone: 'phone',
+  city: 'city',
+  avatarUrl: 'avatarUrl',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -117,6 +128,29 @@ export const FamilyMemberScalarFieldEnum = {
 } as const
 
 export type FamilyMemberScalarFieldEnum = (typeof FamilyMemberScalarFieldEnum)[keyof typeof FamilyMemberScalarFieldEnum]
+
+
+export const FamilyInviteScalarFieldEnum = {
+  id: 'id',
+  familyId: 'familyId',
+  code: 'code',
+  expiresAt: 'expiresAt',
+  createdByUserId: 'createdByUserId',
+  createdAt: 'createdAt'
+} as const
+
+export type FamilyInviteScalarFieldEnum = (typeof FamilyInviteScalarFieldEnum)[keyof typeof FamilyInviteScalarFieldEnum]
+
+
+export const PasswordResetTokenScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  token: 'token',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt'
+} as const
+
+export type PasswordResetTokenScalarFieldEnum = (typeof PasswordResetTokenScalarFieldEnum)[keyof typeof PasswordResetTokenScalarFieldEnum]
 
 
 export const BudgetEntityScalarFieldEnum = {
@@ -161,6 +195,17 @@ export const BudgetCategoryScalarFieldEnum = {
 export type BudgetCategoryScalarFieldEnum = (typeof BudgetCategoryScalarFieldEnum)[keyof typeof BudgetCategoryScalarFieldEnum]
 
 
+export const FamilyCategoryPreferenceScalarFieldEnum = {
+  id: 'id',
+  familyId: 'familyId',
+  categoryId: 'categoryId',
+  preferenceKey: 'preferenceKey',
+  createdAt: 'createdAt'
+} as const
+
+export type FamilyCategoryPreferenceScalarFieldEnum = (typeof FamilyCategoryPreferenceScalarFieldEnum)[keyof typeof FamilyCategoryPreferenceScalarFieldEnum]
+
+
 export const EntityBudgetAllocationScalarFieldEnum = {
   id: 'id',
   familyId: 'familyId',
@@ -175,6 +220,48 @@ export const EntityBudgetAllocationScalarFieldEnum = {
 export type EntityBudgetAllocationScalarFieldEnum = (typeof EntityBudgetAllocationScalarFieldEnum)[keyof typeof EntityBudgetAllocationScalarFieldEnum]
 
 
+export const CategorySuggestionScalarFieldEnum = {
+  id: 'id',
+  familyId: 'familyId',
+  suggestedName: 'suggestedName',
+  exampleMerchant: 'exampleMerchant',
+  status: 'status',
+  outboundMessageSid: 'outboundMessageSid',
+  createdAt: 'createdAt',
+  resolvedAt: 'resolvedAt'
+} as const
+
+export type CategorySuggestionScalarFieldEnum = (typeof CategorySuggestionScalarFieldEnum)[keyof typeof CategorySuggestionScalarFieldEnum]
+
+
+export const BudgetAdjustmentSuggestionScalarFieldEnum = {
+  id: 'id',
+  familyId: 'familyId',
+  userId: 'userId',
+  type: 'type',
+  payload: 'payload',
+  status: 'status',
+  resolvedAt: 'resolvedAt',
+  resolvedBy: 'resolvedBy',
+  createdAt: 'createdAt'
+} as const
+
+export type BudgetAdjustmentSuggestionScalarFieldEnum = (typeof BudgetAdjustmentSuggestionScalarFieldEnum)[keyof typeof BudgetAdjustmentSuggestionScalarFieldEnum]
+
+
+export const UserBudgetSubdivisionScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  familyId: 'familyId',
+  allocationId: 'allocationId',
+  name: 'name',
+  sortOrder: 'sortOrder',
+  createdAt: 'createdAt'
+} as const
+
+export type UserBudgetSubdivisionScalarFieldEnum = (typeof UserBudgetSubdivisionScalarFieldEnum)[keyof typeof UserBudgetSubdivisionScalarFieldEnum]
+
+
 export const TransactionScalarFieldEnum = {
   id: 'id',
   familyId: 'familyId',
@@ -183,6 +270,8 @@ export const TransactionScalarFieldEnum = {
   amount: 'amount',
   date: 'date',
   description: 'description',
+  registrationCode: 'registrationCode',
+  pendingReason: 'pendingReason',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -231,6 +320,11 @@ export const ReceiptExtractionScalarFieldEnum = {
   rawText: 'rawText',
   rawJson: 'rawJson',
   metaJson: 'metaJson',
+  receiptType: 'receiptType',
+  consumptionQuantity: 'consumptionQuantity',
+  consumptionUnit: 'consumptionUnit',
+  consumptionPeriodStart: 'consumptionPeriodStart',
+  consumptionPeriodEnd: 'consumptionPeriodEnd',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -251,11 +345,66 @@ export const ReceiptExtractionItemScalarFieldEnum = {
   isPlaceholder: 'isPlaceholder',
   lineType: 'lineType',
   notesJson: 'notesJson',
+  quantityUnit: 'quantityUnit',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
 
 export type ReceiptExtractionItemScalarFieldEnum = (typeof ReceiptExtractionItemScalarFieldEnum)[keyof typeof ReceiptExtractionItemScalarFieldEnum]
+
+
+export const MoneyRequestScalarFieldEnum = {
+  id: 'id',
+  familyId: 'familyId',
+  createdByUserId: 'createdByUserId',
+  requestedAt: 'requestedAt',
+  forEntityId: 'forEntityId',
+  forName: 'forName',
+  allocationId: 'allocationId',
+  date: 'date',
+  reason: 'reason',
+  amount: 'amount',
+  currency: 'currency',
+  status: 'status',
+  transactionId: 'transactionId',
+  registrationCode: 'registrationCode',
+  outboundMessageSid: 'outboundMessageSid',
+  approvedAt: 'approvedAt',
+  approvedByUserId: 'approvedByUserId',
+  rejectedAt: 'rejectedAt',
+  rejectedByUserId: 'rejectedByUserId',
+  deliveredAt: 'deliveredAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  lastReminderAt: 'lastReminderAt'
+} as const
+
+export type MoneyRequestScalarFieldEnum = (typeof MoneyRequestScalarFieldEnum)[keyof typeof MoneyRequestScalarFieldEnum]
+
+
+export const FamilyCalendarEventScalarFieldEnum = {
+  id: 'id',
+  familyId: 'familyId',
+  title: 'title',
+  eventDate: 'eventDate',
+  type: 'type',
+  description: 'description',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type FamilyCalendarEventScalarFieldEnum = (typeof FamilyCalendarEventScalarFieldEnum)[keyof typeof FamilyCalendarEventScalarFieldEnum]
+
+
+export const ReceiptConfirmationMessageScalarFieldEnum = {
+  id: 'id',
+  messageSid: 'messageSid',
+  transactionId: 'transactionId',
+  familyId: 'familyId',
+  createdAt: 'createdAt'
+} as const
+
+export type ReceiptConfirmationMessageScalarFieldEnum = (typeof ReceiptConfirmationMessageScalarFieldEnum)[keyof typeof ReceiptConfirmationMessageScalarFieldEnum]
 
 
 export const DeletionArchiveScalarFieldEnum = {

@@ -4,6 +4,9 @@ import { prisma } from '@/lib/db/prisma'
 import { uploadToSpaces } from '@/lib/storage/spaces'
 import { extractReceiptFromImageBytes, extractReceiptFromImageParts } from '@/lib/receipts/extract'
 import { requireAtLeastOneActiveBudgetObject } from '@/lib/budget/structural'
+import { generateRegistrationCode, type PrismaLike } from '@/lib/registration-code'
+import { suggestAllocationForReceipt, type AllocationOption } from '@/lib/agent/domus-agent'
+import { findPossibleDuplicate } from '@/lib/dedup'
 
 export const dynamic = 'force-dynamic'
 
@@ -69,16 +72,13 @@ function scoreAllocation(args: { allocation: any; hint: string | null; userName:
 
 export async function POST(req: NextRequest) {
   try {
-    const { familyId, userId } = await requireMembership(req)
+    const { familyId, userId, isFamilyAdmin } = await requireMembership(req)
     const structural = await requireAtLeastOneActiveBudgetObject(familyId)
     if (structural) return structural
 
     const apiKey = process.env.OPENAI_API_KEY
     if (!apiKey) return jsonError('Falta OPENAI_API_KEY en el servidor', 500)
     const model = process.env.OPENAI_RECEIPT_MODEL || 'gpt-4o-mini'
-
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } })
-    const userName = user?.name || user?.email || ''
 
     const form = await req.formData()
     const rawFiles = form.getAll('file')
@@ -87,6 +87,20 @@ export async function POST(req: NextRequest) {
     if (files.length > 8) return jsonError('Demasiadas fotos. Sube máximo 8.', 400)
 
     const allocationIdOverride = typeof form.get('allocationId') === 'string' ? String(form.get('allocationId') || '').trim() : ''
+    const assignToUserIdRaw = typeof form.get('assignToUserId') === 'string' ? String(form.get('assignToUserId') || '').trim() : ''
+    const forceDuplicate = form.get('forceDuplicate') === '1' || form.get('forceDuplicate') === 'true'
+    let transactionUserId = userId
+    if (assignToUserIdRaw) {
+      const member = await prisma.familyMember.findUnique({
+        where: { familyId_userId: { familyId, userId: assignToUserIdRaw } },
+        select: { userId: true },
+      })
+      if (!member) return jsonError('Ese usuario no pertenece a la familia', 403)
+      transactionUserId = member.userId
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: transactionUserId }, select: { name: true, email: true } })
+    const userName = user?.name || user?.email || ''
 
     // 1) Convertir a bytes (una sola vez) y subir a Spaces — guardamos en “inbox” por familia
     const parts = await Promise.all(
@@ -126,10 +140,17 @@ export async function POST(req: NextRequest) {
       return jsonError('No se pudo leer el total del ticket. Reintenta con fotos más nítidas o registra el gasto sin comprobante.', 400)
     }
 
-    const receiptDate = parseDateOnly(extraction?.date || null)
+    // C5: validar fecha de extracción — si es futura o >12 meses, usar hoy
+    let receiptDate = parseDateOnly(extraction?.date || null)
+    const now = new Date()
+    const twelveMonthsAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate())
+    if (receiptDate) {
+      if (receiptDate > now) receiptDate = now
+      else if (receiptDate < twelveMonthsAgo) receiptDate = now
+    }
     const txDate = receiptDate || new Date()
 
-    // 4) Elegir asignación (cuenta)
+    // 4) Elegir asignación (cuenta); si el gasto es para otro usuario, preferir partidas de sus entidades
     let allocationId = allocationIdOverride
     if (allocationId) {
       const alloc = await prisma.entityBudgetAllocation.findUnique({ where: { id: allocationId }, select: { id: true, familyId: true, isActive: true } })
@@ -137,29 +158,64 @@ export async function POST(req: NextRequest) {
       if (alloc.familyId !== familyId) return jsonError('No tienes acceso a esa asignación', 403)
       if (!alloc.isActive) return jsonError('Esa asignación está inactiva', 409)
     } else {
-      const allocs = await prisma.entityBudgetAllocation.findMany({
+      let allocs = await prisma.entityBudgetAllocation.findMany({
         where: { familyId, isActive: true, entity: { isActive: true, participatesInBudget: true }, category: { isActive: true } },
         select: {
           id: true,
+          entityId: true,
           monthlyLimit: true,
           entity: { select: { id: true, name: true, type: true } },
           category: { select: { id: true, name: true, type: true } },
         },
         orderBy: { createdAt: 'asc' },
       })
+      if (transactionUserId !== userId) {
+        const ownedEntityIds = await prisma.budgetEntityOwner.findMany({
+          where: { familyId, userId: transactionUserId },
+          select: { entityId: true },
+        }).then((r) => r.map((x) => x.entityId))
+        const forUser = allocs.filter((a) => ownedEntityIds.includes(a.entityId))
+        if (forUser.length) allocs = forUser
+      }
       if (!allocs.length) return jsonError('No hay asignaciones activas. Ve a Presupuesto y configura montos.', 409)
 
-      const hint = inferCategoryHint({ merchantName: extraction?.merchantName || null, rawText: extraction?.rawText || null })
-      let best = allocs[0]!
-      let bestScore = scoreAllocation({ allocation: best, hint, userName })
-      for (const a of allocs) {
-        const s = scoreAllocation({ allocation: a, hint, userName })
-        if (s > bestScore) {
-          best = a
-          bestScore = s
-        }
+      const merchantName = extraction?.merchantName || null
+      const rawText = extraction?.rawText || null
+      let categoryHintFromPreference: string | null = null
+      if (merchantName && merchantName.trim().length >= 2) {
+        const key = normalizeText(merchantName).slice(0, 80)
+        const pref = await prisma.familyCategoryPreference.findUnique({
+          where: { familyId_preferenceKey: { familyId, preferenceKey: key } },
+          select: { category: { select: { name: true } } },
+        })
+        if (pref?.category?.name) categoryHintFromPreference = pref.category.name
       }
-      allocationId = best.id
+      const allocationOptions: AllocationOption[] = allocs.map((a) => ({
+        id: a.id,
+        entityName: a.entity?.name ?? '',
+        categoryName: a.category?.name ?? '',
+      }))
+      const suggestedId = await suggestAllocationForReceipt(
+        merchantName ?? '',
+        rawText ?? '',
+        allocationOptions,
+        categoryHintFromPreference,
+      )
+      if (suggestedId) {
+        allocationId = suggestedId
+      } else {
+        const hint = inferCategoryHint({ merchantName, rawText })
+        let best = allocs[0]!
+        let bestScore = scoreAllocation({ allocation: best, hint, userName })
+        for (const a of allocs) {
+          const s = scoreAllocation({ allocation: a, hint, userName })
+          if (s > bestScore) {
+            best = a
+            bestScore = s
+          }
+        }
+        allocationId = best.id
+      }
     }
 
     const amountStr = asDecimalString(total, 2)
@@ -168,23 +224,48 @@ export async function POST(req: NextRequest) {
 
     const description = extraction?.merchantName ? String(extraction.merchantName).trim() : 'Gasto con comprobante'
 
+    const duplicateBeforeCreate = await findPossibleDuplicate(prisma, familyId, {
+      amount: Number(total),
+      date: txDate,
+      descriptionOrMerchant: description || null,
+      excludeTransactionId: undefined,
+    })
+    if (duplicateBeforeCreate && !forceDuplicate) {
+      return NextResponse.json(
+        {
+          ok: false,
+          code: 'POSSIBLE_DUPLICATE',
+          message: 'Posible duplicado. Elige descartar o registrar de todos modos.',
+          duplicateWarning: {
+            transactionId: duplicateBeforeCreate.transactionId,
+            date: duplicateBeforeCreate.date,
+            description: duplicateBeforeCreate.description,
+            amount: duplicateBeforeCreate.amount,
+          },
+        },
+        { status: 409 }
+      )
+    }
+
     const created = await prisma.$transaction(async (tx) => {
+      const registrationCode = await generateRegistrationCode(tx as PrismaLike, familyId, 'E')
       const t = await tx.transaction.create({
         data: {
           familyId,
-          userId,
+          userId: transactionUserId,
           allocationId,
           amount: amountStr || String(total),
           date: txDate,
           description,
+          registrationCode,
         },
-        select: { id: true },
+        select: { id: true, registrationCode: true },
       })
 
       const receipt = await tx.receipt.create({
         data: {
           transactionId: t.id,
-          userId,
+          userId: transactionUserId,
           familyId,
           fileUrl: coverUrl,
           images: {
@@ -194,11 +275,18 @@ export async function POST(req: NextRequest) {
         select: { id: true },
       })
 
+      const consumptionPeriodStart = extraction?.consumptionPeriodStart
+        ? parseDateOnly(String(extraction.consumptionPeriodStart))
+        : null
+      const consumptionPeriodEnd = extraction?.consumptionPeriodEnd
+        ? parseDateOnly(String(extraction.consumptionPeriodEnd))
+        : null
+
       const ext = await tx.receiptExtraction.create({
         data: {
           receiptId: receipt.id,
           familyId,
-          userId,
+          userId: transactionUserId,
           merchantName: extraction?.merchantName || null,
           receiptDate,
           total: amountStr,
@@ -208,6 +296,14 @@ export async function POST(req: NextRequest) {
           rawText: extraction?.rawText || null,
           rawJson: JSON.stringify(extraction?.raw || {}),
           metaJson: JSON.stringify(extraction?.meta || {}),
+          receiptType: extraction?.receiptType ?? null,
+          consumptionQuantity:
+            extraction?.consumptionQuantity != null && Number.isFinite(Number(extraction.consumptionQuantity))
+              ? String(extraction.consumptionQuantity)
+              : null,
+          consumptionUnit: extraction?.consumptionUnit ?? null,
+          consumptionPeriodStart,
+          consumptionPeriodEnd,
         },
         select: { id: true },
       })
@@ -226,11 +322,19 @@ export async function POST(req: NextRequest) {
             isPlaceholder: !!it?.isPlaceholder,
             lineType: it?.lineType ? String(it.lineType) : null,
             notesJson: JSON.stringify(it?.notes || {}),
+            quantityUnit: it?.quantityUnit ? String(it.quantityUnit) : null,
           })),
         })
       }
 
-      return { transactionId: t.id, receiptId: receipt.id }
+      return { transactionId: t.id, receiptId: receipt.id, registrationCode: t.registrationCode }
+    })
+
+    const duplicateWarning = await findPossibleDuplicate(prisma, familyId, {
+      amount: Number(total),
+      date: txDate,
+      descriptionOrMerchant: description || null,
+      excludeTransactionId: created.transactionId,
     })
 
     return NextResponse.json(
@@ -238,7 +342,9 @@ export async function POST(req: NextRequest) {
         ok: true,
         transactionId: created.transactionId,
         receiptId: created.receiptId,
+        registrationCode: created.registrationCode ?? null,
         message: 'Gasto agregado con comprobante. Ticket extraído correctamente.',
+        ...(duplicateWarning && { duplicateWarning }),
       },
       { status: 201 }
     )

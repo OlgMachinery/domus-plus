@@ -1,5 +1,7 @@
 import { createBrowserClient } from '@supabase/ssr'
 
+// IMPORTANTE: En el cliente solo se usa la anon key (pública). NUNCA uses
+// SUPABASE_SERVICE_ROLE_KEY aquí: expondría permisos totales y el login puede fallar.
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY || ''
 

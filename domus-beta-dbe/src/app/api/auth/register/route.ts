@@ -16,10 +16,12 @@ export async function POST(req: NextRequest) {
     const password = typeof body.password === 'string' ? body.password : ''
     const name = typeof body.name === 'string' ? body.name.trim() : null
     const phone = typeof body.phone === 'string' ? body.phone.trim() : null
+    const city = typeof body.city === 'string' ? body.city.trim() || null : null
     const familyNameInput = typeof body.familyName === 'string' ? body.familyName.trim() : ''
 
     if (!email || !email.includes('@') || !password) return jsonError('Email y contraseña son requeridos', 400)
     if (password.length < 6) return jsonError('La contraseña debe tener al menos 6 caracteres', 400)
+    if (!phone || phone.length < 10) return jsonError('Teléfono requerido (mínimo 10 dígitos) para comprobantes por WhatsApp', 400)
 
     const passwordHash = await hashPassword(password)
 
@@ -34,6 +36,7 @@ export async function POST(req: NextRequest) {
           passwordHash,
           name,
           phone,
+          city,
         },
         select: { id: true, email: true, name: true },
       })

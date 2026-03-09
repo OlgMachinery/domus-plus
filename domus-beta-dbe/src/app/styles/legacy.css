@@ -1,0 +1,416 @@
+/**
+ * Legacy / feature-specific: org tree, toasts, tx split, system-architecture diagram.
+ * Class names kept for backward compatibility.
+ */
+
+.orgCard {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-24);
+  overflow: auto;
+  box-shadow: var(--sap-shadow-sm);
+}
+
+.orgTree {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-16);
+}
+
+.orgRowCenter {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.orgRowCenter::after {
+  content: '';
+  position: absolute;
+  bottom: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 12px;
+  background: rgba(15, 23, 42, 0.14);
+}
+
+.orgBridge {
+  position: relative;
+  width: 100%;
+  max-width: 920px;
+  height: 24px;
+}
+
+.orgBridge::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 12%;
+  right: 12%;
+  height: 2px;
+  background: rgba(15, 23, 42, 0.14);
+}
+
+.orgBridgeTap {
+  position: absolute;
+  top: 10px;
+  width: 2px;
+  height: 14px;
+  background: rgba(15, 23, 42, 0.14);
+}
+
+.orgBranches {
+  width: 100%;
+  max-width: 1020px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--space-24);
+}
+
+.orgBranch {
+  position: relative;
+  padding-top: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.orgBranch::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 8px;
+  background: rgba(15, 23, 42, 0.14);
+}
+
+.orgBranchTitle {
+  text-align: center;
+  font-size: var(--font-label);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(15, 23, 42, 0.55);
+}
+
+.orgRowWrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-12);
+  justify-content: center;
+}
+
+.orgNode {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-12);
+  padding: var(--space-12) var(--space-16);
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  border-radius: var(--radius);
+  background: #ffffff;
+  box-shadow: var(--sap-shadow-sm);
+  min-width: 160px;
+}
+
+.orgNodeMain {
+  background: linear-gradient(135deg, #111827, #1f2937);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.orgNodeCircle,
+.orgNodeSquare {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  color: #fff;
+}
+
+.orgNodeCircle {
+  border-radius: 999px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+
+.orgNodeSquare {
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, #111827, #1f2937);
+}
+
+.orgTag {
+  font-size: var(--font-label);
+  font-weight: 700;
+  padding: var(--space-8);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.06);
+  color: #0f172a;
+}
+
+.orgLabel {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.orgLabel .name {
+  font-weight: 800;
+}
+
+.orgLabel .muted {
+  font-size: var(--font-label);
+}
+
+/* Toasts */
+.toast {
+  position: fixed;
+  top: 68px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 80;
+  padding: var(--space-12) var(--space-16);
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  font-weight: 600;
+  font-size: var(--font-body);
+  box-shadow: var(--sap-shadow-md);
+  max-width: min(860px, calc(100% - var(--space-24)));
+  text-align: center;
+  animation: toastIn 160ms ease-out;
+}
+
+@media (max-width: 768px) {
+  .toast {
+    top: max(12px, env(safe-area-inset-top));
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: none;
+    transform: none;
+    border-radius: 14px;
+    padding: 12px 16px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+  }
+  .toastOk { background: rgba(11, 169, 91, 0.92); color: #fff; border-color: rgba(255,255,255,0.2); }
+  .toastWarn { background: rgba(245, 158, 11, 0.92); color: #fff; border-color: rgba(255,255,255,0.2); }
+  .toastError { background: rgba(220, 38, 38, 0.92); color: #fff; border-color: rgba(255,255,255,0.2); }
+  .toastInfo { background: rgba(47, 111, 237, 0.92); color: #fff; border-color: rgba(255,255,255,0.2); }
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  @keyframes toastIn {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+.toastOk {
+  background: rgba(11, 169, 91, 0.16);
+  border-color: rgba(11, 169, 91, 0.35);
+  color: #14532d;
+}
+.toastWarn {
+  background: rgba(245, 158, 11, 0.18);
+  border-color: rgba(245, 158, 11, 0.38);
+  color: #92400e;
+}
+.toastError {
+  background: rgba(220, 38, 38, 0.16);
+  border-color: rgba(220, 38, 38, 0.32);
+  color: #991b1b;
+}
+.toastInfo {
+  background: rgba(47, 111, 237, 0.14);
+  border-color: rgba(47, 111, 237, 0.32);
+  color: #0f3d91;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes pulseSoft {
+  0% {
+    box-shadow: 0 0 0 0 rgba(11, 169, 91, 0.25);
+  }
+  70% {
+    box-shadow: 0 0 0 12px rgba(11, 169, 91, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(11, 169, 91, 0);
+  }
+}
+
+.pulseAction {
+  animation: pulseSoft 1.55s ease-out infinite;
+}
+
+/* Transaction detail: header with Volver + Anterior/Siguiente */
+.txDetailView {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+.txDetailHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+}
+.txDetailBack {
+  font-weight: 700;
+}
+.txDetailNav {
+  display: flex;
+  gap: var(--space-8);
+}
+@media (max-width: 768px) {
+  .txDetailAdjust {
+    display: none;
+  }
+  .txDetailView .chartBox {
+    padding-top: var(--space-8);
+  }
+}
+
+/* Transaction split view */
+.txSplitGrid {
+  display: grid;
+  gap: var(--space-16);
+  align-items: start;
+  grid-template-columns: var(--split-left, 50%) 12px 1fr;
+}
+@media (max-width: 920px) {
+  .txSplitGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.txSplitHandle {
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.03);
+  cursor: col-resize;
+  position: relative;
+  user-select: none;
+  touch-action: none;
+}
+.txSplitHandle::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: rgba(15, 61, 145, 0.25);
+}
+.txSplitHandle:hover {
+  background: rgba(15, 23, 42, 0.06);
+}
+@media (max-width: 920px) {
+  .txSplitHandle {
+    display: none;
+  }
+}
+
+.txSplitToolbar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.txSplitRange {
+  width: 180px;
+  accent-color: rgba(15, 61, 145, 0.95);
+}
+
+/* Vista sistema/arquitectura: barra de controles y panel zoom visibles */
+.system-arch-page .system-arch-desktop-toolbar {
+  display: none !important;
+}
+.system-arch-page .system-arch-mobile-toolbar {
+  display: flex !important;
+}
+.system-arch-page .system-arch-panel-zoom {
+  display: flex !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+.system-arch-page .system-arch-opciones-avanzadas {
+  display: block !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+#diagram-wrap {
+  overflow: hidden !important;
+  width: 100% !important;
+  height: 100% !important;
+  position: absolute !important;
+  inset: 0 !important;
+}
+#diagram-wrap .react-flow,
+#diagram-wrap .react-flow__renderer,
+#diagram-wrap .react-flow__viewport,
+#diagram-wrap .react-flow__pane {
+  width: 100% !important;
+  height: 100% !important;
+  overflow: visible !important;
+}
+#diagram-wrap,
+.diagram-canvas {
+  border: none !important;
+  box-shadow: var(--shadow-sm) !important;
+  outline: none !important;
+}
+#diagram-wrap * {
+  outline: none !important;
+}
+#diagram-wrap:focus,
+#diagram-wrap .react-flow__pane:focus,
+#diagram-wrap .react-flow__pane,
+#diagram-wrap .react-flow,
+#diagram-wrap .react-flow__renderer {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}

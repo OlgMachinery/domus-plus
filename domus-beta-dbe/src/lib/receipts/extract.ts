@@ -21,6 +21,7 @@ export type ReceiptExtractionNormalized = {
     isPlaceholder: boolean
     lineType: string | null
     notes: Record<string, any>
+    quantityUnit: string | null // "g", "kg", "L", "ml", "unidades"
   }>
   rawText: string | null
   meta: Record<string, any>
@@ -28,6 +29,12 @@ export type ReceiptExtractionNormalized = {
     itemsParts: OpenAiJson[]
     totalsParts: OpenAiJson[]
   }
+  // Consumo (recibos luz/agua)
+  receiptType?: string | null
+  consumptionQuantity?: number | null
+  consumptionUnit?: string | null
+  consumptionPeriodStart?: string | null // ISO date
+  consumptionPeriodEnd?: string | null
 }
 
 const PROMPT_ITEMS = `MODO EXTRACCIÓN FISCAL UNIVERSAL (tickets, facturas, recibos) — ITEMS.
@@ -214,6 +221,75 @@ function toCents(value: unknown): number {
 
 function parseFloatSafe(value: unknown): number {
   return toCents(value) / 100
+}
+
+/** Parsea cantidad + unidad en una línea (ej. "500G", "1.5 L", "2 KG") para reportes de consumo. */
+function parseQuantityUnitFromLine(line: string): { quantity: number; unit: string } | null {
+  const s = String(line || '').trim()
+  if (!s) return null
+  // Patrones: 500G, 500 G, 1.5L, 1.5 L, 2KG, 2.5 KG, 750 ML, 1 UNIDAD
+  const m = s.match(
+    /(\d+(?:[.,]\d+)?)\s*(G|GR|GRAMOS?|KG|KILOS?|KGS?|L|LT|LITROS?|ML|MILILITROS?|UNIDADES?|UN|PZAS?|PIEZAS?)/i
+  )
+  if (!m) return null
+  let q = (m[1] || '').replace(',', '.')
+  const num = Number(q)
+  if (!Number.isFinite(num) || num <= 0) return null
+  const u = (m[2] || '').toUpperCase()
+  let unit = 'unidades'
+  if (/^G(RAMOS?)?$/i.test(u)) unit = 'g'
+  else if (/^K(G|ILOS?|GS?)?$/i.test(u)) unit = 'kg'
+  else if (/^L(T|ITROS?)?$/i.test(u) && !/^ML/i.test(u)) unit = 'L'
+  else if (/^M(L|ILILITROS?)?$/i.test(u)) unit = 'ml'
+  else if (/UN(IDADES?)?$|PZAS?|PIEZAS?/i.test(u)) unit = 'unidades'
+  return { quantity: num, unit }
+}
+
+/** Detecta recibo de servicio (luz/agua) y extrae consumo y periodo desde rawText. */
+function parseConsumptionFromRawText(rawText: string | null): {
+  receiptType: 'utility'
+  consumptionQuantity: number
+  consumptionUnit: string
+  periodStart: string | null
+  periodEnd: string | null
+} | null {
+  const text = String(rawText || '').toUpperCase()
+  if (!text) return null
+  const isLuz = /CFE|ELECTRICIDAD|KWH|KW\.?H|ENERG[IÍ]A|LECTURA|CONSUMO\s*KWH/i.test(text)
+  const isAgua = /AGUA|M3|M³|METROS?\s*C[UÚ]BICOS|CONSUMO\s*M3|LECTURA/i.test(text)
+  if (!isLuz && !isAgua) return null
+
+  let consumptionQuantity = 0
+  let consumptionUnit = 'kWh'
+  if (isLuz) {
+    const kwhMatch = text.match(/(\d+(?:[.,]\d+)?)\s*K\.?W\.?H/i) || text.match(/CONSUMO[:\s]*(\d+(?:[.,]\d+)?)/i)
+    if (kwhMatch) {
+      consumptionQuantity = Number((kwhMatch[1] || '').replace(',', '.'))
+      consumptionUnit = 'kWh'
+    }
+  }
+  if (isAgua && consumptionQuantity === 0) {
+    const m3Match = text.match(/(\d+(?:[.,]\d+)?)\s*M\.?3/i) || text.match(/(\d+(?:[.,]\d+)?)\s*M³/i) || text.match(/CONSUMO[:\s]*(\d+(?:[.,]\d+)?)/i)
+    if (m3Match) {
+      consumptionQuantity = Number((m3Match[1] || '').replace(',', '.'))
+      consumptionUnit = 'm3'
+    }
+  }
+  if (consumptionQuantity <= 0) return null
+
+  // Periodo: buscar fechas tipo "01/ENE/2025 - 28/ENE/2025" o "PERIODO 01-01-2025 31-01-2025"
+  let periodStart: string | null = null
+  let periodEnd: string | null = null
+  const periodMatch = text.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})[^\d]*(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/)
+  const dateChunk = periodMatch ? periodMatch.slice(1) : null
+  if (dateChunk && dateChunk.length >= 6) {
+    const d1 = [dateChunk[0], dateChunk[1], dateChunk[2].length === 2 ? `20${dateChunk[2]}` : dateChunk[2]]
+    const d2 = [dateChunk[3], dateChunk[4], dateChunk[5].length === 2 ? `20${dateChunk[5]}` : dateChunk[5]]
+    periodStart = `${d1[2]}-${d1[1]!.padStart(2, '0')}-${d1[0]!.padStart(2, '0')}`
+    periodEnd = `${d2[2]}-${d2[1]!.padStart(2, '0')}-${d2[0]!.padStart(2, '0')}`
+  }
+
+  return { receiptType: 'utility', consumptionQuantity, consumptionUnit, periodStart, periodEnd }
 }
 
 function normalizeForMatch(text: string): string {
@@ -1177,6 +1253,7 @@ async function extractReceiptFromImagesInternal(args: {
     const qtyVal = quantityRaw && quantityRaw.toLowerCase() !== 'no legible' ? parseFloatSafe(quantityRaw) : null
     const unitPriceVal = unitPriceRaw && unitPriceRaw.toLowerCase() !== 'no legible' ? parseFloatSafe(unitPriceRaw) : null
 
+    const parsedUnit = parseQuantityUnitFromLine(rawLine || '')
     return {
       lineNumber: idx + 1,
       description: rawLine || 'no legible',
@@ -1199,6 +1276,7 @@ async function extractReceiptFromImagesInternal(args: {
         placeholder_idx: isPlaceholder ? it?._placeholder_idx ?? null : null,
         placeholder_total: isPlaceholder ? it?._placeholder_total ?? null : null,
       },
+      quantityUnit: parsedUnit ? parsedUnit.unit : null,
     }
   })
 
@@ -1206,6 +1284,8 @@ async function extractReceiptFromImagesInternal(args: {
     .map((i) => i.rawLine)
     .filter(Boolean)
     .join('\n')
+
+  const consumption = parseConsumptionFromRawText(rawText || null)
 
   return {
     merchantName: firstMerchant || null,
@@ -1217,6 +1297,11 @@ async function extractReceiptFromImagesInternal(args: {
     tip: null,
     items,
     rawText: rawText || null,
+    receiptType: consumption ? 'utility' : 'retail',
+    consumptionQuantity: consumption?.consumptionQuantity ?? null,
+    consumptionUnit: consumption?.consumptionUnit ?? null,
+    consumptionPeriodStart: consumption?.periodStart ?? null,
+    consumptionPeriodEnd: consumption?.periodEnd ?? null,
     meta: {
       images_count: images.length,
       totals_photos: totalsRaws.length,

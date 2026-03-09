@@ -55,6 +55,16 @@ export type Family = Prisma.FamilyModel
  */
 export type FamilyMember = Prisma.FamilyMemberModel
 /**
+ * Model FamilyInvite
+ * 
+ */
+export type FamilyInvite = Prisma.FamilyInviteModel
+/**
+ * Model PasswordResetToken
+ * 
+ */
+export type PasswordResetToken = Prisma.PasswordResetTokenModel
+/**
  * Model BudgetEntity
  * 
  */
@@ -70,10 +80,30 @@ export type BudgetEntityOwner = Prisma.BudgetEntityOwnerModel
  */
 export type BudgetCategory = Prisma.BudgetCategoryModel
 /**
+ * Model FamilyCategoryPreference
+ * 
+ */
+export type FamilyCategoryPreference = Prisma.FamilyCategoryPreferenceModel
+/**
  * Model EntityBudgetAllocation
  * 
  */
 export type EntityBudgetAllocation = Prisma.EntityBudgetAllocationModel
+/**
+ * Model CategorySuggestion
+ * 
+ */
+export type CategorySuggestion = Prisma.CategorySuggestionModel
+/**
+ * Model BudgetAdjustmentSuggestion
+ * 
+ */
+export type BudgetAdjustmentSuggestion = Prisma.BudgetAdjustmentSuggestionModel
+/**
+ * Model UserBudgetSubdivision
+ * 
+ */
+export type UserBudgetSubdivision = Prisma.UserBudgetSubdivisionModel
 /**
  * Model Transaction
  * 
@@ -99,6 +129,21 @@ export type ReceiptExtraction = Prisma.ReceiptExtractionModel
  * 
  */
 export type ReceiptExtractionItem = Prisma.ReceiptExtractionItemModel
+/**
+ * Model MoneyRequest
+ * 
+ */
+export type MoneyRequest = Prisma.MoneyRequestModel
+/**
+ * Model FamilyCalendarEvent
+ * 
+ */
+export type FamilyCalendarEvent = Prisma.FamilyCalendarEventModel
+/**
+ * Model ReceiptConfirmationMessage
+ * 
+ */
+export type ReceiptConfirmationMessage = Prisma.ReceiptConfirmationMessageModel
 /**
  * Model DeletionArchive
  * 

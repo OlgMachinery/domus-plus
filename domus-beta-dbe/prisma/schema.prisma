@@ -28,6 +28,8 @@ model User {
   passwordHash String  @map("password_hash")
   name         String?
   phone        String?
+  city         String?
+  avatarUrl    String?  @map("avatar_url")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -39,6 +41,10 @@ model User {
   receiptExtractionsConfirmed ReceiptExtraction[] @relation("ReceiptExtractionConfirmedBy")
   deletionArchivesCreated DeletionArchive[] @relation("DeletionArchiveCreatedBy")
   deletionArchivesDeleted DeletionArchive[] @relation("DeletionArchiveDeletedBy")
+  moneyRequestsCreated MoneyRequest[] @relation("MoneyRequestCreatedBy")
+  moneyRequestsApproved MoneyRequest[] @relation("MoneyRequestApprovedBy")
+  moneyRequestsRejected MoneyRequest[] @relation("MoneyRequestRejectedBy")
+  passwordResetTokens PasswordResetToken[]
 }
 
 model Family {
@@ -60,6 +66,13 @@ model Family {
   transactions      Transaction[]
   receipts          Receipt[]
   receiptExtractions ReceiptExtraction[]
+  moneyRequests    MoneyRequest[]
+  categorySuggestions CategorySuggestion[]
+  categoryPreferences FamilyCategoryPreference[]
+  budgetAdjustmentSuggestions BudgetAdjustmentSuggestion[]
+  userBudgetSubdivisions UserBudgetSubdivision[]
+  calendarEvents FamilyCalendarEvent[]
+  invites FamilyInvite[]
 }
 
 model FamilyMember {
@@ -77,6 +90,29 @@ model FamilyMember {
   @@map("family_members")
 }
 
+model FamilyInvite {
+  id        String   @id @default(uuid())
+  familyId  String   @map("family_id")
+  code      String   @unique
+  expiresAt DateTime? @map("expires_at")
+  createdByUserId String? @map("created_by_user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  @@map("family_invites")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("password_reset_tokens")
+}
+
 model BudgetEntity {
   id        String   @id @default(uuid())
   familyId  String   @map("family_id")
@@ -92,6 +128,7 @@ model BudgetEntity {
   family      Family                   @relation(fields: [familyId], references: [id], onDelete: Cascade)
   allocations EntityBudgetAllocation[]
   owners      BudgetEntityOwner[]
+  moneyRequestsFor MoneyRequest[]
 
   @@map("budget_entities")
 }
@@ -122,10 +159,25 @@ model BudgetCategory {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  family      Family                   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  family      Family                     @relation(fields: [familyId], references: [id], onDelete: Cascade)
   allocations EntityBudgetAllocation[]
+  preferences FamilyCategoryPreference[]
 
   @@map("budget_categories")
+}
+
+model FamilyCategoryPreference {
+  id          String   @id @default(uuid())
+  familyId    String   @map("family_id")
+  categoryId  String   @map("category_id")
+  preferenceKey String @map("preference_key") // comercio o concepto normalizado (ej. "farmacias del ahorro")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  family   Family         @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  category BudgetCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([familyId, preferenceKey])
+  @@map("family_category_preferences")
 }
 
 model EntityBudgetAllocation {
@@ -142,26 +194,77 @@ model EntityBudgetAllocation {
   entity   BudgetEntity  @relation(fields: [entityId], references: [id], onDelete: Cascade)
   category BudgetCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   transactions Transaction[]
+  moneyRequests MoneyRequest[]
 
   @@map("entity_budget_allocations")
 }
 
+model CategorySuggestion {
+  id                  String    @id @default(uuid())
+  familyId            String    @map("family_id")
+  suggestedName       String    @map("suggested_name")
+  exampleMerchant     String?   @map("example_merchant")
+  status              String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  outboundMessageSid  String?   @map("outbound_message_sid")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  resolvedAt          DateTime? @map("resolved_at")
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@map("category_suggestions")
+}
+
+model BudgetAdjustmentSuggestion {
+  id          String   @id @default(uuid())
+  familyId    String   @map("family_id")
+  userId      String   @map("user_id")
+  type        String   // SUBDIVIDE_CATEGORY | CHANGE_LIMIT | NEW_CATEGORY | OTHER
+  payload     String   // JSON: { categoryId?, categoryName?, allocationId?, newLimit?, suggestedName?, text? }
+  status      String   @default("PENDING") // PENDING | APPROVED | REJECTED
+  resolvedAt  DateTime? @map("resolved_at")
+  resolvedBy  String?  @map("resolved_by") // userId of admin who resolved
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@map("budget_adjustment_suggestions")
+}
+
+model UserBudgetSubdivision {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  familyId      String   @map("family_id")
+  allocationId  String   @map("allocation_id")
+  name          String
+  sortOrder     Int      @default(0) @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, familyId, allocationId, name])
+  @@map("user_budget_subdivisions")
+}
+
 model Transaction {
-  id           String   @id @default(uuid())
-  familyId     String   @map("family_id")
-  userId       String   @map("user_id")
-  allocationId String   @map("allocation_id")
-  amount       Decimal
-  date         DateTime
-  description  String?
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id               String   @id @default(uuid())
+  familyId         String   @map("family_id")
+  userId           String   @map("user_id")
+  allocationId     String   @map("allocation_id")
+  amount           Decimal
+  date             DateTime
+  description      String?
+  registrationCode String?  @map("registration_code")   // E-XXXX egreso, I-XXXX ingreso; único por familia
+  pendingReason    String?  @map("pending_reason")       // "categoría" | "usuario" | "categoría y usuario" cuando no hubo asignación clara
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   family     Family                 @relation(fields: [familyId], references: [id], onDelete: Cascade)
   user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   allocation EntityBudgetAllocation @relation(fields: [allocationId], references: [id], onDelete: Restrict)
   receipts   Receipt[]
+  moneyRequest MoneyRequest?
 
+  @@unique([familyId, registrationCode])
   @@map("transactions")
 }
 
@@ -216,6 +319,13 @@ model ReceiptExtraction {
   rawJson      String?  @map("raw_json")
   metaJson     String?  @map("meta_json")
 
+  // Consumo (recibos de luz/agua): tipo, cantidad, unidad, periodo
+  receiptType           String?   @map("receipt_type")   // "utility" | "retail"
+  consumptionQuantity   Decimal?  @map("consumption_quantity")
+  consumptionUnit       String?   @map("consumption_unit")   // "kWh", "m3", etc.
+  consumptionPeriodStart DateTime? @map("consumption_period_start")
+  consumptionPeriodEnd   DateTime? @map("consumption_period_end")
+
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -244,6 +354,7 @@ model ReceiptExtractionItem {
   isPlaceholder Boolean @default(false) @map("is_placeholder")
   lineType     String?  @map("line_type")
   notesJson    String?  @map("notes_json")
+  quantityUnit String?  @map("quantity_unit")   // "g", "kg", "L", "ml", "unidades"
 
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
@@ -252,6 +363,71 @@ model ReceiptExtractionItem {
 
   @@unique([extractionId, lineNumber])
   @@map("receipt_extraction_items")
+}
+
+// Solicitud de efectivo (flujo app + WhatsApp).
+model MoneyRequest {
+  id                  String    @id @default(uuid())
+  familyId            String    @map("family_id")
+  createdByUserId     String    @map("created_by_user_id")
+  requestedAt         DateTime  @default(now()) @map("requested_at")
+  forEntityId         String?   @map("for_entity_id")
+  forName             String?   @map("for_name")
+  allocationId        String?   @map("allocation_id")
+  date                DateTime  @map("date")
+  reason              String    @map("reason")
+  amount              Decimal   @map("amount")
+  currency            String    @default("MXN") @map("currency")
+  status              String    @map("status")   // PENDING | APPROVED | REJECTED | DELIVERED
+  transactionId       String?   @unique @map("transaction_id")
+  registrationCode    String?   @map("registration_code")   // S-XXXX único por familia
+  outboundMessageSid  String?   @map("outbound_message_sid")
+  approvedAt          DateTime? @map("approved_at")
+  approvedByUserId    String?   @map("approved_by_user_id")
+  rejectedAt          DateTime? @map("rejected_at")
+  rejectedByUserId    String?   @map("rejected_by_user_id")
+  deliveredAt         DateTime? @map("delivered_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  family       Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  createdBy    User          @relation("MoneyRequestCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
+  forEntity    BudgetEntity? @relation(fields: [forEntityId], references: [id], onDelete: SetNull)
+  allocation   EntityBudgetAllocation? @relation(fields: [allocationId], references: [id], onDelete: SetNull)
+  transaction  Transaction?  @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  approvedBy   User?         @relation("MoneyRequestApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
+  rejectedBy   User?         @relation("MoneyRequestRejectedBy", fields: [rejectedByUserId], references: [id], onDelete: SetNull)
+
+  lastReminderAt   DateTime? @map("last_reminder_at")
+  @@unique([familyId, registrationCode])
+  @@map("money_requests")
+}
+
+// Eventos de calendario no financieros (cumpleaños, recordatorios, vacaciones, etc.).
+model FamilyCalendarEvent {
+  id          String   @id @default(uuid())
+  familyId    String   @map("family_id")
+  title       String
+  eventDate   DateTime @map("event_date")
+  type        String   @default("custom") // birthday | appointment | reminder | vacation | custom
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@map("family_calendar_events")
+}
+
+// SID del mensaje WhatsApp de confirmación de recibo (para vincular respuestas "es para Sofía").
+model ReceiptConfirmationMessage {
+  id            String   @id @default(uuid())
+  messageSid    String   @unique @map("message_sid")
+  transactionId String   @map("transaction_id")
+  familyId      String   @map("family_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("receipt_confirmation_messages")
 }
 
 // Respaldo oculto antes de eliminaciones (no se muestra en UI).

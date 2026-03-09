@@ -25,9 +25,22 @@ async function signIfSpaces(fileUrl: unknown) {
 
 export async function GET(req: NextRequest) {
   try {
-    const { familyId } = await requireMembership(req)
+    const { familyId, userId } = await requireMembership(req)
+    const mine = req.nextUrl.searchParams.get('mine') === '1'
+    const where: { familyId: string; id?: { in: string[] } } = { familyId }
+    if (mine) {
+      const owned = await prisma.budgetEntityOwner.findMany({
+        where: { familyId, userId },
+        select: { entityId: true },
+      })
+      const ids = owned.map((o) => o.entityId)
+      if (ids.length === 0) {
+        return NextResponse.json({ ok: true, entities: [] }, { status: 200 })
+      }
+      where.id = { in: ids }
+    }
     const entities = await prisma.budgetEntity.findMany({
-      where: { familyId },
+      where,
       select: {
         id: true,
         type: true,

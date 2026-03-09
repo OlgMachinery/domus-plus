@@ -53,6 +53,7 @@ export type ReceiptExtractionItemMinAggregateOutputType = {
   isPlaceholder: boolean | null
   lineType: string | null
   notesJson: string | null
+  quantityUnit: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -70,6 +71,7 @@ export type ReceiptExtractionItemMaxAggregateOutputType = {
   isPlaceholder: boolean | null
   lineType: string | null
   notesJson: string | null
+  quantityUnit: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -87,6 +89,7 @@ export type ReceiptExtractionItemCountAggregateOutputType = {
   isPlaceholder: number
   lineType: number
   notesJson: number
+  quantityUnit: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -120,6 +123,7 @@ export type ReceiptExtractionItemMinAggregateInputType = {
   isPlaceholder?: true
   lineType?: true
   notesJson?: true
+  quantityUnit?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -137,6 +141,7 @@ export type ReceiptExtractionItemMaxAggregateInputType = {
   isPlaceholder?: true
   lineType?: true
   notesJson?: true
+  quantityUnit?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -154,6 +159,7 @@ export type ReceiptExtractionItemCountAggregateInputType = {
   isPlaceholder?: true
   lineType?: true
   notesJson?: true
+  quantityUnit?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -258,6 +264,7 @@ export type ReceiptExtractionItemGroupByOutputType = {
   isPlaceholder: boolean
   lineType: string | null
   notesJson: string | null
+  quantityUnit: string | null
   createdAt: Date
   updatedAt: Date
   _count: ReceiptExtractionItemCountAggregateOutputType | null
@@ -298,6 +305,7 @@ export type ReceiptExtractionItemWhereInput = {
   isPlaceholder?: Prisma.BoolFilter<"ReceiptExtractionItem"> | boolean
   lineType?: Prisma.StringNullableFilter<"ReceiptExtractionItem"> | string | null
   notesJson?: Prisma.StringNullableFilter<"ReceiptExtractionItem"> | string | null
+  quantityUnit?: Prisma.StringNullableFilter<"ReceiptExtractionItem"> | string | null
   createdAt?: Prisma.DateTimeFilter<"ReceiptExtractionItem"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ReceiptExtractionItem"> | Date | string
   extraction?: Prisma.XOR<Prisma.ReceiptExtractionScalarRelationFilter, Prisma.ReceiptExtractionWhereInput>
@@ -316,6 +324,7 @@ export type ReceiptExtractionItemOrderByWithRelationInput = {
   isPlaceholder?: Prisma.SortOrder
   lineType?: Prisma.SortOrderInput | Prisma.SortOrder
   notesJson?: Prisma.SortOrderInput | Prisma.SortOrder
+  quantityUnit?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   extraction?: Prisma.ReceiptExtractionOrderByWithRelationInput
@@ -338,6 +347,7 @@ export type ReceiptExtractionItemWhereUniqueInput = Prisma.AtLeast<{
   isPlaceholder?: Prisma.BoolFilter<"ReceiptExtractionItem"> | boolean
   lineType?: Prisma.StringNullableFilter<"ReceiptExtractionItem"> | string | null
   notesJson?: Prisma.StringNullableFilter<"ReceiptExtractionItem"> | string | null
+  quantityUnit?: Prisma.StringNullableFilter<"ReceiptExtractionItem"> | string | null
   createdAt?: Prisma.DateTimeFilter<"ReceiptExtractionItem"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ReceiptExtractionItem"> | Date | string
   extraction?: Prisma.XOR<Prisma.ReceiptExtractionScalarRelationFilter, Prisma.ReceiptExtractionWhereInput>
@@ -356,6 +366,7 @@ export type ReceiptExtractionItemOrderByWithAggregationInput = {
   isPlaceholder?: Prisma.SortOrder
   lineType?: Prisma.SortOrderInput | Prisma.SortOrder
   notesJson?: Prisma.SortOrderInput | Prisma.SortOrder
+  quantityUnit?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.ReceiptExtractionItemCountOrderByAggregateInput
@@ -381,6 +392,7 @@ export type ReceiptExtractionItemScalarWhereWithAggregatesInput = {
   isPlaceholder?: Prisma.BoolWithAggregatesFilter<"ReceiptExtractionItem"> | boolean
   lineType?: Prisma.StringNullableWithAggregatesFilter<"ReceiptExtractionItem"> | string | null
   notesJson?: Prisma.StringNullableWithAggregatesFilter<"ReceiptExtractionItem"> | string | null
+  quantityUnit?: Prisma.StringNullableWithAggregatesFilter<"ReceiptExtractionItem"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"ReceiptExtractionItem"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"ReceiptExtractionItem"> | Date | string
 }
@@ -397,6 +409,7 @@ export type ReceiptExtractionItemCreateInput = {
   isPlaceholder?: boolean
   lineType?: string | null
   notesJson?: string | null
+  quantityUnit?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   extraction: Prisma.ReceiptExtractionCreateNestedOneWithoutItemsInput
@@ -415,6 +428,7 @@ export type ReceiptExtractionItemUncheckedCreateInput = {
   isPlaceholder?: boolean
   lineType?: string | null
   notesJson?: string | null
+  quantityUnit?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -431,6 +445,7 @@ export type ReceiptExtractionItemUpdateInput = {
   isPlaceholder?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lineType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notesJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  quantityUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   extraction?: Prisma.ReceiptExtractionUpdateOneRequiredWithoutItemsNestedInput
@@ -449,6 +464,7 @@ export type ReceiptExtractionItemUncheckedUpdateInput = {
   isPlaceholder?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lineType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notesJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  quantityUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -466,6 +482,7 @@ export type ReceiptExtractionItemCreateManyInput = {
   isPlaceholder?: boolean
   lineType?: string | null
   notesJson?: string | null
+  quantityUnit?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -482,6 +499,7 @@ export type ReceiptExtractionItemUpdateManyMutationInput = {
   isPlaceholder?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lineType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notesJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  quantityUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -499,6 +517,7 @@ export type ReceiptExtractionItemUncheckedUpdateManyInput = {
   isPlaceholder?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lineType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notesJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  quantityUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -531,6 +550,7 @@ export type ReceiptExtractionItemCountOrderByAggregateInput = {
   isPlaceholder?: Prisma.SortOrder
   lineType?: Prisma.SortOrder
   notesJson?: Prisma.SortOrder
+  quantityUnit?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -555,6 +575,7 @@ export type ReceiptExtractionItemMaxOrderByAggregateInput = {
   isPlaceholder?: Prisma.SortOrder
   lineType?: Prisma.SortOrder
   notesJson?: Prisma.SortOrder
+  quantityUnit?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -572,6 +593,7 @@ export type ReceiptExtractionItemMinOrderByAggregateInput = {
   isPlaceholder?: Prisma.SortOrder
   lineType?: Prisma.SortOrder
   notesJson?: Prisma.SortOrder
+  quantityUnit?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -637,6 +659,7 @@ export type ReceiptExtractionItemCreateWithoutExtractionInput = {
   isPlaceholder?: boolean
   lineType?: string | null
   notesJson?: string | null
+  quantityUnit?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -653,6 +676,7 @@ export type ReceiptExtractionItemUncheckedCreateWithoutExtractionInput = {
   isPlaceholder?: boolean
   lineType?: string | null
   notesJson?: string | null
+  quantityUnit?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -698,6 +722,7 @@ export type ReceiptExtractionItemScalarWhereInput = {
   isPlaceholder?: Prisma.BoolFilter<"ReceiptExtractionItem"> | boolean
   lineType?: Prisma.StringNullableFilter<"ReceiptExtractionItem"> | string | null
   notesJson?: Prisma.StringNullableFilter<"ReceiptExtractionItem"> | string | null
+  quantityUnit?: Prisma.StringNullableFilter<"ReceiptExtractionItem"> | string | null
   createdAt?: Prisma.DateTimeFilter<"ReceiptExtractionItem"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ReceiptExtractionItem"> | Date | string
 }
@@ -714,6 +739,7 @@ export type ReceiptExtractionItemCreateManyExtractionInput = {
   isPlaceholder?: boolean
   lineType?: string | null
   notesJson?: string | null
+  quantityUnit?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -730,6 +756,7 @@ export type ReceiptExtractionItemUpdateWithoutExtractionInput = {
   isPlaceholder?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lineType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notesJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  quantityUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -746,6 +773,7 @@ export type ReceiptExtractionItemUncheckedUpdateWithoutExtractionInput = {
   isPlaceholder?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lineType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notesJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  quantityUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -762,6 +790,7 @@ export type ReceiptExtractionItemUncheckedUpdateManyWithoutExtractionInput = {
   isPlaceholder?: Prisma.BoolFieldUpdateOperationsInput | boolean
   lineType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   notesJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  quantityUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -781,6 +810,7 @@ export type ReceiptExtractionItemSelect<ExtArgs extends runtime.Types.Extensions
   isPlaceholder?: boolean
   lineType?: boolean
   notesJson?: boolean
+  quantityUnit?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   extraction?: boolean | Prisma.ReceiptExtractionDefaultArgs<ExtArgs>
@@ -799,6 +829,7 @@ export type ReceiptExtractionItemSelectCreateManyAndReturn<ExtArgs extends runti
   isPlaceholder?: boolean
   lineType?: boolean
   notesJson?: boolean
+  quantityUnit?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   extraction?: boolean | Prisma.ReceiptExtractionDefaultArgs<ExtArgs>
@@ -817,6 +848,7 @@ export type ReceiptExtractionItemSelectUpdateManyAndReturn<ExtArgs extends runti
   isPlaceholder?: boolean
   lineType?: boolean
   notesJson?: boolean
+  quantityUnit?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   extraction?: boolean | Prisma.ReceiptExtractionDefaultArgs<ExtArgs>
@@ -835,11 +867,12 @@ export type ReceiptExtractionItemSelectScalar = {
   isPlaceholder?: boolean
   lineType?: boolean
   notesJson?: boolean
+  quantityUnit?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ReceiptExtractionItemOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "extractionId" | "lineNumber" | "description" | "rawLine" | "quantity" | "unitPrice" | "amount" | "isAdjustment" | "isPlaceholder" | "lineType" | "notesJson" | "createdAt" | "updatedAt", ExtArgs["result"]["receiptExtractionItem"]>
+export type ReceiptExtractionItemOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "extractionId" | "lineNumber" | "description" | "rawLine" | "quantity" | "unitPrice" | "amount" | "isAdjustment" | "isPlaceholder" | "lineType" | "notesJson" | "quantityUnit" | "createdAt" | "updatedAt", ExtArgs["result"]["receiptExtractionItem"]>
 export type ReceiptExtractionItemInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   extraction?: boolean | Prisma.ReceiptExtractionDefaultArgs<ExtArgs>
 }
@@ -868,6 +901,7 @@ export type $ReceiptExtractionItemPayload<ExtArgs extends runtime.Types.Extensio
     isPlaceholder: boolean
     lineType: string | null
     notesJson: string | null
+    quantityUnit: string | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["receiptExtractionItem"]>
@@ -1306,6 +1340,7 @@ export interface ReceiptExtractionItemFieldRefs {
   readonly isPlaceholder: Prisma.FieldRef<"ReceiptExtractionItem", 'Boolean'>
   readonly lineType: Prisma.FieldRef<"ReceiptExtractionItem", 'String'>
   readonly notesJson: Prisma.FieldRef<"ReceiptExtractionItem", 'String'>
+  readonly quantityUnit: Prisma.FieldRef<"ReceiptExtractionItem", 'String'>
   readonly createdAt: Prisma.FieldRef<"ReceiptExtractionItem", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"ReceiptExtractionItem", 'DateTime'>
 }

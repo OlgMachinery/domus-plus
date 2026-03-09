@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import type { User } from '@/lib/types'
 import { useTranslation, getLanguage, type Language } from '@/lib/i18n'
+import { getAuthHeaders } from '@/lib/auth'
 import AIAssistant from './AIAssistant'
 import { supabase } from '@/lib/supabase/client'
 import {
@@ -20,7 +21,8 @@ import {
   ChartBar,
   ListPlus,
   Scroll,
-  Users
+  Users,
+  Wrench
 } from '@phosphor-icons/react'
 
 interface SAPLayoutProps {
@@ -77,8 +79,25 @@ export default function SAPLayout({ children, user, title, subtitle, toolbar }: 
     }
   }, [mounted])
 
+  const [setupComplete, setSetupComplete] = useState<boolean | null>(null)
+  useEffect(() => {
+    if (!mounted || !user?.is_family_admin || pathname === '/setup') return
+    let cancelled = false
+    getAuthHeaders().then((headers) => {
+      if (cancelled) return
+      return fetch('/api/setup/status', { credentials: 'include', headers: headers as HeadersInit })
+    }).then((res) => {
+      if (!res?.ok || cancelled) return res?.json()
+      return res.json()
+    }).then((data) => {
+      if (!cancelled && data?.hasFamily) setSetupComplete(data.setupComplete === true)
+    }).catch(() => {})
+    return () => { cancelled = true }
+  }, [mounted, user?.is_family_admin, pathname])
+
   const menuItems: MenuItem[] = [
     { href: '/dashboard', label: t.nav.dashboard, active: pathname === '/dashboard', icon: House },
+    ...(user?.is_family_admin ? [{ href: '/setup', label: language === 'es' ? 'Configuración' : 'Setup', active: pathname === '/setup', icon: Wrench }] : []),
     { href: '/budgets', label: t.nav.budgets, active: pathname === '/budgets', icon: Wallet },
     { href: '/family', label: language === 'es' ? 'Familia' : 'Family', active: pathname === '/family', icon: Users },
     { href: '/personal-budget', label: t.nav.personalBudget, active: pathname === '/personal-budget', icon: Bank },
@@ -173,6 +192,18 @@ export default function SAPLayout({ children, user, title, subtitle, toolbar }: 
               <p className="text-body text-sap-text-secondary mt-0.5 truncate">{subtitle}</p>
             )}
           </div>
+          {user?.is_family_admin && setupComplete !== null && (
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Link
+                href="/setup"
+                className={`text-xs px-2 py-1 rounded ${
+                  setupComplete ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-amber-500/20 text-amber-700 dark:text-amber-400'
+                }`}
+              >
+                {setupComplete ? (language === 'es' ? 'Setup completo' : 'Setup complete') : (language === 'es' ? 'Configuración incompleta' : 'Setup incomplete')}
+              </Link>
+            </div>
+          )}
           {toolbar && <div className="flex items-center gap-2 flex-shrink-0">{toolbar}</div>}
         </header>
 

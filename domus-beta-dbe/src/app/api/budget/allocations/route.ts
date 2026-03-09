@@ -11,11 +11,24 @@ function toPositiveNumber(value: unknown): number | null {
 
 export async function GET(req: NextRequest) {
   try {
-    const { familyId } = await requireMembership(req)
+    const { familyId, userId } = await requireMembership(req)
     const structural = await requireAtLeastOneActiveBudgetObject(familyId)
     if (structural) return structural
+    const mine = req.nextUrl.searchParams.get('mine') === '1'
+    const where: { familyId: string; entityId?: { in: string[] } } = { familyId }
+    if (mine) {
+      const owned = await prisma.budgetEntityOwner.findMany({
+        where: { familyId, userId },
+        select: { entityId: true },
+      })
+      const entityIds = [...new Set(owned.map((o) => o.entityId))]
+      if (entityIds.length === 0) {
+        return NextResponse.json({ ok: true, allocations: [] }, { status: 200 })
+      }
+      where.entityId = { in: entityIds }
+    }
     const allocations = await prisma.entityBudgetAllocation.findMany({
-      where: { familyId },
+      where,
       select: {
         id: true,
         entityId: true,

@@ -1,0 +1,1048 @@
+/**
+ * Reusable components: buttons, cards, pills, inputs, table, modals.
+ * All class names preserved for existing functionality.
+ */
+
+.btn,
+.input,
+.select,
+textarea,
+.sapNavItem,
+.tabBtn,
+.pillBtn {
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease,
+    filter 160ms ease;
+}
+
+.pills {
+  display: flex;
+  gap: var(--space-8);
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.pill {
+  font-size: var(--font-label);
+  padding: var(--space-8) var(--space-12);
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Pills compactos en tablas (columna Comprobante: Por confirmar, Confirmado, Solicitud efectivo, Pendiente) */
+.table .pill,
+.table td .pill {
+  font-size: 0.625rem;
+  padding: 2px 5px;
+  border-radius: 4px;
+  line-height: 1.1;
+  font-weight: 600;
+}
+
+.pillTrunc {
+  min-width: 0;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pillBtn {
+  appearance: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+button.pill {
+  font-family: inherit;
+  line-height: 1;
+}
+
+.pillBtn:hover {
+  filter: brightness(0.98);
+}
+
+.pillBtn:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.pillBtn:active {
+  transform: translateY(1px);
+}
+
+.pillBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.pillOk {
+  background: var(--success-bg);
+  border-color: rgba(52, 199, 89, 0.35);
+  color: #0a7c47;
+}
+
+.pillWarn {
+  background: var(--warning-bg);
+  border-color: rgba(255, 149, 0, 0.35);
+  color: #c93400;
+}
+
+@keyframes pillPendientePulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(220, 80, 20, 0.5); }
+  50%  { opacity: 0.92; box-shadow: 0 0 0 6px rgba(220, 80, 20, 0); }
+}
+.pillPendientePulse {
+  animation: pillPendientePulse 1.6s ease-in-out infinite;
+  background: rgba(220, 80, 20, 0.2) !important;
+  border-color: rgba(220, 80, 20, 0.5) !important;
+  color: #b91c1c;
+  font-weight: 700;
+}
+
+.pillBad {
+  background: var(--danger-bg);
+  border-color: rgba(255, 59, 48, 0.35);
+  color: #d32f2f;
+}
+
+/* Calendario Time Engine — colores por tipo de evento */
+.calEvtPayment { background: rgba(255, 59, 48, 0.15); border-color: rgba(255, 59, 48, 0.4); color: #c62828; }
+.calEvtExpected { background: rgba(255, 149, 0, 0.2); border-color: rgba(255, 149, 0, 0.45); color: #e65100; }
+.calEvtCutoff { background: rgba(33, 150, 243, 0.15); border-color: rgba(33, 150, 243, 0.4); color: #1565c0; }
+.calEvtMoney { background: rgba(156, 39, 176, 0.15); border-color: rgba(156, 39, 176, 0.4); color: #6a1b9a; }
+.calEvtUtility { background: rgba(76, 175, 80, 0.2); border-color: rgba(76, 175, 80, 0.4); color: #2e7d32; }
+.calEvtPending { background: rgba(97, 97, 97, 0.15); border-color: rgba(97, 97, 97, 0.35); color: #424242; }
+
+/* Borde izquierdo en bloques de evento del calendario grid */
+.calEventBlock.calEvtPayment { border-left-color: #c62828; }
+.calEventBlock.calEvtExpected { border-left-color: #e65100; }
+.calEventBlock.calEvtCutoff { border-left-color: #1565c0; }
+.calEventBlock.calEvtMoney { border-left-color: #6a1b9a; }
+.calEventBlock.calEvtUtility { border-left-color: #2e7d32; }
+.calEventBlock.calEvtPending { border-left-color: #424242; }
+
+.pillActive {
+  outline: 2px solid var(--primary);
+  box-shadow: var(--ring);
+}
+
+.alert {
+  margin-top: var(--space-16);
+  padding: var(--space-12) var(--space-16);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 149, 0, 0.3);
+  background: var(--warning-bg);
+  color: #c93400;
+  font-size: var(--font-body);
+  line-height: var(--line-height-body);
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--sap-shadow-sm);
+  overflow: clip;
+  transition: box-shadow 160ms ease, transform 160ms ease;
+}
+
+.card:hover {
+  box-shadow: var(--sap-shadow);
+}
+
+.cardHeader {
+  padding: var(--space-16) var(--space-16);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-12);
+  align-items: center;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: var(--font-section-title);
+  font-weight: 700;
+  letter-spacing: var(--letter-spacing-tight);
+  color: var(--text);
+  line-height: var(--line-height-tight);
+}
+
+.cardDesc {
+  margin: var(--space-8) 0 0;
+  font-size: var(--font-body);
+  color: var(--muted);
+  line-height: var(--line-height-body);
+}
+
+.cardBody {
+  padding: var(--space-24);
+}
+
+.cardSub {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  padding: var(--space-16);
+  box-shadow: none;
+}
+
+.subTitle {
+  margin: 0;
+  font-size: var(--font-section-title);
+  font-weight: 700;
+  letter-spacing: var(--letter-spacing-tight);
+  color: var(--text);
+}
+
+.note {
+  margin-top: var(--space-8);
+  font-size: var(--font-body);
+  color: var(--muted);
+  line-height: var(--line-height-body);
+}
+
+.sectionRow {
+  display: flex;
+  gap: var(--space-12);
+  flex-wrap: wrap;
+  align-items: center;
+  min-width: 0;
+}
+
+.fieldGrid {
+  display: grid;
+  gap: var(--layout-form-field-gap);
+}
+
+.fieldRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-12);
+  min-width: 0;
+}
+
+@media (max-width: 720px) {
+  .fieldRow {
+    grid-template-columns: 1fr;
+    gap: var(--layout-form-field-gap);
+  }
+}
+
+@media (max-width: 520px) {
+  .fieldRow {
+    grid-template-columns: 1fr;
+    gap: var(--layout-form-field-gap);
+  }
+  /* Button groups stack vertically and expand to full width on narrow screens */
+  .sectionRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-12);
+  }
+  .sectionRow .btn,
+  .sectionRow button {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+  }
+}
+
+label {
+  font-size: var(--font-label);
+  font-weight: 500;
+  letter-spacing: var(--letter-spacing-label);
+  color: var(--muted);
+  display: grid;
+  gap: var(--space-8);
+}
+
+.checkboxRow {
+  display: flex;
+  gap: var(--space-12);
+  align-items: center;
+  font-size: var(--font-body);
+  color: var(--text);
+  line-height: var(--line-height-body);
+}
+
+/* Usuarios: formulario y tabla */
+.usuariosAddCard {
+  padding: var(--space-24);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
+}
+
+.usuariosAddForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.usuariosAddForm label {
+  display: block;
+}
+
+/* Botón Agregar usuario: tamaño estándar (no full-width gigante), estilo iOS */
+.usuariosAddForm .btnPrimary {
+  width: auto;
+  min-width: 160px;
+  flex: 0 0 auto;
+  align-self: flex-start;
+  min-height: 40px;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+@media (max-width: 920px) {
+  .usuariosAddCard {
+    padding: var(--space-12) var(--space-16);
+  }
+  .usuariosAddForm {
+    gap: var(--space-10);
+  }
+  .usuariosAddForm .input {
+    min-height: 40px !important;
+  }
+}
+
+/* Contenedor de vista Usuarios: permitir scroll en móvil */
+@media (max-width: 920px) {
+  .sapContent .cardBody .grid2 {
+    max-height: none;
+    min-height: 0;
+  }
+  .sapContent.viewUsuarios .cardBody {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: env(safe-area-inset-bottom, 24px);
+  }
+}
+
+.usuariosListaCard {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.usuariosTableWrap {
+  overflow: auto;
+  max-height: 420px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.usuariosTableWrap .usuariosTable {
+  min-width: 920px;
+}
+
+.usuariosTable th,
+.usuariosTable td {
+  padding: var(--space-12) var(--space-16);
+  vertical-align: middle;
+}
+
+.usuariosTable .input {
+  min-height: 38px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.usuariosTable .thAcciones {
+  min-width: 280px;
+  width: 280px;
+}
+
+.usuariosTable .tdAcciones {
+  min-width: 280px;
+}
+
+.usuariosAccionesRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--layout-form-label-gap);
+  align-items: center;
+}
+
+/* Usuarios lista tipo iPhone: filas más legibles en móvil */
+@media (max-width: 768px) {
+  .usuariosCardCompact .cardHeader {
+    padding: 14px 16px !important;
+  }
+  .usuariosCardCompact .cardTitle {
+    font-size: 17px !important;
+  }
+  .usuariosCardCompact .cardDesc {
+    font-size: 13px !important;
+  }
+  .usuariosCardCompact .cardBody {
+    padding: 12px 16px !important;
+  }
+  .usuariosCardCompact .grid2 {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .usuariosTableWrap {
+    max-height: none;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .usuariosTableWrap .usuariosTable {
+    min-width: 640px;
+  }
+  .usuariosTable th,
+  .usuariosTable td {
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+  .usuariosTable .usuariosAccionesRow {
+    gap: 6px;
+  }
+  .usuariosTable .usuariosAccionesRow .btn {
+    font-size: 13px;
+    padding: 6px 10px;
+    min-height: 32px;
+  }
+}
+
+.input,
+.select,
+.file,
+textarea {
+  width: 100%;
+  padding: var(--space-12) var(--space-16);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--card);
+  font-size: var(--font-body);
+  color: var(--text);
+  outline: none;
+  line-height: var(--line-height-body);
+}
+
+.input::placeholder,
+textarea::placeholder {
+  color: rgba(107, 114, 128, 0.85);
+}
+
+.input:hover,
+.select:hover,
+textarea:hover {
+  border-color: var(--border-strong);
+}
+
+.input:focus-visible,
+.select:focus-visible,
+textarea:focus-visible {
+  border-color: var(--primary);
+  box-shadow: var(--ring);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8);
+  padding: var(--space-12) var(--space-16);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  font-weight: 600;
+  font-size: var(--font-body);
+  cursor: pointer;
+  background: var(--card);
+  color: var(--text);
+  transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease, transform 80ms ease;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--bg);
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+
+.btn:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btnPrimary {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+  font-weight: 600;
+}
+
+.btnPrimary:hover:not(:disabled) {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+  filter: brightness(1.02);
+}
+
+.btnSuccess {
+  background: var(--success);
+  color: #ffffff;
+  border-color: var(--success);
+}
+
+.btnSuccess:hover {
+  background: #15803d;
+}
+
+.btnConfirmApple {
+  background: var(--apple-green);
+  color: #fff;
+  border: none;
+}
+
+.btnConfirmApple:hover:not(:disabled) {
+  background: var(--apple-green-hover);
+}
+
+.pillBtn.btnConfirmApple {
+  background: var(--apple-green);
+  color: #fff;
+  border: none;
+}
+
+.pillBtn.btnConfirmApple:hover:not(:disabled) {
+  background: var(--apple-green-hover);
+}
+
+.btnGhost {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--muted);
+}
+
+.btnGhost:hover:not(:disabled) {
+  background: var(--bg);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.btnSm {
+  padding: var(--space-8) var(--space-12);
+  font-size: var(--font-label);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+
+.btnDanger {
+  background: var(--danger);
+  color: #ffffff;
+  border-color: var(--danger);
+}
+
+.btnDanger:hover:not(:disabled) {
+  background: var(--danger-hover);
+  border-color: var(--danger-hover);
+  filter: brightness(1.05);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .btn,
+  .btnSm {
+    min-height: var(--touch-min);
+    min-width: var(--touch-min);
+    padding: var(--space-12) var(--space-16);
+  }
+  .btnSm {
+    padding: var(--space-12) var(--space-16);
+  }
+  .sapNavItem {
+    min-height: var(--touch-min);
+    padding: var(--space-12) var(--space-16);
+  }
+  .modalClose {
+    min-height: var(--touch-min);
+    min-width: var(--touch-min);
+    padding: var(--space-12);
+    top: max(var(--space-12), env(safe-area-inset-top, 0));
+    right: max(var(--space-12), env(safe-area-inset-right, 0));
+  }
+  .input,
+  .select,
+  textarea {
+    min-height: var(--touch-min);
+  }
+}
+
+.code {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-12);
+  overflow: auto;
+  font-size: var(--font-label);
+  line-height: 1.55;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: var(--space-12) var(--space-16);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  font-size: var(--font-body);
+  vertical-align: middle;
+  line-height: var(--line-height-body);
+}
+
+.table th {
+  color: var(--muted);
+  font-size: var(--font-label);
+  font-weight: 600;
+  letter-spacing: var(--letter-spacing-label);
+  text-transform: uppercase;
+}
+
+.table thead th {
+  background: var(--bg);
+  padding-top: var(--space-12);
+  padding-bottom: var(--space-12);
+}
+
+.table tbody tr td {
+  transition: background 0.12s ease;
+}
+
+.table tbody tr:hover td {
+  background: rgba(0, 122, 255, 0.06);
+}
+
+.tableSticky thead th {
+  position: sticky;
+  top: 0;
+  background: var(--card);
+  z-index: 1;
+  box-shadow: 0 1px 0 var(--border);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.spacer16 {
+  height: var(--space-16);
+}
+
+.spacer8 {
+  height: var(--space-8);
+}
+
+.spacer6 {
+  height: 6px;
+}
+
+.hr {
+  height: 1px;
+  background: var(--border);
+  margin: var(--space-16) 0;
+}
+
+.details summary {
+  cursor: pointer;
+  user-select: none;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: var(--font-body);
+}
+
+.tag {
+  font-size: var(--font-label);
+  padding: var(--space-8) var(--space-12);
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.tabRow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-8);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.tabBtn {
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  padding: var(--space-8) var(--space-12);
+  font-size: var(--font-label);
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.tabBtn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text);
+}
+
+.tabBtn:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.tabBtnActive {
+  background: var(--card);
+  border-color: rgba(0, 122, 255, 0.25);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+
+.inputSm {
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-body);
+}
+
+.selectSm {
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-body);
+  width: auto;
+}
+
+.selectXs {
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-label);
+  width: auto;
+}
+
+/* Modals */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  padding: var(--layout-modal-padding);
+  padding-top: max(var(--layout-modal-padding), env(safe-area-inset-top, 0));
+  padding-bottom: max(var(--layout-modal-padding), env(safe-area-inset-bottom, 0));
+  padding-left: max(var(--layout-modal-padding), env(safe-area-inset-left, 0));
+  padding-right: max(var(--layout-modal-padding), env(safe-area-inset-right, 0));
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  display: grid;
+  place-items: center;
+  z-index: 60;
+  animation: domusFadeIn 140ms ease-out;
+}
+
+.modalOverlayFull {
+  padding: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-start;
+  background: var(--bg);
+  backdrop-filter: none;
+}
+
+.modalOverlay.modalOverlayFull {
+  padding: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-start;
+  background: var(--bg);
+  backdrop-filter: none;
+}
+
+.modalOverlay.modalOverlayOpaque {
+  background: var(--bg);
+  opacity: 1;
+}
+
+.modalPanel {
+  width: min(1080px, 100%);
+  max-height: min(86vh, 900px);
+  overflow: auto;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--sap-shadow-md);
+  padding: var(--layout-modal-padding);
+  position: relative;
+  animation: domusPopIn 160ms ease-out;
+}
+
+.modalPanel.modalPanelSm {
+  width: min(480px, 96vw);
+  max-height: min(88vh, 640px);
+}
+
+.modalToolbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--card);
+  backdrop-filter: blur(12px);
+  padding: 0 52px var(--layout-actions-gap) 0;
+  margin-bottom: var(--layout-actions-gap);
+  margin-left: 0;
+  margin-right: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.budgetStudioPanel .modalToolbar,
+.receiptWizardPanel .modalToolbar {
+  padding-left: 52px;
+}
+
+.modalPanel .cardBody {
+  padding-top: var(--layout-form-label-gap);
+}
+
+.modalPanel .fieldGrid {
+  gap: var(--layout-form-field-gap);
+}
+
+.modalPanel .fieldGrid .input,
+.modalPanel .fieldGrid select.input {
+  min-height: var(--touch-min);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.modalPanel .fieldGrid label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--layout-form-label-gap);
+}
+
+.modalPanel .modalClose {
+  position: absolute;
+  top: max(var(--space-12), env(safe-area-inset-top, 0));
+  right: max(var(--space-12), env(safe-area-inset-right, 0));
+  z-index: 10;
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  padding: var(--space-12) var(--space-16);
+  font-size: var(--font-body);
+  font-weight: 800;
+}
+
+.modalPanel .modalMenuBtn {
+  position: absolute;
+  top: max(var(--space-12), env(safe-area-inset-top, 0));
+  left: max(var(--space-12), env(safe-area-inset-left, 0));
+  z-index: 10;
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  padding: var(--space-12) var(--space-16);
+  font-size: var(--font-body);
+  font-weight: 700;
+}
+
+.receiptWizardPanel {
+  width: min(520px, 96vw);
+  max-height: min(90vh, 640px);
+  overflow: auto;
+  padding: var(--layout-modal-padding);
+  padding-bottom: max(var(--layout-modal-padding), env(safe-area-inset-bottom, 0));
+}
+
+.txReceiptWizardOverlay {
+  padding: var(--space-12);
+}
+
+.receiptWizardHelper {
+  margin: 0 0 var(--layout-form-label-gap) 0;
+  font-size: var(--font-label);
+}
+
+.receiptWizardCapture,
+.receiptWizardAssign {
+  display: flex;
+  flex-direction: column;
+  gap: var(--layout-form-field-gap);
+}
+
+.receiptWizardCapture label,
+.receiptWizardAssign label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--layout-form-label-gap);
+  font-weight: 700;
+  font-size: var(--font-body);
+}
+
+.receiptWizardActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--layout-actions-gap);
+  margin-top: var(--layout-actions-gap);
+}
+
+.receiptWizardActions .btnPrimary {
+  min-height: var(--touch-min);
+  padding: var(--space-12) var(--space-24);
+}
+
+/* Botones Cámara / Seleccionar: más vivos, tipo iPhone */
+.receiptWizardPhotoBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--touch-min);
+  padding: var(--space-12) var(--space-20);
+  font-weight: 700;
+  font-size: var(--font-body);
+  border-radius: 12px;
+  border: 2px solid var(--color-primary, #0f3d91);
+  background: rgba(15, 61, 145, 0.08);
+  color: var(--color-primary, #0f3d91);
+  transition: background 0.15s, transform 0.1s;
+}
+.receiptWizardPhotoBtn:hover {
+  background: rgba(15, 61, 145, 0.15);
+}
+.receiptWizardPhotoBtn:active {
+  transform: scale(0.98);
+}
+.receiptWizardPhotoBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.receiptWizardPhotoBtn .receiptWizardPhotoIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+.receiptWizardPhotoBtn .receiptWizardPhotoIcon svg {
+  width: 100%;
+  height: 100%;
+  vertical-align: middle;
+}
+
+.txAddReceiptIntro .btnPrimary {
+  min-height: var(--touch-min);
+  padding: var(--space-12) var(--space-24);
+}
+
+@keyframes domusFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes domusPopIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 768px) {
+  .modalPanel {
+    border-radius: var(--radius);
+    max-height: min(86vh, calc(100dvh - 2 * env(safe-area-inset-top, 0)));
+  }
+  .pageHead {
+    gap: var(--space-8);
+    margin-bottom: var(--space-12);
+  }
+  .table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .table th,
+  .table td {
+    padding: var(--space-12);
+  }
+  .modalPanel .cardBody {
+    padding: var(--layout-modal-padding);
+    padding-top: var(--layout-form-label-gap);
+  }
+}
+
+@media (max-width: 480px) {
+  /* Standard modals as bottom sheet on small screens (iPhone) */
+  .modalOverlay:not(.modalOverlayFull) {
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0;
+  }
+  .modalOverlay:not(.modalOverlayFull) .modalPanel {
+    width: 100%;
+    max-height: 92dvh;
+    min-height: 70dvh;
+    border-radius: 16px 16px 0 0;
+    margin: 0;
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.2);
+  }
+  .txReceiptWizardOverlay {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    height: 100dvh;
+    min-height: 100dvh;
+    padding: 0;
+  }
+  .txReceiptWizardOverlay .receiptWizardPanel {
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+    border-radius: 16px 16px 0 0;
+    margin: 0;
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.2);
+    padding-top: max(var(--layout-modal-padding), env(safe-area-inset-top));
+  }
+  .receiptWizardActions {
+    flex-direction: column;
+  }
+  .receiptWizardActions .btn {
+    width: 100%;
+    min-height: var(--touch-min);
+  }
+  .receiptWizardCapture .txFileField .btn,
+  .receiptWizardCapture label .input,
+  .receiptWizardCapture label .select {
+    min-height: var(--touch-min);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modalOverlay,
+  .modalPanel {
+    animation: none !important;
+    transition: none !important;
+  }
+}

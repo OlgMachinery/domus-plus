@@ -1,0 +1,26 @@
+================================================================================
+ESTÁNDAR INTEGRACIÓN DIGITALOCEAN SPACES (solo config en F1)
+================================================================================
+
+En F1 solo se deja preparado; no se implementa subida de archivos (eso es F2/F3).
+
+---- Variables de entorno (.env.example) ---------------------------------------
+DO_SPACES_KEY=          # Access Key de Spaces
+DO_SPACES_SECRET=       # Secret Key
+DO_SPACES_BUCKET=       # Nombre del bucket
+DO_SPACES_ENDPOINT=     # ej. https://nyc3.digitaloceanspaces.com
+DO_SPACES_REGION=       # ej. nyc3
+
+No poner valores reales en el ejemplo; solo las claves vacías o con placeholder.
+
+---- Helper / cliente S3 (skeleton F1) -----------------------------------------
+- Crear un módulo o util (ej. lib/storage/spaces.ts o lib/s3.ts).
+- Inicializar cliente compatible con S3 (Spaces usa API S3): por ejemplo @aws-sdk/client-s3 con endpoint de DO.
+- Exportar una función o objeto que luego se usará para upload (en F2/F3), por ejemplo getSpacesClient() que lee las env y devuelve el cliente.
+- En F1 no implementar upload ni signed URLs; solo config y cliente listo para usar después.
+
+Ejemplo de responsabilidad del helper (para F2):
+- getSpacesClient(): devuelve cliente configurado con DO_SPACES_*.
+- Más adelante: uploadFile(buffer, key), getSignedUrl(key), etc.
+
+================================================================================

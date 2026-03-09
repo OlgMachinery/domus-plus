@@ -15,11 +15,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => ({}))
-    const { email, password, phone, name } = body || {}
+    const { email, password, phone, name, city, belongs_to_family } = body || {}
 
-    if (!email || !password || !phone || !name) {
+    if (!email || !password || !phone || !name || !(city != null && String(city).trim())) {
       return NextResponse.json(
-        { detail: 'Faltan campos requeridos' },
+        { detail: 'Faltan campos requeridos (email, contraseña, teléfono, nombre, ciudad)' },
         { status: 400 }
       )
     }
@@ -78,18 +78,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const userRow = {
+      id: authData.user.id,
+      email: email.trim(),
+      phone: phone.trim(),
+      name: name.trim(),
+      city: typeof city === 'string' ? city.trim() || null : null,
+      belongs_to_family: Boolean(belongs_to_family),
+      is_active: true,
+      is_family_admin: false,
+    }
+
     // Intentar crear registro en tabla users
-    // Primero intentamos INSERT directo (más simple y confiable)
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .insert({
-        id: authData.user.id,
-        email: email.trim(),
-        phone: phone.trim(),
-        name: name.trim(),
-        is_active: true,
-        is_family_admin: false,
-      })
+      .insert(userRow)
       .select()
       .single()
 

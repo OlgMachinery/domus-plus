@@ -1,0 +1,121 @@
+/**
+ * Design tokens — SAP-Family (Domus)
+ * Modern SaaS-style: spacing scale, typography hierarchy, consistent shadows.
+ */
+:root {
+  color-scheme: light;
+  /* Spacing scale (8px base) — use for margins/padding */
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-24: 24px;
+  --space-32: 32px;
+  /* SAP-Family color tokens — pulida tipo Apple */
+  --sap-bg: #F2F2F7;
+  --sap-card: #FFFFFF;
+  --sap-text: #1D1D1F;
+  --sap-muted: #8E8E93;
+  --sap-border: #E5E5EA;
+  --sap-border-strong: #C6C6C8;
+  --sap-primary: #007AFF;
+  --sap-primary-hover: #0051D5;
+  --sap-secondary: #007AFF;
+  --sap-success: #34C759;
+  --sap-apple-green: #34C759;
+  --sap-apple-green-hover: #2DB84E;
+  --sap-warning: #FF9500;
+  --sap-danger: #FF3B30;
+  --sap-danger-hover: #D32F2F;
+  --sap-success-bg: rgba(52, 199, 89, 0.12);
+  --sap-warning-bg: rgba(255, 149, 0, 0.12);
+  --sap-danger-bg: rgba(255, 59, 48, 0.12);
+  /* Sombras sutiles — pulida */
+  --sap-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --sap-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --sap-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --sap-ring: 0 0 0 2px rgba(0, 122, 255, 0.3);
+  --sap-radius: 12px;
+  --sap-radius-sm: 8px;
+  /* Typography — hierarchy (pulida Apple) */
+  --font-page-title: 1.25rem;
+  --font-section-title: 1.0625rem;
+  --font-label: 0.8125rem;
+  --font-body: 0.875rem;
+  --font-body-mobile: 0.9375rem;
+  --font-numeric: 600 20px/1.2 system-ui, ui-sans-serif, sans-serif;
+  --line-height-tight: 1.25;
+  --line-height-body: 1.5;
+  --letter-spacing-tight: -0.02em;
+  --letter-spacing-label: 0.02em;
+  /* Layout structure — page / modal / form rhythm */
+  --layout-page-head-mb: var(--space-24);
+  --layout-section-gap: var(--space-24);
+  --layout-modal-padding: var(--space-24);
+  --layout-form-field-gap: var(--space-16);
+  --layout-form-label-gap: var(--space-8);
+  --layout-actions-gap: var(--space-12);
+  --touch-min: 44px;
+  /* Legacy aliases (keep for existing class names) */
+  --bg: var(--sap-bg);
+  --card: var(--sap-card);
+  --text: var(--sap-text);
+  --muted: var(--sap-muted);
+  --border: var(--sap-border);
+  --primary: var(--sap-primary);
+  --primary-hover: var(--sap-primary-hover);
+  --secondary: var(--sap-secondary);
+  --success: var(--sap-success);
+  --apple-green: var(--sap-apple-green);
+  --apple-green-hover: var(--sap-apple-green-hover);
+  --warning: var(--sap-warning);
+  --danger: var(--sap-danger);
+  --danger-hover: var(--sap-danger-hover);
+  --shadow-sm: var(--sap-shadow-sm);
+  --shadow: var(--sap-shadow);
+  --ring: var(--sap-ring);
+  --radius: var(--sap-radius);
+  --radius-sm: var(--sap-radius-sm);
+  --border-strong: var(--sap-border-strong);
+  --success-bg: var(--sap-success-bg);
+  --warning-bg: var(--sap-warning-bg);
+  --danger-bg: var(--sap-danger-bg);
+}
+
+/* Base reset and typography — uses tokens above */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  height: 100%;
+  margin: 0;
+  overflow-x: hidden;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  font-size: var(--font-body);
+  line-height: var(--line-height-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 920px) {
+  body {
+    font-size: var(--font-body-mobile);
+  }
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}

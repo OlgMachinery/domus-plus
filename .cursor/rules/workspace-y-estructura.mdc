@@ -12,7 +12,7 @@ alwaysApply: true
 
 ## Carpetas principales
 
-- **domus-beta-dbe/** — Frontend Next.js que debe desplegarse en **domus-fam.com**. Contiene el diagrama de arquitectura (`/ui/system-architecture`), API routes de este app, etc. En Vercel, el proyecto que tenga el dominio domus-fam.com debe usar **Root Directory = `domus-beta-dbe`**.
+- **domus-beta-dbe/** — Frontend Next.js que se despliega en **domus-fam.com** (VPS). Contiene el diagrama (`/ui/system-architecture`), API routes, etc. Deploy con `domus-beta-dbe/deploy/deploy-vps.sh`.
 - **frontend/** — Otro frontend Next.js (puede ser otro deploy o entorno).
 - **mobile/** — App móvil con Expo.
 - **supabase/** — Configuración, migraciones y esquema de Supabase.
@@ -24,6 +24,18 @@ alwaysApply: true
 - **Página del diagrama:** la única fuente es `domus-beta-dbe/src/app/ui/system-architecture/page.tsx`. Tras editarla, ejecutar desde la raíz `npm run sync:diagram` para copiar a `app/` y `frontend/`.
 - No confundir **domus-beta-dbe** con **frontend** ni con la app en la raíz (`app/`): son apps distintas.
 - Referencia rápida: ver también `docs/WORKSPACE_Y_PROYECTO.md` si hace falta comprobar la estructura o indicar el workspace a otro chat.
+
+## Producción: solo domus-fam.com
+
+- El diagrama y la app en producción se ven **únicamente en domus-fam.com**. Es el único entorno/hogar donde el usuario quiere verlo. No usar otros dominios o proyectos para "ver" los cambios.
+
+## Mantenimiento (evitar que vuelvan problemas ya resueltos)
+
+- **domus-fam.com** se actualiza solo desplegando a la **VPS** con `domus-beta-dbe/deploy/deploy-vps.sh` (siempre con `--chown deploy`). Un simple push a GitHub no actualiza la web.
+- **Regla obligatoria:** Tras cualquier cambio en domus-beta-dbe que deba verse en domus-fam.com, **hay que ejecutar siempre el deploy**. Sin excepción. No preguntar al usuario si quiere desplegar; hacerlo. Si desde este entorno falla SSH, indicar al usuario que ejecute él el deploy desde su terminal (con su clave).
+- Tras un deploy, comprobar **https://domus-fam.com/api/build-info** (que `version` coincida con el repo) y la página en incógnito.
+- Página del diagrama: editar solo en domus-beta-dbe; si se mantienen app/ y frontend/, usar `npm run sync:diagram` desde la raíz.
+- Guía completa: **docs/MANTENIMIENTO_SISTEMA.md**.
 
 ## Si otro chat no identifica el proyecto
 

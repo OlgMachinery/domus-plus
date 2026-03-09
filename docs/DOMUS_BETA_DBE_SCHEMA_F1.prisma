@@ -1,0 +1,143 @@
+// DOMUS+ Beta DBE — Schema F1 (validado)
+// SQLite. Ajustes: WAL y busy_timeout se aplican al conectar (ver docs).
+// UUID como String para compatibilidad SQLite.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String  @map("password_hash")
+  name         String?
+  phone        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  memberships  FamilyMember[]
+  transactions Transaction[]
+  receipts     Receipt[]
+}
+
+model Family {
+  id               String   @id @default(uuid())
+  name             String
+  currency         String   @default("MXN")
+  cutoffDay        Int      @default(1) @map("cutoff_day")
+  budgetStartDate  DateTime @map("budget_start_date")
+  setupComplete    Boolean  @default(false) @map("setup_complete")
+  planStatus       String   @default("DRAFT") @map("plan_status")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  members           FamilyMember[]
+  budgetEntities    BudgetEntity[]
+  budgetCategories  BudgetCategory[]
+  allocations       EntityBudgetAllocation[]
+  transactions      Transaction[]
+  receipts          Receipt[]
+}
+
+model FamilyMember {
+  id             String   @id @default(uuid())
+  familyId       String   @map("family_id")
+  userId         String   @map("user_id")
+  isFamilyAdmin  Boolean  @default(false) @map("is_family_admin")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([familyId, userId])
+  @@map("family_members")
+}
+
+model BudgetEntity {
+  id        String   @id @default(uuid())
+  familyId  String   @map("family_id")
+  type      String   // PERSON | GROUP
+  name      String
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  family      Family                   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  allocations EntityBudgetAllocation[]
+
+  @@map("budget_entities")
+}
+
+model BudgetCategory {
+  id        String   @id @default(uuid())
+  familyId  String   @map("family_id")
+  type      String
+  name      String
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  family      Family                   @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  allocations EntityBudgetAllocation[]
+
+  @@map("budget_categories")
+}
+
+model EntityBudgetAllocation {
+  id          String   @id @default(uuid())
+  familyId    String   @map("family_id")
+  entityId    String   @map("entity_id")
+  categoryId  String   @map("category_id")
+  monthlyLimit Decimal @map("monthly_limit")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  family   Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  entity   BudgetEntity  @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  category BudgetCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@map("entity_budget_allocations")
+}
+
+model Transaction {
+  id           String   @id @default(uuid())
+  familyId     String   @map("family_id")
+  userId       String   @map("user_id")
+  allocationId String   @map("allocation_id")
+  amount       Decimal
+  date         DateTime
+  description  String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  family     Family                 @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  allocation EntityBudgetAllocation @relation(fields: [allocationId], references: [id], onDelete: Restrict)
+  receipts   Receipt[]
+
+  @@map("transactions")
+}
+
+model Receipt {
+  id            String   @id @default(uuid())
+  transactionId String   @map("transaction_id")
+  userId        String   @map("user_id")
+  familyId      String   @map("family_id")
+  fileUrl       String   @map("file_url")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family      Family     @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@map("receipts")
+}

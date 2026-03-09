@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { format } from 'date-fns'
@@ -18,6 +18,9 @@ export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<User | null>(null)
+  const [toast, setToast] = useState<{ kind: 'success' | 'error' | 'info'; text: string } | null>(null)
+  const toastTimerRef = useRef<number | null>(null)
+  const [showAddOptionsModal, setShowAddOptionsModal] = useState(false)
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
@@ -59,8 +62,24 @@ export default function TransactionsPage() {
       if (uploadAbortController) {
         uploadAbortController.abort()
       }
+      if (toastTimerRef.current) {
+        window.clearTimeout(toastTimerRef.current)
+        toastTimerRef.current = null
+      }
     }
   }, [uploadAbortController])
+
+  const showToast = (kind: 'success' | 'error' | 'info', text: string) => {
+    if (toastTimerRef.current) {
+      window.clearTimeout(toastTimerRef.current)
+      toastTimerRef.current = null
+    }
+    setToast({ kind, text })
+    toastTimerRef.current = window.setTimeout(() => {
+      setToast(null)
+      toastTimerRef.current = null
+    }, 2400)
+  }
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -103,24 +122,26 @@ export default function TransactionsPage() {
         return
       }
 
-      let query = supabase
-        .from('transactions')
-        .select('*')
-        .eq('user_id', authUser.id)
-        .order('date', { ascending: false })
+      const params = new URLSearchParams()
+      params.set('limit', '2000')
+      if (filterType !== 'all') params.set('transaction_type', filterType)
+      if (filters.category) params.set('category', filters.category)
+      if (filters.subcategory) params.set('subcategory', filters.subcategory)
+      if (filters.dateFrom) params.set('start_date', filters.dateFrom)
+      if (filters.dateTo) params.set('end_date', filters.dateTo)
+      if (filters.amountMin) params.set('amount_min', filters.amountMin)
+      if (filters.amountMax) params.set('amount_max', filters.amountMax)
+      if (filters.merchant) params.set('merchant', filters.merchant)
 
-      if (filterType !== 'all') {
-        query = query.eq('transaction_type', filterType)
+      const res = await fetch(`/api/families/transactions?${params.toString()}`, {
+        method: 'GET',
+        credentials: 'include',
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data?.detail || (language === 'es' ? 'Error cargando transacciones' : 'Error loading transactions'))
       }
-
-      const { data: transactionsData, error: transactionsError } = await query
-
-      if (transactionsError) {
-        console.error('Error cargando transacciones:', transactionsError)
-        setTransactions([])
-      } else {
-        setTransactions((transactionsData || []) as Transaction[])
-      }
+      setTransactions((data?.transactions || []) as Transaction[])
     } catch (error: any) {
       console.error('Error cargando transacciones:', error)
       setTransactions([])
@@ -188,10 +209,10 @@ export default function TransactionsPage() {
       setShowEditModal(false)
       setEditingTransaction(null)
       loadTransactions()
-      alert(t.transactions.editTransaction + ' ' + (language === 'es' ? 'exitosamente' : 'successfully'))
+      showToast('success', language === 'es' ? 'Transacción actualizada correctamente.' : 'Transaction updated successfully.')
     } catch (error: any) {
       console.error('Error actualizando transacción:', error)
-      alert(error.message || (language === 'es' ? 'Error al actualizar transacción' : 'Error updating transaction'))
+      showToast('error', error.message || (language === 'es' ? 'Error al actualizar transacción' : 'Error updating transaction'))
     }
   }
 
@@ -238,8 +259,9 @@ export default function TransactionsPage() {
         family_budget_id: null
       })
       loadTransactions()
+      showToast('success', language === 'es' ? 'Gasto agregado.' : 'Transaction created.')
     } catch (error: any) {
-      alert(error.message || 'Error al crear transacción')
+      showToast('error', error.message || (language === 'es' ? 'Error al crear transacción' : 'Error creating transaction'))
     }
   }
 
@@ -337,18 +359,18 @@ export default function TransactionsPage() {
       
       await loadTransactions()
       
-      const receipt = responseData.receipt
-      const receipts = receipt ? [receipt] : []
-      const totalItems = receipts.reduce((sum: number, r: any) => sum + (r.items?.length || 0), 0)
-      const partsStatus = responseData.parts_status || []
-      const okParts = partsStatus.filter((p: any) => p.ok).length
-      const partsMsg = partsStatus.length
-        ? `Partes OK: ${okParts}/${partsStatus.length}\n${partsStatus.map((p: any) => `Parte ${p.part}: ${p.ok ? 'OK' : 'ERROR'} (${p.items || 0} items)`).join('\n')}`
-        : ''
-      alert(`✅ Recibos procesados exitosamente\n\n` +
-            `Recibos: ${receipts.length}\n` +
-            `Items extraídos: ${totalItems}\n` +
-            (partsMsg ? `\n${partsMsg}` : ''))
+      const totalItems = Number(responseData.items_count || 0) || 0
+      const hasTx = !!responseData.transaction?.id
+      showToast(
+        hasTx ? 'success' : 'info',
+        language === 'es'
+          ? hasTx
+            ? `Listo: gasto agregado con comprobante. (${totalItems} conceptos)`
+            : `Ticket procesado. (${totalItems} conceptos)`
+          : hasTx
+            ? `Done: expense added with receipt. (${totalItems} items)`
+            : `Receipt processed. (${totalItems} items)`
+      )
       
       // Cerrar modal y limpiar solo después de éxito
       setShowUploadModal(false)
@@ -396,7 +418,7 @@ export default function TransactionsPage() {
         fullErrorMsg += '\n\nEl recibo tiene demasiados items. El sistema está configurado para extraer hasta ~200 items. Intenta con una imagen más clara.'
       }
       
-      alert(fullErrorMsg)
+      showToast('error', errorMsg)
       // NO limpiar el archivo ni cerrar el modal si hay error, para que el usuario pueda intentar de nuevo
     } finally {
       // SIEMPRE resetear el estado de carga, incluso si hay error
@@ -505,17 +527,11 @@ export default function TransactionsPage() {
         {language === 'es' ? '🇲🇽 ES' : '🇺🇸 EN'}
       </button>
       <button
-        onClick={() => setShowCreateModal(true)}
+        onClick={() => setShowAddOptionsModal(true)}
         className="sap-button-primary flex items-center gap-2"
       >
         <PlusIcon size={14} />
-        {t.transactions.newTransaction}
-      </button>
-      <button
-        onClick={() => setShowUploadModal(true)}
-        className="sap-button-secondary"
-      >
-        {t.transactions.uploadReceipt}
+        {language === 'es' ? 'Agregar gasto' : 'Add expense'}
       </button>
     </div>
   )
@@ -527,6 +543,21 @@ export default function TransactionsPage() {
       subtitle={t.transactions.subtitle}
       toolbar={loading ? null : toolbar}
     >
+      {toast ? (
+        <div
+          className={`fixed top-[84px] left-1/2 -translate-x-1/2 z-[60] px-4 py-2 rounded-full text-sm font-semibold shadow-elevation-1 ${
+            toast.kind === 'success'
+              ? 'bg-emerald-600 text-white'
+              : toast.kind === 'error'
+                ? 'bg-red-600 text-white'
+                : 'bg-sap-primary text-white'
+          }`}
+          role="status"
+          aria-live="polite"
+        >
+          {toast.text}
+        </div>
+      ) : null}
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="text-muted-foreground">{language === 'es' ? 'Cargando...' : 'Loading...'}</div>
@@ -759,7 +790,8 @@ export default function TransactionsPage() {
                         ? 'text-sap-success' 
                         : 'text-sap-danger'
                     }`}>
-                      {transaction.transaction_type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount, language, false).replace('$', '').replace(' MXN', '')}
+                      {transaction.transaction_type === 'income' ? '+' : '-'}
+                      {formatCurrency(transaction.amount, language, false)}
                     </span>
                   </td>
                   <td>
@@ -793,21 +825,60 @@ export default function TransactionsPage() {
               </p>
               <div className="flex gap-2 justify-center">
                 <button
-                  onClick={() => setShowCreateModal(true)}
+                  onClick={() => setShowAddOptionsModal(true)}
                   className="sap-button-primary flex items-center gap-2"
                 >
                   <PlusIcon size={14} />
-                  Crear Transacción
-                </button>
-                <button
-                  onClick={() => setShowUploadModal(true)}
-                  className="sap-button-secondary"
-                >
-                  Subir Recibo
+                  {language === 'es' ? 'Agregar gasto' : 'Add expense'}
                 </button>
               </div>
             </div>
           )}
+
+      {/* Modal: Agregar gasto (elige flujo) */}
+      {showAddOptionsModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowAddOptionsModal(false)}>
+          <div className="sap-card max-w-md w-full mx-4 shadow-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-5 border-b border-border pb-4">
+                <h2 className="text-lg font-semibold text-foreground">{language === 'es' ? 'Agregar gasto' : 'Add expense'}</h2>
+                <button onClick={() => setShowAddOptionsModal(false)} className="sap-button-ghost p-2" type="button">
+                  <XIcon size={18} className="text-muted-foreground" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  className="sap-button-primary w-full"
+                  onClick={() => {
+                    setShowAddOptionsModal(false)
+                    setShowUploadModal(true)
+                  }}
+                >
+                  {language === 'es' ? 'Con comprobante (ticket)' : 'With receipt'}
+                </button>
+                <button
+                  type="button"
+                  className="sap-button-secondary w-full"
+                  onClick={() => {
+                    setShowAddOptionsModal(false)
+                    setShowCreateModal(true)
+                  }}
+                >
+                  {language === 'es' ? 'Sin comprobante' : 'Without receipt'}
+                </button>
+              </div>
+
+              <div className="mt-4 text-xs text-muted-foreground">
+                {language === 'es'
+                  ? 'Si subes un ticket, DOMUS lo procesa y agrega el gasto automáticamente. Solo validas que esté correcto.'
+                  : 'If you upload a receipt, DOMUS processes it and adds the expense automatically.'}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de crear transacción estilo SAP */}
       {showCreateModal && (
@@ -815,7 +886,7 @@ export default function TransactionsPage() {
           <div className="sap-card max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto shadow-lg">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6 border-b border-border pb-4">
-                <h2 className="text-lg font-semibold text-foreground">Nueva Transacción</h2>
+                <h2 className="text-lg font-semibold text-foreground">{language === 'es' ? 'Agregar gasto (sin comprobante)' : 'Add transaction (no receipt)'}</h2>
                 <button
                   onClick={() => setShowCreateModal(false)}
                   className="sap-button-ghost p-2"
@@ -944,7 +1015,7 @@ export default function TransactionsPage() {
                     type="submit"
                     className="sap-button-primary flex-1"
                   >
-                    Crear Transacción
+                    {language === 'es' ? 'Agregar gasto' : 'Add'}
                   </button>
                   <button
                     type="button"
@@ -966,7 +1037,9 @@ export default function TransactionsPage() {
           <div className="sap-card max-w-md w-full mx-4 shadow-lg">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6 border-b border-border pb-4">
-                <h2 className="text-lg font-semibold text-foreground">Subir Recibo</h2>
+                <h2 className="text-lg font-semibold text-foreground">
+                  {language === 'es' ? 'Agregar gasto con comprobante' : 'Add expense with receipt'}
+                </h2>
                 <button
                   onClick={() => setShowUploadModal(false)}
                   className="sap-button-ghost p-2"
@@ -1062,11 +1135,13 @@ export default function TransactionsPage() {
                   <button
                     onClick={handleFileUpload}
                       disabled={uploading || uploadFiles.length === 0}
-                    className="sap-button-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className={`sap-button-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed ${
+                      !uploading && uploadFiles.length > 0 ? 'animate-pulse' : ''
+                    }`}
                   >
                     {uploading 
                       ? (language === 'es' ? 'Procesando...' : 'Processing...')
-                      : (language === 'es' ? 'Procesar Recibo' : 'Process Receipt')}
+                      : (language === 'es' ? 'Procesar ticket y agregar gasto' : 'Process receipt and add expense')}
                   </button>
                   <button
                     onClick={handleCancelUpload}

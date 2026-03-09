@@ -1,12 +1,24 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
+
+const TicketCaptureModal = dynamic(
+  () => import('@/components/scan/TicketCaptureModal').then((m) => m.TicketCaptureModal),
+  { ssr: false }
+)
+
+const DomusCalendar = dynamic(
+  () => import('@/components/calendar/DomusCalendar').then((m) => m.default),
+  { ssr: false }
+)
 
 type MeResponse =
   | {
       ok: true
-      user: { id: string; email: string; name: string | null }
+      user: { id: string; email: string; name: string | null; city?: string | null; avatarUrl?: string | null }
       activeFamily: { id: string; name: string } | null
       isFamilyAdmin: boolean
       families: { id: string; name: string; isFamilyAdmin: boolean }[]
@@ -23,27 +35,29 @@ type FakeDataResponse = {
   createdCategories: number
   createdAllocations: number
   createdTransactions: number
+  createdTransactions12M?: number
+  seedHint?: string
   skippedTransactions: boolean
   demoUsers?: { email: string; name: string | null; isFamilyAdmin: boolean; password: string }[]
   receipt?: { created: boolean; skipped: boolean; reason?: string; receiptId?: string }
 }
 
-type UiView = 'dashboard' | 'presupuesto' | 'transacciones' | 'usuarios' | 'configuracion' | 'tx'
+type UiView = 'dashboard' | 'presupuesto' | 'transacciones' | 'calendario' | 'usuarios' | 'configuracion' | 'solicitudes' | 'tx'
 type TxTab = 'Detalle' | 'Evidencias'
 
 type EntityType = 'PERSON' | 'HOUSE' | 'PET' | 'VEHICLE' | 'PROJECT' | 'FUND' | 'GROUP' | 'OTHER'
 type RangeKey = 'this_month' | 'prev_month' | 'last_90' | 'all'
-type ReceiptFilter = 'all' | 'with' | 'without'
+type ReceiptFilter = 'all' | 'with' | 'without' | 'to_confirm'
 
 const ENTITY_TYPE_OPTIONS: { value: EntityType; label: string }[] = [
-  { value: 'PERSON', label: 'PERSON (Persona)' },
-  { value: 'HOUSE', label: 'HOUSE (Casa)' },
-  { value: 'PET', label: 'PET (Mascota)' },
-  { value: 'VEHICLE', label: 'VEHICLE (Vehículo)' },
-  { value: 'PROJECT', label: 'PROJECT (Proyecto)' },
-  { value: 'FUND', label: 'FUND (Fondo)' },
-  { value: 'GROUP', label: 'GROUP (Grupo)' },
-  { value: 'OTHER', label: 'OTHER (Otro)' },
+  { value: 'PERSON', label: 'Persona' },
+  { value: 'HOUSE', label: 'Casa' },
+  { value: 'PET', label: 'Mascota' },
+  { value: 'VEHICLE', label: 'Vehículo' },
+  { value: 'PROJECT', label: 'Proyecto' },
+  { value: 'FUND', label: 'Fondo' },
+  { value: 'GROUP', label: 'Grupo' },
+  { value: 'OTHER', label: 'Otro' },
 ]
 
 function entityTypeLabel(value: unknown) {
@@ -146,6 +160,20 @@ function initialsFromName(value: unknown) {
   return (a + b) || '—'
 }
 
+function normReceiptExtraction(raw: unknown): any | null {
+  if (!raw || typeof raw !== 'object') return null
+  const o = raw as Record<string, unknown>
+  return {
+    ...o,
+    items: Array.isArray(o.items) ? o.items : [],
+    merchantName: o.merchantName ?? '',
+    date: typeof o.date === 'string' ? o.date : '',
+    total: o.total !== null && o.total !== undefined ? Number(o.total) : null,
+    tax: o.tax !== null && o.tax !== undefined ? Number(o.tax) : null,
+    tip: o.tip !== null && o.tip !== undefined ? Number(o.tip) : null,
+  }
+}
+
 export default function UiPage() {
   const router = useRouter()
   const [me, setMe] = useState<MeResponse | null>(null)
@@ -156,16 +184,40 @@ export default function UiPage() {
   const [seeding, setSeeding] = useState(false)
   const [seedResult, setSeedResult] = useState<FakeDataResponse | null>(null)
   const [reportsOpen, setReportsOpen] = useState(false)
-  const [reportsTab, setReportsTab] = useState<'detalle' | 'resumen' | 'tablas'>('detalle')
+  const [reportsTab, setReportsTab] = useState<'detalle' | 'resumen' | 'tablas' | 'consumo'>('detalle')
   const [reportsTableTab, setReportsTableTab] = useState<'categorias' | 'objetos' | 'usuarios'>('categorias')
   const [reportsMenuOpen, setReportsMenuOpen] = useState(false)
   const reportsMenuBtnRef = useRef<HTMLButtonElement | null>(null)
   const reportsMenuRef = useRef<HTMLDivElement | null>(null)
+  const [consumptionData, setConsumptionData] = useState<{
+    utility: Array<{ receiptId: string; receiptDate: string | null; periodStart: string | null; periodEnd: string | null; unit: string; quantity: number; merchantName: string | null }>
+    products: Array<{ description: string; unit: string; totalQuantity: number; count: number; receiptDates: string[] }>
+    productsGrouped?: Array<{ displayName: string; unit: string; totalQuantity: number; count: number; receiptCount: number; receiptDates: string[] }>
+    reposicion: Array<{ description: string; unit: string; betweenPurchasesDays: string[]; avgDays: number }>
+  } | null>(null)
+  const [consumptionView, setConsumptionView] = useState<'agrupado' | 'detalle'>('agrupado')
+  const [consumptionLoading, setConsumptionLoading] = useState(false)
+  const [consumptionSeeding, setConsumptionSeeding] = useState(false)
   const [familyMenuOpen, setFamilyMenuOpen] = useState(false)
   const familyMenuBtnRef = useRef<HTMLButtonElement | null>(null)
   const familyMenuRef = useRef<HTMLDivElement | null>(null)
+  const [now, setNow] = useState(() => new Date())
 
   const [view, setView] = useState<UiView>('dashboard')
+  const [moneyRequests, setMoneyRequests] = useState<any[]>([])
+  const [moneyRequestsLoading, setMoneyRequestsLoading] = useState(false)
+  const [solicitudEfectivoOpen, setSolicitudEfectivoOpen] = useState(false)
+  const [solicitudEfectivoReason, setSolicitudEfectivoReason] = useState('')
+  const [solicitudEfectivoAmount, setSolicitudEfectivoAmount] = useState('')
+  const [solicitudEfectivoAllocationId, setSolicitudEfectivoAllocationId] = useState('')
+  const [solicitudEfectivoBusy, setSolicitudEfectivoBusy] = useState(false)
+  const [solicitudEfectivoDone, setSolicitudEfectivoDone] = useState<{ at: string } | null>(null)
+  const [selectedMoneyRequestId, setSelectedMoneyRequestId] = useState<string | null>(null)
+  const [fltMoneyRequestStatus, setFltMoneyRequestStatus] = useState<string>('all')
+  const [deliverAmountSent, setDeliverAmountSent] = useState('')
+  const [deliverBusy, setDeliverBusy] = useState(false)
+  const [deliverFilesCount, setDeliverFilesCount] = useState(0)
+  const deliverFileInputRef = useRef<HTMLInputElement>(null)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [txTab, setTxTab] = useState<TxTab>('Detalle')
   const [selectedTxId, setSelectedTxId] = useState<string | null>(null)
@@ -175,6 +227,12 @@ export default function UiPage() {
   const reportsPanelRef = useRef<HTMLDivElement | null>(null)
 
   const didAutoScrollBudgetRef = useRef(false)
+  const messageRef = useRef('')
+  const viewAsUserRef = useRef<{ userId: string; name: string } | null>(null)
+
+  useEffect(() => {
+    messageRef.current = message
+  }, [message])
 
   function showToast(kind: 'ok' | 'warn' | 'error' | 'info', text: string) {
     try {
@@ -196,6 +254,9 @@ export default function UiPage() {
   // Register
   const [rName, setRName] = useState('')
   const [rEmail, setREmail] = useState('')
+  const [rPhone, setRPhone] = useState('')
+  const [rCity, setRCity] = useState('')
+  const [rBelongsToFamily, setRBelongsToFamily] = useState<'yes' | 'no'>('no')
   const [rPass, setRPass] = useState('')
   const [rFamily, setRFamily] = useState('')
 
@@ -219,21 +280,104 @@ export default function UiPage() {
   const [mName, setMName] = useState('')
   const [mEmail, setMEmail] = useState('')
   const [mPass, setMPass] = useState('')
+  const [mPhone, setMPhone] = useState('')
   const [mAdmin, setMAdmin] = useState(false)
   const [members, setMembers] = useState<any[] | null>(null)
   const [memberNameDraft, setMemberNameDraft] = useState<Record<string, string>>({})
+  const [memberPhoneDraft, setMemberPhoneDraft] = useState<Record<string, string>>({})
+  const [memberCityDraft, setMemberCityDraft] = useState<Record<string, string>>({})
   const [memberSavingId, setMemberSavingId] = useState<string | null>(null)
+  const [twilioTestSendingId, setTwilioTestSendingId] = useState<string | null>(null)
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const avatarFileInputRef = useRef<HTMLInputElement>(null)
   const [adminSavingId, setAdminSavingId] = useState<string | null>(null)
+  const [inviteLoading, setInviteLoading] = useState(false)
+  const [lastInviteUrl, setLastInviteUrl] = useState<string | null>(null)
+  const [onboardingDismissed, setOnboardingDismissed] = useState(false)
+  const [viewingAsUser, setViewingAsUser] = useState<{ userId: string; name: string } | null>(() => {
+    if (typeof window === 'undefined') return null
+    try {
+      const raw = sessionStorage.getItem('domus_view_as')
+      if (!raw) return null
+      const parsed = JSON.parse(raw) as { userId?: string; name?: string }
+      if (parsed?.userId && parsed?.name) return { userId: parsed.userId, name: parsed.name }
+    } catch {
+      // ignore
+    }
+    return null
+  })
+
+  useEffect(() => {
+    viewAsUserRef.current = viewingAsUser
+  }, [viewingAsUser])
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(t)
+  }, [])
+
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  })
+  type CalendarEvent = { id: string; type: string; title: string; date: string; amount?: number; status?: string; source_table: string; source_id: string | null }
+  const [calendarData, setCalendarData] = useState<{
+    events: CalendarEvent[]
+    familyName: string | null
+    summary: { totalEvents: number; paymentsPending: number; paymentsCompleted: number; totalCommitted: number }
+  } | null>(null)
+  const [calendarLoading, setCalendarLoading] = useState(false)
+  const [calendarRefreshTrigger, setCalendarRefreshTrigger] = useState(0)
+  const [calendarEventModalOpen, setCalendarEventModalOpen] = useState(false)
+  const [newCalendarEventTitle, setNewCalendarEventTitle] = useState('')
+  const [newCalendarEventDate, setNewCalendarEventDate] = useState('')
+  const [newCalendarEventType, setNewCalendarEventType] = useState('custom')
+  const [calendarEventSubmitBusy, setCalendarEventSubmitBusy] = useState(false)
+
   const [entityImageUploadingId, setEntityImageUploadingId] = useState<string | null>(null)
   const [entityNameDraft, setEntityNameDraft] = useState<Record<string, string>>({})
   const [categoryNameDraft, setCategoryNameDraft] = useState<Record<string, string>>({})
   const [allocationLimitDraft, setAllocationLimitDraft] = useState<Record<string, string>>({})
 
   const isAuthed = useMemo(() => me && 'ok' in me && me.ok === true, [me])
+
+  useEffect(() => {
+    if (isAuthed) refreshMe()
+  }, [viewingAsUser])
+
   const activeFamilyId = useMemo(() => {
     if (!me || !('ok' in me) || me.ok !== true) return null
     return me.activeFamily?.id ?? null
   }, [me])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    setOnboardingDismissed(!!window.localStorage.getItem('domus_onboarding_done'))
+  }, [])
+
+  useEffect(() => {
+    if (view !== 'calendario' || !activeFamilyId) return
+    let cancelled = false
+    setCalendarLoading(true)
+    const [y, m] = calendarMonth.split('-').map(Number)
+    const from = new Date(y, m - 1, 1)
+    const to = new Date(y, m, 0, 23, 59, 59)
+    const fromStr = from.toISOString().slice(0, 10)
+    const toStr = to.toISOString().slice(0, 10)
+    fetch(`/api/calendar/events?from=${fromStr}&to=${toStr}`, { credentials: 'include' })
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled && data?.ok) setCalendarData({
+          events: data.events ?? [],
+          familyName: data.familyName ?? null,
+          summary: data.summary ?? { totalEvents: 0, paymentsPending: 0, paymentsCompleted: 0, totalCommitted: 0 },
+        })
+        else if (!cancelled) setCalendarData(null)
+      })
+      .catch(() => { if (!cancelled) setCalendarData(null) })
+      .finally(() => { if (!cancelled) setCalendarLoading(false) })
+    return () => { cancelled = true }
+  }, [view, calendarMonth, activeFamilyId, calendarRefreshTrigger])
 
   // Presupuesto (partidas / categorías / montos)
   const [familyDetails, setFamilyDetails] = useState<any | null>(null)
@@ -253,6 +397,7 @@ export default function UiPage() {
   const [alCategoryId, setAlCategoryId] = useState('')
   const [alLimit, setAlLimit] = useState('')
   const [budgetYear, setBudgetYear] = useState(() => String(new Date().getFullYear()))
+  const [soloMisPartidas, setSoloMisPartidas] = useState(false)
   const [budgetWizardMemberId, setBudgetWizardMemberId] = useState<string>('')
   const [budgetWizardBusy, setBudgetWizardBusy] = useState(false)
   const [budgetDupEntityId, setBudgetDupEntityId] = useState<string>('')
@@ -285,6 +430,13 @@ export default function UiPage() {
   const [budgetListCategoryId, setBudgetListCategoryId] = useState<string>('all')
   const [budgetListType, setBudgetListType] = useState<'all' | 'individual' | 'shared'>('all')
   const [budgetListSpenderId, setBudgetListSpenderId] = useState<string>('all')
+  const [budgetViewMineOnly, setBudgetViewMineOnly] = useState(false)
+  const [suggestionOpen, setSuggestionOpen] = useState(false)
+  const [suggestionType, setSuggestionType] = useState<string>('OTHER')
+  const [suggestionText, setSuggestionText] = useState('')
+  const [suggestionSending, setSuggestionSending] = useState(false)
+  const [suggestionsList, setSuggestionsList] = useState<any[] | null>(null)
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false)
 
   // Gastos (transacciones) + recibos
   const [transactions, setTransactions] = useState<any[] | null>(null)
@@ -297,13 +449,31 @@ export default function UiPage() {
   const [txNewReceiptFiles, setTxNewReceiptFiles] = useState<File[]>([])
   const [txNewReceiptAllocationId, setTxNewReceiptAllocationId] = useState<string>('')
   const [txNewReceiptBusy, setTxNewReceiptBusy] = useState(false)
+  const [txNewReceiptUploadProgress, setTxNewReceiptUploadProgress] = useState<{ current: number; total: number } | null>(null)
+  const [txReceiptWizardOpen, setTxReceiptWizardOpen] = useState(false)
+  const [txReceiptWizardStep, setTxReceiptWizardStep] = useState<'capture' | 'assign'>('capture')
+  const [txReceiptAssignTo, setTxReceiptAssignTo] = useState<'me' | 'others'>('me')
+  const [txReceiptManualAmount, setTxReceiptManualAmount] = useState('')
+  const [txReceiptAssignUserId, setTxReceiptAssignUserId] = useState('')
+  const [txReceiptWizardFileInputKey, setTxReceiptWizardFileInputKey] = useState(0)
+  const [txScanOpen, setTxScanOpen] = useState(false)
+  const [lastBackgroundReceiptDone, setLastBackgroundReceiptDone] = useState<{ message: string; at: string } | null>(null)
+  const [lastDuplicateWarning, setLastDuplicateWarning] = useState<{ transactionId: string; date: string; description: string | null; amount: string } | null>(null)
+  const [duplicateConfirmPending, setDuplicateConfirmPending] = useState<{
+    duplicateWarning: { transactionId: string; date: string; description: string | null; amount: string }
+    allocationId: string
+    assignToUserId: string
+  } | null>(null)
+  const duplicateConfirmFileRef = useRef<File | null>(null)
 
-  const [txFltRange, setTxFltRange] = useState<RangeKey>('all')
+  const [txFltRange, setTxFltRange] = useState<RangeKey>('this_month')
+  const [txFltFrom, setTxFltFrom] = useState<string>('')
+  const [txFltTo, setTxFltTo] = useState<string>('')
   const [txFltCategoryId, setTxFltCategoryId] = useState<string>('all')
   const [txFltEntityId, setTxFltEntityId] = useState<string>('all')
   const [txFltMemberId, setTxFltMemberId] = useState<string>('all')
   const [txFltReceipt, setTxFltReceipt] = useState<ReceiptFilter>('all')
-  const [txSearch, setTxSearch] = useState<string>('')
+  const [globalSearch, setGlobalSearch] = useState<string>('')
   const [txDetailReceiptId, setTxDetailReceiptId] = useState<string | null>(null)
   const [txDetailReceiptLoading, setTxDetailReceiptLoading] = useState(false)
 
@@ -337,11 +507,19 @@ export default function UiPage() {
   const [fltMemberId, setFltMemberId] = useState<string>('all')
   const [fltReceipt, setFltReceipt] = useState<ReceiptFilter>('all')
 
+  function viewAsHeaders(skipViewAs: boolean): Record<string, string> {
+    if (skipViewAs || !viewAsUserRef.current) return {}
+    return { 'X-View-As-User': viewAsUserRef.current.userId }
+  }
+
   async function refreshMe() {
     setLoading(true)
     setMessage('')
     try {
-      const res = await fetch('/api/auth/me', { credentials: 'include' })
+      const res = await fetch('/api/auth/me', {
+        credentials: 'include',
+        headers: viewAsHeaders(false),
+      })
       const data = (await res.json().catch(() => ({}))) as MeResponse
       setMe(data)
     } finally {
@@ -351,7 +529,10 @@ export default function UiPage() {
 
   async function refreshMembers(opts: { silent?: boolean } = {}) {
     if (!opts.silent) setMessage('')
-    const res = await fetch('/api/families/members', { credentials: 'include' })
+    const res = await fetch('/api/families/members', {
+      credentials: 'include',
+      headers: viewAsHeaders(false),
+    })
     const data = await res.json().catch(() => ({}))
     if (!res.ok) {
       if (!opts.silent) setMessage(data.detail || 'No se pudo cargar usuarios')
@@ -364,8 +545,25 @@ export default function UiPage() {
       for (const m of list) {
         const id = String(m?.id || '')
         if (!id) continue
-        // Si no existe borrador, lo inicializamos con el nombre actual
         if (next[id] === undefined) next[id] = String(m?.name || '')
+      }
+      return next
+    })
+    setMemberPhoneDraft((prev) => {
+      const next: Record<string, string> = { ...prev }
+      for (const m of list) {
+        const id = String(m?.id || '')
+        if (!id) continue
+        if (next[id] === undefined) next[id] = String(m?.phone || '')
+      }
+      return next
+    })
+    setMemberCityDraft((prev) => {
+      const next: Record<string, string> = { ...prev }
+      for (const m of list) {
+        const id = String(m?.id || '')
+        if (!id) continue
+        if (next[id] === undefined) next[id] = String(m?.city || '')
       }
       return next
     })
@@ -376,7 +574,16 @@ export default function UiPage() {
   }, [])
 
   useEffect(() => {
-    const isAnyOverlayOpen = deleteFamilyOpen || reportsOpen || budgetModalOpen || peopleBudgetOpen || mobileNavOpen
+    if (typeof window === 'undefined') return
+    if (viewingAsUser) {
+      sessionStorage.setItem('domus_view_as', JSON.stringify({ userId: viewingAsUser.userId, name: viewingAsUser.name }))
+    } else {
+      sessionStorage.removeItem('domus_view_as')
+    }
+  }, [viewingAsUser])
+
+  useEffect(() => {
+    const isAnyOverlayOpen = deleteFamilyOpen || reportsOpen || budgetModalOpen || peopleBudgetOpen || mobileNavOpen || txReceiptWizardOpen
     if (!isAnyOverlayOpen) return
     const prevBodyOverflow = document.body.style.overflow
     const prevHtmlOverflow = document.documentElement.style.overflow
@@ -386,7 +593,15 @@ export default function UiPage() {
       document.body.style.overflow = prevBodyOverflow
       document.documentElement.style.overflow = prevHtmlOverflow
     }
-  }, [deleteFamilyOpen, reportsOpen, budgetModalOpen, peopleBudgetOpen, mobileNavOpen])
+  }, [deleteFamilyOpen, reportsOpen, budgetModalOpen, peopleBudgetOpen, mobileNavOpen, txReceiptWizardOpen])
+
+  useEffect(() => {
+    if (view !== 'transacciones') return
+    const r = rangeDates('this_month')
+    setTxFltRange('this_month')
+    if (r.from) setTxFltFrom(r.from.toISOString().slice(0, 10))
+    if (r.to) setTxFltTo(new Date(r.to.getTime() - 1).toISOString().slice(0, 10))
+  }, [view])
 
   useEffect(() => {
     if (!reportsOpen) return
@@ -407,6 +622,59 @@ export default function UiPage() {
   useEffect(() => {
     if (!reportsOpen) setReportsMenuOpen(false)
   }, [reportsOpen])
+
+  useEffect(() => {
+    if (!reportsOpen || reportsTab !== 'consumo') return
+    const { from, to } = rangeDates(fltRange)
+    const params = new URLSearchParams()
+    if (from) params.set('from', from.toISOString().slice(0, 10))
+    if (to) params.set('to', to.toISOString().slice(0, 10))
+    setConsumptionLoading(true)
+    fetch(`/api/reports/consumption?${params.toString()}`, { credentials: 'include', headers: viewAsHeaders(false) })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.ok) setConsumptionData({
+          utility: data.utility || [],
+          products: data.products || [],
+          productsGrouped: data.productsGrouped || [],
+          reposicion: data.reposicion || [],
+        })
+        else setConsumptionData({ utility: [], products: [], productsGrouped: [], reposicion: [] })
+      })
+      .catch(() => setConsumptionData({ utility: [], products: [], productsGrouped: [], reposicion: [] }))
+      .finally(() => setConsumptionLoading(false))
+  }, [reportsOpen, reportsTab, fltRange])
+
+  async function loadConsumptionSeed() {
+    if (consumptionSeeding) return
+    setConsumptionSeeding(true)
+    try {
+      const res = await fetch('/api/dev/seed-consumption', { method: 'POST', credentials: 'include', headers: viewAsHeaders(false) })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setMessage(data?.detail || data?.message || 'No se pudieron crear datos de consumo')
+        return
+      }
+      setMessage('Datos de consumo creados. Actualizando…')
+      const { from, to } = rangeDates(fltRange)
+      const params = new URLSearchParams()
+      if (from) params.set('from', from.toISOString().slice(0, 10))
+      if (to) params.set('to', to.toISOString().slice(0, 10))
+      const r = await fetch(`/api/reports/consumption?${params.toString()}`, { credentials: 'include', headers: viewAsHeaders(false) })
+      const consumption = await r.json().catch(() => ({}))
+      if (consumption?.ok) setConsumptionData({
+        utility: consumption.utility || [],
+        products: consumption.products || [],
+        productsGrouped: consumption.productsGrouped || [],
+        reposicion: consumption.reposicion || [],
+      })
+      setMessage('')
+    } catch (e: any) {
+      setMessage(e?.message || 'Error al cargar datos de consumo')
+    } finally {
+      setConsumptionSeeding(false)
+    }
+  }
 
   useEffect(() => {
     if (!reportsMenuOpen) return
@@ -479,11 +747,13 @@ export default function UiPage() {
     setTxNewReceiptAllocationId('')
     setTxNewReceiptBusy(false)
     setTxFltRange('all')
+    setTxFltFrom('')
+    setTxFltTo('')
     setTxFltCategoryId('all')
     setTxFltEntityId('all')
     setTxFltMemberId('all')
     setTxFltReceipt('all')
-    setTxSearch('')
+    setGlobalSearch('')
     setTxDetailReceiptId(null)
     setTxDetailReceiptLoading(false)
 
@@ -510,6 +780,8 @@ export default function UiPage() {
     setReceiptEditConcepts(false)
 
     setMemberNameDraft({})
+    setMemberPhoneDraft({})
+    setMemberCityDraft({})
     setEntityNameDraft({})
     setCategoryNameDraft({})
     setAllocationLimitDraft({})
@@ -626,13 +898,46 @@ export default function UiPage() {
     }
   }, [familyDetails?.id])
 
-  async function postJson(url: string, body: any) {
+  async function loadMoneyRequests() {
+    if (!activeFamilyId) return
+    setMoneyRequestsLoading(true)
+    try {
+      const r = await fetch('/api/money-requests', { credentials: 'include', headers: viewAsHeaders(false) })
+      const data = await r.json()
+      setMoneyRequests(Array.isArray(data?.moneyRequests) ? data.moneyRequests : [])
+    } catch {
+      setMoneyRequests([])
+    } finally {
+      setMoneyRequestsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (view !== 'solicitudes' || !activeFamilyId) return
+    loadMoneyRequests()
+  }, [view, activeFamilyId])
+
+  // Sincronización entre dispositivos: refrescar lista cada 30s mientras se está en Solicitudes
+  useEffect(() => {
+    if (view !== 'solicitudes' || !activeFamilyId) return
+    const interval = setInterval(loadMoneyRequests, 30_000)
+    return () => clearInterval(interval)
+  }, [view, activeFamilyId])
+
+  useEffect(() => {
+    setDeliverFilesCount(0)
+    setDeliverAmountSent('')
+    if (deliverFileInputRef.current) deliverFileInputRef.current.value = ''
+  }, [selectedMoneyRequestId])
+
+  async function postJson(url: string, body: any, opts?: { skipViewAs?: boolean }) {
+    const skipViewAs = opts?.skipViewAs === true
     let res: Response
     try {
       res = await fetch(url, {
         method: 'POST',
         credentials: 'include',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...viewAsHeaders(skipViewAs) },
         body: JSON.stringify(body),
       })
     } catch (e: any) {
@@ -644,13 +949,14 @@ export default function UiPage() {
     return data
   }
 
-  async function patchJson(url: string, body: any) {
+  async function patchJson(url: string, body: any, opts?: { skipViewAs?: boolean }) {
+    const skipViewAs = opts?.skipViewAs === true
     let res: Response
     try {
       res = await fetch(url, {
         method: 'PATCH',
         credentials: 'include',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...viewAsHeaders(skipViewAs) },
         body: JSON.stringify(body),
       })
     } catch (e: any) {
@@ -662,10 +968,15 @@ export default function UiPage() {
     return data
   }
 
-  async function deleteReq(url: string) {
+  async function deleteReq(url: string, opts?: { skipViewAs?: boolean }) {
+    const skipViewAs = opts?.skipViewAs === true
     let res: Response
     try {
-      res = await fetch(url, { method: 'DELETE', credentials: 'include' })
+      res = await fetch(url, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: viewAsHeaders(skipViewAs),
+      })
     } catch (e: any) {
       const raw = typeof e?.message === 'string' ? e.message : ''
       throw new Error(`Error de conexión con el servidor${raw ? ` (${raw})` : ''}. Recarga la página e intenta de nuevo.`)
@@ -675,10 +986,14 @@ export default function UiPage() {
     return data
   }
 
-  async function getJson(url: string) {
+  async function getJson(url: string, opts?: { skipViewAs?: boolean }) {
+    const skipViewAs = opts?.skipViewAs === true
     let res: Response
     try {
-      res = await fetch(url, { credentials: 'include' })
+      res = await fetch(url, {
+        credentials: 'include',
+        headers: viewAsHeaders(skipViewAs),
+      })
     } catch (e: any) {
       const raw = typeof e?.message === 'string' ? e.message : ''
       throw new Error(`Error de conexión con el servidor${raw ? ` (${raw})` : ''}. Recarga la página e intenta de nuevo.`)
@@ -688,14 +1003,15 @@ export default function UiPage() {
     return data
   }
 
-  async function refreshBudget(opts: { silent?: boolean } = {}) {
+  async function refreshBudget(opts: { silent?: boolean; mine?: boolean } = {}) {
     if (!opts.silent) setMessage('')
+    const mineQ = opts.mine ? '?mine=1' : ''
     try {
       const [f, e, c, a] = await Promise.all([
         getJson('/api/families/active'),
-        getJson('/api/budget/entities'),
+        getJson(`/api/budget/entities${mineQ}`),
         getJson('/api/budget/categories'),
-        getJson('/api/budget/allocations'),
+        getJson(`/api/budget/allocations${mineQ}`),
       ])
       setFamilyDetails(f.family || null)
       setEntities(e.entities || [])
@@ -703,7 +1019,7 @@ export default function UiPage() {
       setAllocations(a.allocations || [])
     } catch (err: any) {
       const msg = err?.message || 'No se pudo cargar el presupuesto'
-      if (typeof msg === 'string' && msg.toLowerCase().includes('objeto presupuestal')) {
+      if (typeof msg === 'string' && msg.toLowerCase().includes('objeto presupuestal') || msg.toLowerCase().includes('partida presupuestal')) {
         router.push('/setup/objects')
         return
       }
@@ -711,27 +1027,51 @@ export default function UiPage() {
     }
   }
 
-  async function refreshTransactions(opts: { silent?: boolean } = {}) {
+  async function refreshTransactions(opts: { silent?: boolean } = {}): Promise<any[] | undefined> {
     if (!opts.silent) setMessage('')
     try {
       const t = await getJson('/api/transactions')
-      setTransactions(t.transactions || [])
+      const list = t.transactions || []
+      setTransactions(list)
+      if (messageRef.current.includes('DigitalOcean') || messageRef.current.includes('DO_SPACES')) setMessage('')
+      return list
     } catch (err: any) {
       const msg = err?.message || 'No se pudieron cargar los gastos'
-      if (typeof msg === 'string' && msg.toLowerCase().includes('objeto presupuestal')) {
+      if (typeof msg === 'string' && msg.toLowerCase().includes('objeto presupuestal') || msg.toLowerCase().includes('partida presupuestal')) {
         router.push('/setup/objects')
         return
       }
       if (!opts.silent) setMessage(msg)
+      return undefined
     }
   }
 
   async function register() {
     setMessage('')
+    const phone = (rPhone || '').replace(/\D/g, '')
+    if (!rEmail?.trim()) {
+      setMessage('Email es requerido.')
+      return
+    }
+    if (!rPass || rPass.length < 6) {
+      setMessage('La contraseña debe tener al menos 6 caracteres.')
+      return
+    }
+    if (phone.length < 10) {
+      setMessage('Teléfono requerido (mínimo 10 dígitos) para comprobantes por WhatsApp.')
+      return
+    }
+    if (!(rCity || '').trim()) {
+      setMessage('Ciudad es requerida.')
+      return
+    }
     try {
       await postJson('/api/auth/register', {
-        name: rName,
-        email: rEmail,
+        name: rName.trim() || undefined,
+        email: rEmail.trim(),
+        phone: rPhone.trim(),
+        city: rCity.trim() || undefined,
+        belongs_to_family: rBelongsToFamily === 'yes',
         password: rPass,
         familyName: rFamily,
       })
@@ -757,7 +1097,7 @@ export default function UiPage() {
   async function logout() {
     setMessage('')
     try {
-      await postJson('/api/auth/logout', {})
+      await postJson('/api/auth/logout', {}, { skipViewAs: true })
       setMessage('Sesión cerrada.')
       setMe({ detail: 'No autenticado' })
       setMembers(null)
@@ -796,7 +1136,7 @@ export default function UiPage() {
   async function switchFamily(familyId: string) {
     setMessage('')
     try {
-      await postJson('/api/auth/switch-family', { familyId })
+      await postJson('/api/auth/switch-family', { familyId }, { skipViewAs: true })
       setMessage('Familia seleccionada.')
       await refreshMe()
       await refreshMembers()
@@ -829,7 +1169,14 @@ export default function UiPage() {
       await refreshBudget()
       await refreshTransactions()
       await refreshMembers()
-      setMessage('Datos ficticios cargados.')
+      const n12 = data.createdTransactions12M ?? 0
+      const msg =
+        n12 > 0
+          ? `Datos ficticios cargados. Se añadieron ${data.createdTransactions} transacciones (${n12} del historial de 12 meses). Cambia el filtro de fechas a "Todo" o "Últimos 6 meses" en Transacciones/Reportes para verlas.`
+          : data.seedHint
+            ? `Datos ficticios cargados. ${data.seedHint}`
+            : 'Datos ficticios cargados.'
+      setMessage(msg)
     } catch (e: any) {
       setMessage(e?.message || 'No se pudieron cargar datos ficticios')
     } finally {
@@ -887,7 +1234,7 @@ export default function UiPage() {
       const res = await fetch('/api/families/active', {
         method: 'PATCH',
         credentials: 'include',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...viewAsHeaders(false) },
         body: JSON.stringify({
           name: famName,
           currency: famCurrency,
@@ -969,7 +1316,7 @@ export default function UiPage() {
         res = await fetch('/api/families/active', {
           method: 'DELETE',
           credentials: 'include',
-          headers: { 'content-type': 'application/json' },
+          headers: { 'content-type': 'application/json', ...viewAsHeaders(false) },
           body: JSON.stringify({ email, password, archiveId }),
         })
       } catch (e: any) {
@@ -997,32 +1344,63 @@ export default function UiPage() {
         name: mName,
         email: mEmail,
         password: mPass,
+        phone: mPhone.trim() || undefined,
         isFamilyAdmin: mAdmin,
       })
-      setMessage('Usuario agregado.')
+      setMessage('Usuario agregado. Si ya no ves tu sesión, cierra sesión e inicia con tu correo.')
       setMName('')
       setMEmail('')
       setMPass('')
+      setMPhone('')
       setMAdmin(false)
       await refreshMembers()
+      await refreshMe()
     } catch (e: any) {
       setMessage(e?.message || 'No se pudo agregar usuario')
     }
   }
 
-  async function saveUserName(targetUserId: string) {
+  async function createInviteLink() {
+    setMessage('')
+    setInviteLoading(true)
+    setLastInviteUrl(null)
+    try {
+      const data = await postJson('/api/families/invites', { expiresInDays: 7 })
+      if (data.joinUrl) setLastInviteUrl(data.joinUrl)
+      setMessage('Enlace generado. Compártelo por WhatsApp o correo. Caduca en 7 días.')
+    } catch (e: any) {
+      setMessage(e?.message || 'No se pudo generar el enlace')
+    } finally {
+      setInviteLoading(false)
+    }
+  }
+
+  async function saveUserProfile(targetUserId: string) {
     if (memberSavingId) return
     setMessage('')
     try {
-      const draft = (memberNameDraft[targetUserId] ?? '').trim()
+      const nameDraft = (memberNameDraft[targetUserId] ?? '').trim()
+      const phoneDraft = (memberPhoneDraft[targetUserId] ?? '').trim()
+      const cityDraft = (memberCityDraft[targetUserId] ?? '').trim()
       const current = (Array.isArray(members) ? members : []).find((m: any) => m?.id === targetUserId)
-      const currentName = typeof current?.name === 'string' ? current.name : ''
-      if (draft === currentName) {
+      const same =
+        nameDraft === String(current?.name || '') &&
+        phoneDraft === String(current?.phone || '') &&
+        cityDraft === String(current?.city || '')
+      if (same) {
         setMessage('Sin cambios.')
         return
       }
+      if (phoneDraft && phoneDraft.replace(/\D/g, '').length < 10) {
+        setMessage('El teléfono debe tener al menos 10 dígitos.')
+        return
+      }
       setMemberSavingId(targetUserId)
-      await patchJson(`/api/families/members/${targetUserId}`, { name: draft })
+      await patchJson(`/api/families/members/${targetUserId}`, {
+        name: nameDraft || null,
+        phone: phoneDraft || null,
+        city: cityDraft || null,
+      })
       await refreshMembers()
       await refreshMe()
       setMessage('Usuario actualizado.')
@@ -1030,6 +1408,93 @@ export default function UiPage() {
       setMessage(e?.message || 'No se pudo actualizar el usuario')
     } finally {
       setMemberSavingId(null)
+    }
+  }
+
+  async function sendTwilioTest(targetUserId: string) {
+    if (twilioTestSendingId) return
+    setMessage('')
+    try {
+      setTwilioTestSendingId(targetUserId)
+      const res = await fetch('/api/whatsapp/test', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...viewAsHeaders(false) },
+        body: JSON.stringify({ userId: targetUserId }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.detail || 'No se pudo enviar')
+      setMessage('Mensaje de prueba enviado a tu WhatsApp. Revisa tu teléfono.')
+    } catch (e: any) {
+      setMessage(e?.message || 'Error al enviar prueba. Revisa que Twilio esté configurado y el teléfono tenga 10+ dígitos.')
+    } finally {
+      setTwilioTestSendingId(null)
+    }
+  }
+
+  async function sendBudgetSuggestion() {
+    if (suggestionSending || !suggestionText.trim()) return
+    setMessage('')
+    try {
+      setSuggestionSending(true)
+      await postJson('/api/budget/suggestions', {
+        type: suggestionType,
+        payload: { text: suggestionText.trim() },
+      })
+      showToast('ok', 'Sugerencia enviada. El admin la revisará.')
+      setSuggestionOpen(false)
+      setSuggestionText('')
+      if (meOk?.isFamilyAdmin) loadSuggestions()
+    } catch (e: any) {
+      setMessage(e?.message || 'No se pudo enviar')
+    } finally {
+      setSuggestionSending(false)
+    }
+  }
+
+  async function loadSuggestions() {
+    try {
+      const data = await getJson('/api/budget/suggestions')
+      setSuggestionsList(Array.isArray(data?.suggestions) ? data.suggestions : [])
+    } catch {
+      setSuggestionsList([])
+    }
+  }
+
+  async function resolveSuggestion(id: string, status: 'APPROVED' | 'REJECTED') {
+    try {
+      await patchJson(`/api/budget/suggestions/${id}`, { status })
+      showToast('ok', status === 'APPROVED' ? 'Sugerencia aprobada' : 'Sugerencia rechazada')
+      loadSuggestions()
+    } catch (e: any) {
+      setMessage(e?.message || 'No se pudo actualizar')
+    }
+  }
+
+  async function uploadAvatar(file: File) {
+    if (avatarUploading || !file?.size) return
+    setMessage('')
+    try {
+      setAvatarUploading(true)
+      const form = new FormData()
+      form.append('file', file)
+      const res = await fetch('/api/users/me/avatar', {
+        method: 'POST',
+        credentials: 'include',
+        headers: viewAsHeaders(false),
+        body: form,
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.detail || 'No se pudo subir')
+      await refreshMe()
+      await refreshMembers()
+      setMessage('Avatar actualizado.')
+      showToast('ok', 'Avatar actualizado.')
+      if (avatarFileInputRef.current) avatarFileInputRef.current.value = ''
+    } catch (e: any) {
+      setMessage(e?.message || 'No se pudo subir el avatar')
+    } finally {
+      setAvatarUploading(false)
     }
   }
 
@@ -1055,7 +1520,11 @@ export default function UiPage() {
     try {
       if (!confirm('¿Eliminar a este usuario de la familia?')) return
       setMemberSavingId(targetUserId)
-      const res = await fetch(`/api/families/members/${targetUserId}`, { method: 'DELETE', credentials: 'include' })
+      const res = await fetch(`/api/families/members/${targetUserId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: viewAsHeaders(false),
+      })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.detail || 'No se pudo eliminar')
       await refreshMembers()
@@ -1065,6 +1534,32 @@ export default function UiPage() {
       setMessage(e?.message || 'No se pudo eliminar el usuario')
     } finally {
       setMemberSavingId(null)
+    }
+  }
+
+  async function uploadAvatarUser(file: File) {
+    if (avatarUploading || !meOk) return
+    setMessage('')
+    try {
+      setAvatarUploading(true)
+      const form = new FormData()
+      form.append('file', file)
+      const res = await fetch('/api/users/me/avatar', {
+        method: 'POST',
+        credentials: 'include',
+        headers: viewAsHeaders(false),
+        body: form,
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.detail || 'No se pudo subir la foto')
+      await refreshMe()
+      showToast('ok', 'Foto de perfil actualizada.')
+    } catch (e: any) {
+      setMessage(e?.message || 'No se pudo subir la foto')
+      showToast('error', e?.message || 'Error al subir')
+    } finally {
+      setAvatarUploading(false)
+      if (avatarFileInputRef.current) avatarFileInputRef.current.value = ''
     }
   }
 
@@ -1081,9 +1576,9 @@ export default function UiPage() {
       setBeInBudget(true)
       setBeInReports(true)
       await refreshBudget()
-      setMessage('Objeto creado.')
+      setMessage('Partida creada.')
     } catch (e: any) {
-      setMessage(e?.message || 'No se pudo crear el objeto')
+      setMessage(e?.message || 'No se pudo crear la partida')
     }
   }
 
@@ -1136,7 +1631,7 @@ export default function UiPage() {
       setAlEntityId(vehicleId)
       if (gasolinaId) setAlCategoryId(gasolinaId)
       setAlLimit('')
-      setMessage(`Listo: ${vehicleName}. Ahora asigna el monto mensual (ej. Gasolina) y registra los gastos en ese objeto.`)
+      setMessage(`Listo: ${vehicleName}. Ahora asigna el monto mensual (ej. Gasolina) y registra los gastos en esa partida.`)
     } catch (e: any) {
       setMessage(e?.message || 'No se pudo preparar el auto personal')
     } finally {
@@ -1180,8 +1675,8 @@ export default function UiPage() {
       const fromEntityId = String(from?.entity?.id || '')
       const fromCategoryId = String(from?.category?.id || '')
       if (!from || !fromEntityId || !fromCategoryId) throw new Error('Cuenta origen inválida')
-      if (!toEntityId) throw new Error('Selecciona un objeto destino')
-      if (String(toEntityId) === String(fromEntityId)) throw new Error('El objeto destino debe ser diferente')
+      if (!toEntityId) throw new Error('Selecciona una partida destino')
+      if (String(toEntityId) === String(fromEntityId)) throw new Error('La partida destino debe ser diferente')
 
       const clean = String(monthlyLimit || '').trim().replace(/,/g, '')
       const n = Number(clean)
@@ -1230,10 +1725,6 @@ export default function UiPage() {
     if (entityImageUploadingId) return
     setMessage('')
     try {
-      if (!meOk?.isFamilyAdmin) {
-        setMessage('Solo el administrador puede subir fotos.')
-        return
-      }
       if (!file) {
         setMessage('Selecciona una imagen.')
         return
@@ -1244,7 +1735,12 @@ export default function UiPage() {
 
       let res: Response
       try {
-        res = await fetch(`/api/budget/entities/${entityId}/image`, { method: 'POST', credentials: 'include', body: form })
+        res = await fetch(`/api/budget/entities/${entityId}/image`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: viewAsHeaders(false),
+          body: form,
+        })
       } catch (e: any) {
         const raw = typeof e?.message === 'string' ? e.message : ''
         throw new Error(`No se pudo subir la foto (conexión)${raw ? `: ${raw}` : ''}.`)
@@ -1276,9 +1772,9 @@ export default function UiPage() {
       setAdminSavingId(id)
       await patchJson(`/api/budget/entities/${id}`, patch)
       await refreshBudget({ silent: true })
-      setMessage('Objeto actualizado.')
+      setMessage('Partida actualizada.')
     } catch (e: any) {
-      setMessage(e?.message || 'No se pudo actualizar el objeto')
+      setMessage(e?.message || 'No se pudo actualizar la partida')
     } finally {
       setAdminSavingId(null)
     }
@@ -1288,14 +1784,14 @@ export default function UiPage() {
     if (adminSavingId) return
     setMessage('')
     try {
-      if (!confirm('¿Eliminar este objeto?')) return
+      if (!confirm('¿Eliminar esta partida?')) return
       setAdminSavingId(id)
       await deleteReq(`/api/budget/entities/${id}`)
       await refreshBudget({ silent: true })
       await refreshTransactions({ silent: true })
-      setMessage('Objeto eliminado.')
+      setMessage('Partida eliminada.')
     } catch (e: any) {
-      setMessage(e?.message || 'No se pudo eliminar el objeto')
+      setMessage(e?.message || 'No se pudo eliminar la partida')
     } finally {
       setAdminSavingId(null)
     }
@@ -1385,60 +1881,218 @@ export default function UiPage() {
       setTxAmount('')
       setTxDesc('')
       await refreshTransactions({ silent: true })
-      showToast('ok', 'Gasto agregado.')
+      const regCode = created?.registrationCode ? ` Registro: ${created.registrationCode}.` : ''
+      showToast('ok', created?.duplicateWarning ? `Gasto agregado.${regCode} Posible duplicado: revisa el aviso.` : `Gasto agregado.${regCode}`)
+      if (created?.duplicateWarning) {
+        setLastDuplicateWarning({
+          transactionId: created.duplicateWarning.transactionId,
+          date: created.duplicateWarning.date,
+          description: created.duplicateWarning.description ?? null,
+          amount: created.duplicateWarning.amount ?? '',
+        })
+      } else {
+        setLastDuplicateWarning(null)
+      }
       if (created?.id) setReceiptTxId(String(created.id))
     } catch (e: any) {
       setMessage(e?.message || 'No se pudo crear el gasto')
     }
   }
 
-  async function createTransactionFromReceipt() {
+  async function createTransactionFromReceipt(opts?: { openDetail?: boolean; awaitExtraction?: boolean }) {
     if (txNewReceiptBusy) return
+    const openDetail = opts?.openDetail !== false
+    const awaitExtraction = opts?.awaitExtraction !== false
+    const files = [...txNewReceiptFiles]
     setMessage('')
     try {
-      if (!txNewReceiptFiles.length) {
+      if (!files.length) {
         setMessage('Selecciona al menos 1 foto del ticket')
         return
       }
       setTxNewReceiptBusy(true)
+      const total = files.length
 
-      const form = new FormData()
-      for (const f of txNewReceiptFiles) form.append('file', f)
-      if (txNewReceiptAllocationId) form.append('allocationId', txNewReceiptAllocationId)
-
-      let res: Response
-      try {
-        res = await fetch('/api/transactions/from-receipt', {
-          method: 'POST',
-          credentials: 'include',
-          body: form,
-        })
-      } catch (e: any) {
-        const raw = typeof e?.message === 'string' ? e.message : ''
-        throw new Error(`No se pudo subir el ticket (conexión)${raw ? `: ${raw}` : ''}.`)
+      // Varias fotos = un gasto por foto (en fila). Cola en segundo plano: no bloquea el móvil.
+      if (total > 1) {
+        const allocationId = txNewReceiptAllocationId
+        const assignToUserId = txReceiptAssignTo === 'others' && txReceiptAssignUserId ? txReceiptAssignUserId : ''
+        setTxNewReceiptFiles([]) // vaciar ya para poder añadir más mientras suben
+        setTxNewReceiptUploadProgress({ current: 0, total })
+        showToast('info', `Subiendo ${total} tickets en segundo plano…`)
+        ;(async () => {
+          let lastTransactionId = ''
+          let lastDuplicate: { transactionId: string; date: string; description: string | null; amount: string } | null = null
+          try {
+            for (let i = 0; i < files.length; i++) {
+              setTxNewReceiptUploadProgress({ current: i + 1, total })
+              duplicateConfirmFileRef.current = files[i] ?? null
+              const form = new FormData()
+              form.append('file', files[i]!)
+              if (allocationId) form.append('allocationId', allocationId)
+              if (assignToUserId) form.append('assignToUserId', assignToUserId)
+              const res = await fetch('/api/transactions/from-receipt', {
+                method: 'POST',
+                credentials: 'include',
+                headers: viewAsHeaders(false),
+                body: form,
+              })
+              const data = await res.json().catch(() => ({}))
+              if (res.status === 409 && data?.code === 'POSSIBLE_DUPLICATE') {
+                setTxNewReceiptUploadProgress(null)
+                setDuplicateConfirmPending({
+                  duplicateWarning: {
+                    transactionId: data.duplicateWarning.transactionId,
+                    date: data.duplicateWarning.date,
+                    description: data.duplicateWarning.description ?? null,
+                    amount: data.duplicateWarning.amount ?? '',
+                  },
+                  allocationId,
+                  assignToUserId,
+                })
+                showToast('info', `Gasto ${i + 1}: posible duplicado. Elige descartar o registrar de todos modos.`)
+                return
+              }
+              if (!res.ok) throw new Error(data.detail || data.message || `Gasto ${i + 1} (HTTP ${res.status})`)
+              lastTransactionId = String(data?.transactionId || '')
+              if (data?.duplicateWarning) lastDuplicate = { transactionId: data.duplicateWarning.transactionId, date: data.duplicateWarning.date, description: data.duplicateWarning.description ?? null, amount: data.duplicateWarning.amount ?? '' }
+              await new Promise((r) => setTimeout(r, 80))
+            }
+            setTxNewReceiptAllocationId('')
+            setTxNewReceiptUploadProgress(null)
+            if (lastDuplicate) setLastDuplicateWarning(lastDuplicate)
+            else setLastDuplicateWarning(null)
+            const doneAt = new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+            setLastBackgroundReceiptDone({ message: `${total} gastos guardados`, at: doneAt })
+            setTimeout(() => setLastBackgroundReceiptDone(null), 12000)
+            showToast('ok', lastDuplicate ? `${total} gastos guardados. Revisa posible duplicado.` : `${total} gastos guardados. Ver en Transacciones.`)
+            setTimeout(() => refreshTransactions({ silent: true }).catch(() => {}), 600)
+            if (openDetail && lastTransactionId) {
+              openTx(lastTransactionId)
+              setTxTab('Evidencias')
+            }
+          } catch (e: any) {
+            setMessage(e?.message || 'Error al subir uno de los tickets')
+            showToast('error', e?.message || 'Error al subir')
+          } finally {
+            setTxNewReceiptBusy(false)
+            setTxNewReceiptUploadProgress(null)
+          }
+        })()
+        return // no esperar: el flujo sigue y el móvil no se congela
       }
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.detail || `No se pudo agregar el gasto (HTTP ${res.status})`)
 
-      const transactionId = String(data?.transactionId || '')
-      const receiptId = String(data?.receiptId || '')
+      // Una sola foto: subir en segundo plano para no congelar la UI
+      duplicateConfirmFileRef.current = files[0] ?? null
+      const form = new FormData()
+      form.append('file', files[0]!)
+      if (txNewReceiptAllocationId) form.append('allocationId', txNewReceiptAllocationId)
+      if (txReceiptAssignTo === 'others' && txReceiptAssignUserId) form.append('assignToUserId', txReceiptAssignUserId)
 
+      showToast('info', 'Subiendo ticket en segundo plano…')
       setTxNewReceiptFiles([])
       setTxNewReceiptAllocationId('')
-      showToast('ok', data?.message || 'Gasto agregado con comprobante.')
+      setTxNewReceiptBusy(false)
 
-      await refreshTransactions({ silent: true })
-
-      if (transactionId) {
-        openTx(transactionId)
-        setTxTab('Evidencias')
-      }
-      if (receiptId) {
-        // Carga la extracción ya guardada y abre la revisión.
-        await extractReceipt(receiptId)
-      }
+      ;(async () => {
+        try {
+          const res = await fetch('/api/transactions/from-receipt', {
+            method: 'POST',
+            credentials: 'include',
+            headers: viewAsHeaders(false),
+            body: form,
+          })
+          const data = await res.json().catch(() => ({}))
+          if (res.status === 409 && data?.code === 'POSSIBLE_DUPLICATE') {
+            setDuplicateConfirmPending({
+              duplicateWarning: {
+                transactionId: data.duplicateWarning.transactionId,
+                date: data.duplicateWarning.date,
+                description: data.duplicateWarning.description ?? null,
+                amount: data.duplicateWarning.amount ?? '',
+              },
+              allocationId: txNewReceiptAllocationId,
+              assignToUserId: txReceiptAssignTo === 'others' && txReceiptAssignUserId ? txReceiptAssignUserId : '',
+            })
+            showToast('info', 'Posible duplicado. Elige descartar o registrar de todos modos.')
+            return
+          }
+          if (!res.ok) {
+            showToast('error', data.detail || data.message || `No se pudo agregar el gasto (HTTP ${res.status})`)
+            return
+          }
+          const transactionId = String(data?.transactionId || '')
+          const receiptId = String(data?.receiptId || '')
+          const regCode = data?.registrationCode ? ` Registro: ${data.registrationCode}.` : ''
+          showToast('ok', (data?.message || 'Gasto guardado. Ver en Transacciones.') + regCode)
+          if (data?.duplicateWarning) {
+            setLastDuplicateWarning({
+              transactionId: data.duplicateWarning.transactionId,
+              date: data.duplicateWarning.date,
+              description: data.duplicateWarning.description ?? null,
+              amount: data.duplicateWarning.amount ?? '',
+            })
+          } else {
+            setLastDuplicateWarning(null)
+          }
+          setTimeout(() => refreshTransactions({ silent: true }).catch(() => {}), 600)
+          if (receiptId) {
+            setTimeout(() => extractReceipt(receiptId, { background: true }).catch(() => {}), 800)
+          }
+          if (openDetail && transactionId) {
+            openTx(transactionId)
+            setTxTab('Evidencias')
+          }
+        } catch (e: any) {
+          showToast('error', e?.message || 'No se pudo subir el ticket')
+        }
+      })()
+      return
     } catch (e: any) {
       setMessage(e?.message || 'No se pudo agregar el gasto con comprobante')
+      setTxNewReceiptUploadProgress(null)
+    } finally {
+      setTxNewReceiptBusy(false)
+    }
+  }
+
+  async function confirmDuplicateAndRegister() {
+    const file = duplicateConfirmFileRef.current
+    const pending = duplicateConfirmPending
+    if (!file || !pending) {
+      setDuplicateConfirmPending(null)
+      duplicateConfirmFileRef.current = null
+      return
+    }
+    setTxNewReceiptBusy(true)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      if (pending.allocationId) form.append('allocationId', pending.allocationId)
+      if (pending.assignToUserId) form.append('assignToUserId', pending.assignToUserId)
+      form.append('forceDuplicate', '1')
+      const res = await fetch('/api/transactions/from-receipt', {
+        method: 'POST',
+        credentials: 'include',
+        headers: viewAsHeaders(false),
+        body: form,
+      })
+      const data = await res.json().catch(() => ({}))
+      setDuplicateConfirmPending(null)
+      duplicateConfirmFileRef.current = null
+      if (!res.ok) {
+        showToast('error', data.message || data.detail || 'No se pudo registrar')
+        return
+      }
+      showToast('ok', 'Gasto registrado de todos modos. Ver en Transacciones.')
+      if (data?.duplicateWarning) setLastDuplicateWarning({ transactionId: data.duplicateWarning.transactionId, date: data.duplicateWarning.date, description: data.duplicateWarning.description ?? null, amount: data.duplicateWarning.amount ?? '' })
+      setTimeout(() => refreshTransactions({ silent: true }).catch(() => {}), 600)
+      if (data?.transactionId) {
+        openTx(data.transactionId)
+        setTxTab('Evidencias')
+      }
+    } catch (e: any) {
+      showToast('error', e?.message || 'No se pudo registrar')
     } finally {
       setTxNewReceiptBusy(false)
     }
@@ -1462,6 +2116,7 @@ export default function UiPage() {
         res = await fetch(`/api/transactions/${receiptTxId}/receipt`, {
           method: 'POST',
           credentials: 'include',
+          headers: viewAsHeaders(false),
           body: form,
         })
       } catch (e: any) {
@@ -1527,7 +2182,10 @@ export default function UiPage() {
     try {
       let res: Response
       try {
-        res = await fetch(`/api/receipts/${receiptId}/extraction`, { credentials: 'include' })
+        res = await fetch(`/api/receipts/${receiptId}/extraction`, {
+          credentials: 'include',
+          headers: viewAsHeaders(false),
+        })
       } catch (e: any) {
         const raw = typeof e?.message === 'string' ? e.message : ''
         throw new Error(`Error de conexión con el servidor${raw ? ` (${raw})` : ''}. Recarga la página e intenta de nuevo.`)
@@ -1542,11 +2200,12 @@ export default function UiPage() {
       }
       if (!res.ok) throw new Error(data.detail || `Error HTTP ${res.status}`)
 
-      setReceiptExtraction(data.extraction || null)
+      const extraction = normReceiptExtraction(data.extraction)
+      setReceiptExtraction(extraction)
       setReceiptExtractionForId(receiptId)
       setReceiptDraftForId(null)
       setReceiptEditConcepts(false)
-      return data.extraction || null
+      return extraction
     } catch (e: any) {
       if (!opts.silent) setMessage(e?.message || 'No se pudo cargar la extracción')
       return null
@@ -1624,17 +2283,17 @@ export default function UiPage() {
     }
   }
 
-  async function extractReceipt(receiptId: string, opts?: { force?: boolean }) {
-    if (receiptExtractingId) return
-    setMessage('')
+  async function extractReceipt(receiptId: string, opts?: { force?: boolean; background?: boolean }) {
+    if (!opts?.background && receiptExtractingId) return
+    if (!opts?.background) setMessage('')
     try {
-      setReceiptExtractingId(receiptId)
+      if (!opts?.background) setReceiptExtractingId(receiptId)
       let res: Response
       try {
         res = await fetch(`/api/receipts/${receiptId}/extract`, {
           method: 'POST',
           credentials: 'include',
-          headers: { 'content-type': 'application/json' },
+          headers: { 'content-type': 'application/json', ...viewAsHeaders(false) },
           body: JSON.stringify({ mode: 'precise', ...(opts?.force ? { force: true } : {}) }),
         })
       } catch (e: any) {
@@ -1643,17 +2302,24 @@ export default function UiPage() {
       }
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.detail || `No se pudo extraer el ticket (HTTP ${res.status})`)
-      setReceiptExtraction(data.extraction || null)
-      setReceiptExtractionForId(receiptId)
-      setReceiptDraftForId(null)
-      setReceiptEditConcepts(false)
-      showToast('ok', data.message || 'Ticket extraído correctamente.')
-      await loadReceiptPreview(receiptId)
-      await refreshTransactions({ silent: true })
+      const extraction = normReceiptExtraction(data.extraction)
+      if (opts?.background) {
+        showToast('ok', 'Ticket extraído en segundo plano.')
+        refreshTransactions({ silent: true }).catch(() => {})
+      } else {
+        setReceiptExtraction(extraction)
+        setReceiptExtractionForId(receiptId)
+        setReceiptDraftForId(null)
+        setReceiptEditConcepts(false)
+        showToast('ok', data.message || 'Ticket extraído correctamente.')
+        await loadReceiptPreview(receiptId)
+        await refreshTransactions({ silent: true })
+      }
     } catch (e: any) {
-      setMessage(e?.message || 'No se pudo extraer el ticket')
+      if (!opts?.background) setMessage(e?.message || 'No se pudo extraer el ticket')
+      else showToast('error', 'La extracción falló. Puedes extraer después desde el ticket.')
     } finally {
-      setReceiptExtractingId(null)
+      if (!opts?.background) setReceiptExtractingId(null)
     }
   }
 
@@ -1712,7 +2378,7 @@ export default function UiPage() {
       }
 
       const res = await patchJson(`/api/receipts/${rid}/extraction`, payload)
-      setReceiptExtraction(res.extraction || null)
+      setReceiptExtraction(normReceiptExtraction(res.extraction))
       setReceiptExtractionForId(rid)
       setReceiptDraftForId(null)
       showToast('ok', res.message || 'Cambios guardados (opcional).')
@@ -1726,14 +2392,14 @@ export default function UiPage() {
   async function confirmReceipt(receiptId: string) {
     if (receiptConfirming) return
     setMessage('')
+    const currentTxId = selectedTxId
     try {
       setReceiptConfirming(true)
       const payload = receiptConfirmAllocationId ? { allocationId: receiptConfirmAllocationId } : {}
       const data = await postJson(`/api/receipts/${receiptId}/confirm`, payload)
       showToast('ok', data?.message || 'Ticket confirmado.')
-      await refreshTransactions({ silent: true })
 
-      // Limpiar revisión para seguir con el siguiente ticket
+      // Limpiar revisión antes de refrescar
       setReceiptExtraction(null)
       setReceiptExtractionForId(null)
       setReceiptPreviewUrl(null)
@@ -1747,6 +2413,23 @@ export default function UiPage() {
       setReceiptDraftForId(null)
       setReceiptEditConcepts(false)
       setReceiptConfirmAllocationId('')
+
+      const list = await refreshTransactions({ silent: true })
+      const hasPending = (tx: any) => {
+        const receipts = Array.isArray(tx?.receipts) ? tx.receipts : []
+        return receipts.some((r: any) => (r?.extraction && !r?.extraction?.confirmedAt) || !r?.extraction)
+      }
+      const pendingIds = list ? list.filter(hasPending).map((t: any) => t.id) : []
+      const currentIdx = currentTxId ? pendingIds.indexOf(currentTxId) : -1
+      const nextIdx = currentIdx >= 0 ? currentIdx + 1 : 0
+      const nextId = pendingIds[nextIdx]
+      if (nextId) {
+        openTx(nextId)
+        setTxTab('Evidencias')
+      } else {
+        setSelectedTxId(null)
+        go('transacciones')
+      }
     } catch (e: any) {
       setMessage(e?.message || 'No se pudo confirmar el ticket')
     } finally {
@@ -1778,6 +2461,33 @@ export default function UiPage() {
   const categoryItems = useMemo(() => (Array.isArray(categories) ? categories : []), [categories])
   const allocationItems = useMemo(() => (Array.isArray(allocations) ? allocations : []), [allocations])
   const memberItems = useMemo(() => (Array.isArray(members) ? members : []), [members])
+
+  const myPersonEntityId = useMemo(() => {
+    if (!meOk?.user) return null
+    const name = String(meOk.user.name || '')
+    const email = String(meOk.user.email || '')
+    const key = normKey(name || (email ? email.split('@')[0] : ''))
+    for (const e of entityItems) {
+      if (e?.type !== 'PERSON' || e?.isActive === false) continue
+      if (normKey(e?.name) === key) return String(e.id)
+      const first = name ? String(name).split(' ')[0] : ''
+      if (normKey(first) === normKey(e?.name)) return String(e.id)
+    }
+    return null
+  }, [entityItems, meOk])
+
+  const receiptWizardAllocationsForMe = useMemo(() => {
+    if (!myPersonEntityId) return []
+    return allocationItems.filter(
+      (a: any) => a?.isActive !== false && String(a?.entity?.id || '') === myPersonEntityId
+    )
+  }, [allocationItems, myPersonEntityId])
+
+  const receiptWizardAllocationsOthers = useMemo(() => {
+    return allocationItems.filter(
+      (a: any) => a?.isActive !== false && String(a?.entity?.id || '') !== myPersonEntityId
+    )
+  }, [allocationItems, myPersonEntityId])
   const orgUsers = useMemo(
     () =>
       memberItems.map((m: any) => ({
@@ -1788,13 +2498,18 @@ export default function UiPage() {
       })),
     [memberItems]
   )
+  const receiptWizardOtherUsers = useMemo(() => {
+    const meId = meOk?.user?.id ? String(meOk.user.id) : ''
+    if (meOk?.isFamilyAdmin) return orgUsers
+    return orgUsers.filter((u: any) => String(u.id) !== meId)
+  }, [meOk?.isFamilyAdmin, meOk?.user?.id, orgUsers])
   const orgEntities = useMemo(
     () =>
       entityItems
         .filter((e: any) => e?.isActive !== false)
         .map((e: any) => ({
           id: String(e.id || ''),
-          name: displayPersonName(e.name || 'Objeto'),
+          name: displayPersonName(e.name || 'Partida'),
           type: entityTypeLabel(e.type),
           inBudget: !!e.participatesInBudget,
           inReports: !!e.participatesInReports,
@@ -1872,13 +2587,37 @@ export default function UiPage() {
 
   const txItems = useMemo(() => (Array.isArray(transactions) ? transactions : []), [transactions])
 
+  const txPendingConfirm = useMemo(() => {
+    const items = txItems
+    const withToConfirm = items.filter((t: any) => {
+      const receipts = Array.isArray(t.receipts) ? t.receipts : []
+      return receipts.some((r: any) => r?.extraction && !r?.extraction?.confirmedAt)
+    })
+    const byUser: Record<string, number> = {}
+    for (const t of withToConfirm) {
+      const name = String(t.user?.name || t.user?.email || 'Sin usuario')
+      byUser[name] = (byUser[name] || 0) + 1
+    }
+    return { count: withToConfirm.length, byUser, transactions: withToConfirm }
+  }, [txItems])
+
+  const txPendingCategoryUser = useMemo(() => {
+    const items = txItems.filter((t: any) => t?.pendingReason)
+    const byUser: Record<string, number> = {}
+    for (const t of items) {
+      const name = String(t.user?.name || t.user?.email || 'Sin usuario')
+      byUser[name] = (byUser[name] || 0) + 1
+    }
+    return { count: items.length, byUser, transactions: items }
+  }, [txItems])
+
   const flt = useMemo(() => rangeDates(fltRange), [fltRange])
   const txFlt = useMemo(() => rangeDates(txFltRange), [txFltRange])
 
   const txFilteredItems = useMemo(() => {
-    const from = txFlt.from
-    const to = txFlt.to
-    const q = txSearch.trim().toLowerCase()
+    const from = txFltFrom ? new Date(txFltFrom + 'T00:00:00.000Z') : txFlt.from
+    const to = txFltTo ? new Date(txFltTo + 'T23:59:59.999Z') : txFlt.to
+    const q = globalSearch.trim().toLowerCase()
 
     return txItems.filter((t: any) => {
       if ((from || to) && !inDateRange(String(t?.date || ''), from, to)) return false
@@ -1888,8 +2627,10 @@ export default function UiPage() {
 
       const receipts = Array.isArray(t?.receipts) ? t.receipts : []
       const hasReceipt = receipts.length > 0
+      const hasToConfirm = receipts.some((r: any) => r?.extraction && !r?.extraction?.confirmedAt)
       if (txFltReceipt === 'with' && !hasReceipt) return false
       if (txFltReceipt === 'without' && hasReceipt) return false
+      if (txFltReceipt === 'to_confirm' && !hasToConfirm) return false
 
       if (q) {
         const hay = `${t?.description || ''} ${t?.allocation?.entity?.name || ''} ${t?.allocation?.category?.name || ''} ${t?.user?.name || ''} ${
@@ -1900,7 +2641,7 @@ export default function UiPage() {
 
       return true
     })
-  }, [txFlt.from, txFlt.to, txFltCategoryId, txFltEntityId, txFltMemberId, txFltReceipt, txItems, txSearch])
+  }, [txFlt.from, txFlt.to, txFltFrom, txFltTo, txFltCategoryId, txFltEntityId, txFltMemberId, txFltReceipt, txItems, globalSearch])
 
   useEffect(() => {
     didAutoScrollBudgetRef.current = false
@@ -1933,6 +2674,20 @@ export default function UiPage() {
     const r = (selectedTx as any)?.receipts
     return Array.isArray(r) ? r : []
   }, [selectedTx])
+
+  const txFilteredIndex = useMemo(() => {
+    if (!selectedTxId || !txFilteredItems.length) return -1
+    const i = txFilteredItems.findIndex((t: any) => t?.id === selectedTxId)
+    return i >= 0 ? i : -1
+  }, [selectedTxId, txFilteredItems])
+  const txPrevId = useMemo(() => {
+    if (txFilteredIndex <= 0) return null
+    return txFilteredItems[txFilteredIndex - 1]?.id ?? null
+  }, [txFilteredIndex, txFilteredItems])
+  const txNextId = useMemo(() => {
+    if (txFilteredIndex < 0 || txFilteredIndex >= txFilteredItems.length - 1) return null
+    return txFilteredItems[txFilteredIndex + 1]?.id ?? null
+  }, [txFilteredIndex, txFilteredItems])
 
   const receiptStats = useMemo(() => {
     const all = selectedTxReceipts
@@ -3165,15 +3920,19 @@ export default function UiPage() {
   const pageInfo = useMemo(() => {
     switch (view) {
       case 'dashboard':
-        return { title: 'Dashboard', subtitle: 'Overview financiero (estilo SAP-Family)' }
+        return { title: 'Dashboard', subtitle: '' }
       case 'presupuesto':
         return { title: 'Presupuesto', subtitle: 'List Report: filtros + tabla + panel de estado' }
       case 'transacciones':
         return { title: 'Transacciones', subtitle: 'Registro de gastos y recibos' }
+      case 'calendario':
+        return { title: 'Calendario de pagos', subtitle: 'Pagos realizados y esperados (motor IA)' }
       case 'usuarios':
         return { title: 'Usuarios', subtitle: 'Administración de usuarios de la familia' }
       case 'configuracion':
         return { title: 'Configuración', subtitle: 'Familias, sesión y estado del plan' }
+      case 'solicitudes':
+        return { title: 'Solicitudes de efectivo o pago', subtitle: 'Solicita efectivo o pago de servicios (colegiatura, cine, préstamo). Crear y gestionar aquí o por WhatsApp.' }
       case 'tx':
         return { title: 'Detalle de transacción', subtitle: '' }
       default:
@@ -3430,6 +4189,11 @@ export default function UiPage() {
           </div>
         </div>
         <div className="sapHeaderRight">
+          <div className="sapHeaderDateTimeCity" aria-label="Fecha, hora y ciudad">
+            <span className="sapHeaderDate">{now.toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+            <span className="sapHeaderTime">{now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+            <span className="sapHeaderCity">{meOk?.user?.city?.trim() || '—'}</span>
+          </div>
           <div className="reportsMenuAnchor">
             <button
               ref={familyMenuBtnRef}
@@ -3496,7 +4260,26 @@ export default function UiPage() {
                 Setup: {setupChecklist.needsSetup ? 'Pendiente' : 'Listo'}
               </span>
           ) : null}
-          <span className="pill pillTrunc sapPillProfile">{meOk ? (meOk.user.name || 'Perfil') : 'Perfil'}</span>
+          {meOk && activeFamilyId ? (
+            <label className="sapHeaderSearchWrap" style={{ margin: 0, minWidth: 140, maxWidth: 220 }}>
+              <input
+                type="search"
+                className="input inputSm"
+                placeholder="Buscar…"
+                value={globalSearch}
+                onChange={(e) => setGlobalSearch(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') go('transacciones') }}
+                style={{ width: '100%', padding: '4px 8px' }}
+                aria-label="Buscar (transacciones)"
+              />
+            </label>
+          ) : null}
+          <span className="pill pillTrunc sapPillProfile" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {meOk?.user?.avatarUrl ? (
+              <img src={meOk.user.avatarUrl} alt="" width={24} height={24} style={{ borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+            ) : null}
+            {meOk ? (meOk.user.name || 'Perfil') : 'Perfil'}
+          </span>
           {meOk ? (
             <button className="btn btnDanger btnSm" onClick={logout}>
               Cerrar sesión
@@ -3505,65 +4288,89 @@ export default function UiPage() {
         </div>
       </div>
 
+      {viewingAsUser ? (
+        <div className="sapViewAsBanner" role="status" aria-live="polite">
+          <span>Viendo sesión como: <strong>{viewingAsUser.name}</strong></span>
+          <button
+            type="button"
+            className="btn btnSm"
+            onClick={() => setViewingAsUser(null)}
+            style={{ marginLeft: 12, background: 'rgba(0,0,0,0.12)', color: 'inherit' }}
+          >
+            Salir de ver como
+          </button>
+        </div>
+      ) : null}
+
       {mobileNavOpen ? (
         <div className="mobileNavOverlay" onClick={() => setMobileNavOpen(false)}>
-          <div className="mobileNavSheet" onClick={(e) => e.stopPropagation()}>
-            <div className="sectionRow" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontWeight: 950 }}>Menú</div>
-              <button className="btn btnGhost btnSm" type="button" onClick={() => setMobileNavOpen(false)}>
+          <div className="mobileNavSheet mobileNavSheetIphone" onClick={(e) => e.stopPropagation()}>
+            <div className="mobileNavSheetHeader">
+              <span className="mobileNavSheetTitle">Menú</span>
+              <button className="btn btnGhost btnSm" type="button" onClick={() => setMobileNavOpen(false)} aria-label="Cerrar">
                 Cerrar
               </button>
             </div>
-            <div className="spacer8" />
-            <div className="muted" style={{ fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: 12 }}>
-              Navegación
-            </div>
-            <div className="spacer6" />
-            <nav className="sapNav" aria-label="DOMUS navegación móvil">
-              <button className={`sapNavItem ${view === 'dashboard' ? 'sapNavItemActive' : ''}`} onClick={() => go('dashboard')}>
-                Dashboard
-              </button>
-              <button className={`sapNavItem ${view === 'presupuesto' ? 'sapNavItemActive' : ''}`} onClick={() => go('presupuesto')}>
-                Presupuesto
-              </button>
-              <button className={`sapNavItem ${view === 'transacciones' ? 'sapNavItemActive' : ''}`} onClick={() => go('transacciones')}>
-                Transacciones
-              </button>
-              <button className={`sapNavItem ${view === 'usuarios' ? 'sapNavItemActive' : ''}`} onClick={() => go('usuarios')}>
-                Usuarios
-              </button>
-              <button
-                className={`sapNavItem ${reportsOpen ? 'sapNavItemActive' : ''}`}
-                onClick={() => {
-                  setMobileNavOpen(false)
-                  setReportsTab('detalle')
-                  setReportsTableTab('categorias')
-                  setReportsOpen(true)
-                }}
-              >
-                Reportes
-              </button>
-              <button className={`sapNavItem ${view === 'configuracion' ? 'sapNavItemActive' : ''}`} onClick={() => go('configuracion')}>
-                Configuración
-              </button>
-              <button
-                className="sapNavItem"
-                onClick={() => {
-                  setMobileNavOpen(false)
-                  router.push('/setup/objects')
-                }}
-              >
-                Partidas
-              </button>
-            <button
-              className="sapNavItem"
-              onClick={() => {
-                setMobileNavOpen(false)
-                router.push('/ui/system-architecture')
-              }}
-            >
-              Arquitectura
-            </button>
+            <nav className="mobileNavGroups" aria-label="DOMUS navegación móvil">
+              <div className="mobileNavGroup">
+                <div className="mobileNavGroupTitle">Principal</div>
+                <div className="mobileNavGroupItems">
+                  <button className={`mobileNavItem ${view === 'dashboard' ? 'mobileNavItemActive' : ''}`} onClick={() => go('dashboard')}>
+                    Dashboard
+                  </button>
+                  <button className={`mobileNavItem ${view === 'transacciones' ? 'mobileNavItemActive' : ''}`} onClick={() => go('transacciones')}>
+                    Transacciones
+                  </button>
+                  <button className={`mobileNavItem ${view === 'calendario' ? 'mobileNavItemActive' : ''}`} onClick={() => go('calendario')}>
+                    Calendario
+                  </button>
+                  <button
+                    className={`mobileNavItem ${reportsOpen ? 'mobileNavItemActive' : ''}`}
+                    onClick={() => {
+                      setMobileNavOpen(false)
+                      setReportsTab('detalle')
+                      setReportsTableTab('categorias')
+                      setReportsOpen(true)
+                    }}
+                  >
+                    Reportes
+                  </button>
+                </div>
+              </div>
+              <div className="mobileNavGroup">
+                <div className="mobileNavGroupTitle">Familia</div>
+                <div className="mobileNavGroupItems">
+                  <button className={`mobileNavItem ${view === 'usuarios' ? 'mobileNavItemActive' : ''}`} onClick={() => go('usuarios')}>
+                    Usuarios
+                  </button>
+                  <button className={`mobileNavItem ${view === 'configuracion' ? 'mobileNavItemActive' : ''}`} onClick={() => go('configuracion')}>
+                    Configuración
+                  </button>
+                </div>
+              </div>
+              <div className="mobileNavGroup">
+                <div className="mobileNavGroupTitle">Más</div>
+                <div className="mobileNavGroupItems">
+                  <button
+                    className="mobileNavItem"
+                    onClick={() => {
+                      setMobileNavOpen(false)
+                      router.push('/setup/objects')
+                    }}
+                  >
+                    Partidas
+                  </button>
+                  <button
+                    className="mobileNavItem"
+                    onClick={() => {
+                      setMobileNavOpen(false)
+                      router.push('/ui/system-architecture')
+                    }}
+                  >
+                    Arquitectura
+                  </button>
+                </div>
+              </div>
             </nav>
           </div>
         </div>
@@ -3578,9 +4385,12 @@ export default function UiPage() {
           }}
         >
           <div
-            className="modalPanel"
+            className="modalPanel modalPanelSm"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-delete-family-title"
             onClick={(e) => e.stopPropagation()}
-            style={{ width: 'min(640px, 100%)', maxHeight: 'min(86vh, 720px)' }}
+            style={{ width: 'min(560px, 96vw)', maxHeight: 'min(86vh, 720px)' }}
           >
             <button
               className="btn btnGhost btnSm modalClose"
@@ -3589,27 +4399,18 @@ export default function UiPage() {
                 setDeleteFamilyOpen(false)
               }}
               type="button"
+              aria-label="Cerrar"
             >
               Cerrar
             </button>
             <div className="modalToolbar">
                 <div className="sectionRow" style={{ justifyContent: 'space-between' }}>
                 <div>
-                  <h2 className="cardTitle" style={{ margin: 0 }}>
+                  <h2 id="modal-delete-family-title" className="cardTitle" style={{ margin: 0 }}>
                     Eliminar familia
                   </h2>
                   <div className="muted">Por seguridad pedimos usuario y contraseña.</div>
                 </div>
-                <button
-                  className="btn btnGhost btnSm modalClose"
-                  onClick={() => {
-                    if (deleteFamilyBusy) return
-                    setDeleteFamilyOpen(false)
-                  }}
-                  type="button"
-                >
-                  Cerrar
-                </button>
               </div>
             </div>
 
@@ -3620,7 +4421,7 @@ export default function UiPage() {
 
             <div className="spacer8" />
 
-            <div className="fieldGrid">
+            <div className="fieldGrid" style={{ gridTemplateColumns: '1fr' }}>
               <label>
                 Usuario (email)
                 <input
@@ -3630,6 +4431,7 @@ export default function UiPage() {
                   disabled={deleteFamilyBusy}
                   inputMode="email"
                   autoComplete="username"
+                  placeholder="tu@email.com"
                 />
               </label>
               <label>
@@ -3641,6 +4443,7 @@ export default function UiPage() {
                   onChange={(e) => setDeleteFamilyPassword(e.target.value)}
                   disabled={deleteFamilyBusy}
                   autoComplete="current-password"
+                  placeholder="Contraseña de la cuenta"
                 />
               </label>
             </div>
@@ -3667,6 +4470,250 @@ export default function UiPage() {
         </div>
       ) : null}
 
+      {calendarEventModalOpen ? (
+        <div
+          className="modalOverlay"
+          onClick={() => {
+            if (!calendarEventSubmitBusy) setCalendarEventModalOpen(false)
+          }}
+        >
+          <div
+            className="modalPanel modalPanelSm"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-calendar-event-title"
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: 'min(400px, 96vw)' }}
+          >
+            <button
+              className="btn btnGhost btnSm modalClose"
+              type="button"
+              aria-label="Cerrar"
+              disabled={calendarEventSubmitBusy}
+              onClick={() => { if (!calendarEventSubmitBusy) setCalendarEventModalOpen(false) }}
+            >
+              Cerrar
+            </button>
+            <h2 id="modal-calendar-event-title" className="cardTitle" style={{ margin: 0, marginBottom: 12 }}>
+              Añadir evento (no financiero)
+            </h2>
+            <p className="muted" style={{ marginBottom: 16 }}>Cumpleaños, citas, recordatorios, vacaciones, etc.</p>
+            <div className="fieldGrid" style={{ gridTemplateColumns: '1fr' }}>
+              <label>
+                Título
+                <input
+                  className="input"
+                  value={newCalendarEventTitle}
+                  onChange={(e) => setNewCalendarEventTitle(e.target.value)}
+                  disabled={calendarEventSubmitBusy}
+                  placeholder="Ej. Cumpleaños de María"
+                />
+              </label>
+              <label>
+                Fecha
+                <input
+                  className="input"
+                  type="date"
+                  value={newCalendarEventDate}
+                  onChange={(e) => setNewCalendarEventDate(e.target.value)}
+                  disabled={calendarEventSubmitBusy}
+                />
+              </label>
+              <label>
+                Tipo
+                <select
+                  className="input"
+                  value={newCalendarEventType}
+                  onChange={(e) => setNewCalendarEventType(e.target.value)}
+                  disabled={calendarEventSubmitBusy}
+                >
+                  <option value="custom">Otro</option>
+                  <option value="birthday">Cumpleaños</option>
+                  <option value="appointment">Cita</option>
+                  <option value="reminder">Recordatorio</option>
+                  <option value="vacation">Vacaciones</option>
+                </select>
+              </label>
+            </div>
+            <div className="sectionRow" style={{ justifyContent: 'flex-end', marginTop: 20, gap: 8 }}>
+              <button
+                className="btn btnGhost btnSm"
+                type="button"
+                onClick={() => { if (!calendarEventSubmitBusy) setCalendarEventModalOpen(false) }}
+                disabled={calendarEventSubmitBusy}
+              >
+                Cancelar
+              </button>
+              <button
+                className="btn btnPrimary btnSm"
+                type="button"
+                disabled={calendarEventSubmitBusy || !newCalendarEventTitle.trim() || !newCalendarEventDate}
+                onClick={async () => {
+                  if (!newCalendarEventTitle.trim() || !newCalendarEventDate) return
+                  setCalendarEventSubmitBusy(true)
+                  try {
+                    const res = await fetch('/api/calendar/family-events', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      credentials: 'include',
+                      body: JSON.stringify({
+                        title: newCalendarEventTitle.trim(),
+                        eventDate: newCalendarEventDate,
+                        type: newCalendarEventType,
+                      }),
+                    })
+                    const data = await res.json()
+                    if (data?.ok) {
+                      setCalendarRefreshTrigger((t) => t + 1)
+                      setCalendarEventModalOpen(false)
+                      setNewCalendarEventTitle('')
+                      setNewCalendarEventDate(calendarMonth + '-01')
+                      setNewCalendarEventType('custom')
+                    } else {
+                      alert(data?.error || 'Error al crear el evento')
+                    }
+                  } catch {
+                    alert('Error de conexión')
+                  } finally {
+                    setCalendarEventSubmitBusy(false)
+                  }
+                }}
+              >
+                {calendarEventSubmitBusy ? 'Guardando…' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {solicitudEfectivoOpen ? (
+        <div
+          className="modalOverlay"
+          onClick={() => {
+            if (!solicitudEfectivoBusy) {
+              setSolicitudEfectivoOpen(false)
+              setSolicitudEfectivoDone(null)
+            }
+          }}
+        >
+          <div
+            className="modalPanel modalPanelSm"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-solicitud-efectivo-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="btn btnGhost btnSm modalClose"
+              type="button"
+              aria-label="Cerrar"
+              disabled={solicitudEfectivoBusy}
+              onClick={() => {
+                if (!solicitudEfectivoBusy) {
+                  setSolicitudEfectivoOpen(false)
+                  setSolicitudEfectivoDone(null)
+                }
+              }}
+            >
+              Cerrar
+            </button>
+            <div className="modalToolbar">
+              <h2 id="modal-solicitud-efectivo-title" className="cardTitle" style={{ margin: 0 }}>
+                Solicitud de efectivo
+              </h2>
+              <p className="cardDesc muted" style={{ marginTop: 4 }}>Motivo, monto y partida. Revisa en Solicitudes o por WhatsApp.</p>
+            </div>
+            <div className="cardBody">
+              {solicitudEfectivoDone ? (
+                <div className="note" style={{ marginTop: 0 }}>
+                  <strong>Solicitud enviada.</strong> {new Date(solicitudEfectivoDone.at).toLocaleString('es-MX')}
+                </div>
+              ) : (
+                <>
+                  <div className="fieldGrid" style={{ gap: 12 }}>
+                    <label>
+                      Motivo
+                      <input
+                        className="input"
+                        placeholder="Ej. Gastos escuela"
+                        value={solicitudEfectivoReason}
+                        onChange={(e) => setSolicitudEfectivoReason(e.target.value)}
+                        disabled={solicitudEfectivoBusy}
+                        style={{ minHeight: 44 }}
+                      />
+                    </label>
+                    <label>
+                      Monto
+                      <input
+                        className="input"
+                        type="number"
+                        min={0}
+                        step="any"
+                        placeholder="0"
+                        value={solicitudEfectivoAmount}
+                        onChange={(e) => setSolicitudEfectivoAmount(e.target.value)}
+                        disabled={solicitudEfectivoBusy}
+                        style={{ minHeight: 44 }}
+                      />
+                    </label>
+                    <label>
+                      Partida
+                      <select
+                        className="input"
+                        value={solicitudEfectivoAllocationId}
+                        onChange={(e) => setSolicitudEfectivoAllocationId(e.target.value)}
+                        disabled={solicitudEfectivoBusy}
+                        style={{ minHeight: 44 }}
+                      >
+                        <option value="">— Seleccionar —</option>
+                        {(receiptWizardAllocationsForMe?.length ? receiptWizardAllocationsForMe : allocationItems).map((a: any) => (
+                          <option key={a.id} value={a.id}>
+                            {a.entity?.name} → {a.category?.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <div className="sectionRow" style={{ justifyContent: 'flex-end', marginTop: 16, gap: 10 }}>
+                    <button
+                      className="btn btnPrimary"
+                      type="button"
+                      style={{ minHeight: 44 }}
+                      disabled={solicitudEfectivoBusy || !solicitudEfectivoReason.trim() || !solicitudEfectivoAmount.trim()}
+                      onClick={async () => {
+                        const amount = Number(solicitudEfectivoAmount.replace(',', '.'))
+                        if (!Number.isFinite(amount) || amount <= 0) {
+                          setMessage('Monto inválido')
+                          return
+                        }
+                        setSolicitudEfectivoBusy(true)
+                        try {
+                          await postJson('/api/money-requests', {
+                            reason: solicitudEfectivoReason.trim(),
+                            amount,
+                            allocationId: solicitudEfectivoAllocationId || undefined,
+                            date: new Date().toISOString().slice(0, 10),
+                            currency: familyDetails?.currency || 'MXN',
+                          })
+                          setSolicitudEfectivoDone({ at: new Date().toISOString() })
+                          loadMoneyRequests()
+                        } catch (e: any) {
+                          setMessage(e?.message || 'Error al crear solicitud')
+                        } finally {
+                          setSolicitudEfectivoBusy(false)
+                        }
+                      }}
+                    >
+                      {solicitudEfectivoBusy ? 'Enviando…' : 'Enviar'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="sapBody">
         <aside className="sapSidebar">
           <div className="muted" style={{ fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: 12 }}>
@@ -3684,6 +4731,9 @@ export default function UiPage() {
               onClick={() => go('transacciones')}
             >
               Transacciones
+            </button>
+            <button className={`sapNavItem ${view === 'calendario' ? 'sapNavItemActive' : ''}`} onClick={() => go('calendario')}>
+              Calendario
             </button>
             <button className={`sapNavItem ${view === 'usuarios' ? 'sapNavItemActive' : ''}`} onClick={() => go('usuarios')}>
               Usuarios
@@ -3704,6 +4754,9 @@ export default function UiPage() {
             >
               Configuración
             </button>
+            <button className={`sapNavItem ${view === 'solicitudes' ? 'sapNavItemActive' : ''}`} onClick={() => go('solicitudes')}>
+              Solicitudes
+            </button>
             <button className="sapNavItem" onClick={() => router.push('/setup/objects')}>
               Partidas
             </button>
@@ -3713,31 +4766,27 @@ export default function UiPage() {
           </nav>
         </aside>
 
-        <section className="sapContent">
+        <section className={`sapContent ${view === 'usuarios' ? 'viewUsuarios' : ''} ${view === 'calendario' ? 'viewCalendario' : ''}`}>
           <div className="pageHead">
             <div>
               <h1 className="pageTitle">{pageInfo.title}</h1>
-              <p className="pageSubtitle">{pageInfo.subtitle}</p>
+              {pageInfo.subtitle ? <p className="pageSubtitle">{pageInfo.subtitle}</p> : null}
             </div>
             <div className="sectionRow">
-              <span
-                role="status"
-                style={{
-                  background: '#15803d',
-                  color: '#fff',
-                  padding: '4px 10px',
-                  borderRadius: 8,
-                  fontSize: 12,
-                  fontWeight: 700,
-                }}
-              >
-                ✓ Versión correcta (prueba)
-              </span>
               {loading ? <span className="pill pillWarn">Cargando…</span> : null}
             </div>
           </div>
 
-          {message ? <div className="alert">{message}</div> : null}
+          {message ? (
+            <div className="alert" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ flex: 1, minWidth: 0 }}>{message}</span>
+              {(message.includes('DigitalOcean') || message.includes('DO_SPACES')) ? (
+                <button type="button" className="btn btnGhost btnSm" onClick={() => setMessage('')} aria-label="Cerrar aviso">
+                  Cerrar
+                </button>
+              ) : null}
+            </div>
+          ) : null}
 
           {!meOk ? (
             <section className="grid grid2">
@@ -3745,7 +4794,7 @@ export default function UiPage() {
                 <div className="cardHeader">
                   <div>
                     <h2 className="cardTitle">Crear cuenta</h2>
-                    <p className="cardDesc">Crea un usuario y su primera familia.</p>
+                    <p className="cardDesc">Crea un usuario y su primera familia. Teléfono y ciudad son necesarios para comprobantes por WhatsApp.</p>
                   </div>
                 </div>
                 <div className="cardBody">
@@ -3756,7 +4805,51 @@ export default function UiPage() {
                     </label>
                     <label>
                       Email
-                      <input className="input" placeholder="Email" value={rEmail} onChange={(e) => setREmail(e.target.value)} />
+                      <input className="input" type="email" placeholder="Email" value={rEmail} onChange={(e) => setREmail(e.target.value)} />
+                    </label>
+                    <label>
+                      Teléfono <span className="muted">(requerido)</span>
+                      <input
+                        className="input"
+                        type="tel"
+                        placeholder="+52 686 569 0472"
+                        value={rPhone}
+                        onChange={(e) => setRPhone(e.target.value)}
+                      />
+                      <span className="muted" style={{ fontSize: 11, display: 'block', marginTop: 4 }}>Mín. 10 dígitos. Para identificar tu cuenta y enviar comprobantes por WhatsApp.</span>
+                    </label>
+                    <label>
+                      Ciudad <span className="muted">(requerido)</span>
+                      <input
+                        className="input"
+                        placeholder="Ej. Hermosillo, CDMX"
+                        value={rCity}
+                        onChange={(e) => setRCity(e.target.value)}
+                      />
+                    </label>
+                    <label>
+                      ¿Perteneces a una familia?
+                      <div className="sectionRow" style={{ gap: 16, marginTop: 6 }}>
+                        <label className="sectionRow" style={{ cursor: 'pointer', gap: 6 }}>
+                          <input
+                            type="radio"
+                            name="rBelongsToFamily"
+                            checked={rBelongsToFamily === 'yes'}
+                            onChange={() => setRBelongsToFamily('yes')}
+                          />
+                          <span>Sí</span>
+                        </label>
+                        <label className="sectionRow" style={{ cursor: 'pointer', gap: 6 }}>
+                          <input
+                            type="radio"
+                            name="rBelongsToFamily"
+                            checked={rBelongsToFamily === 'no'}
+                            onChange={() => setRBelongsToFamily('no')}
+                          />
+                          <span>No</span>
+                        </label>
+                      </div>
+                      <span className="muted" style={{ fontSize: 11, display: 'block', marginTop: 4 }}>Sí = ya tienes o crearás una familia. No = solo tú.</span>
                     </label>
                     <label>
                       Contraseña (mín. 6)
@@ -3782,6 +4875,9 @@ export default function UiPage() {
                         Registrar
                       </button>
                     </div>
+                    <p style={{ marginTop: 12, fontSize: 14 }}>
+                      <a href="/join">Unirse con código de invitación</a>
+                    </p>
                   </div>
                 </div>
               </section>
@@ -3814,14 +4910,141 @@ export default function UiPage() {
                         Entrar
                       </button>
                     </div>
+                    <p style={{ marginTop: 8, fontSize: 14 }}>
+                      <a href="/forgot-password">Olvidé mi contraseña</a>
+                    </p>
                   </div>
                 </div>
               </section>
             </section>
           ) : (
             <>
-              {view === 'dashboard' ? (
+              {view === 'calendario' ? (
+                <section id="calendar-print-area" className="card calendarPrintArea" style={{ maxWidth: 'none', width: '100%' }}>
+                  <div className="cardHeader" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, justifyContent: 'space-between' }}>
+                    <h2 className="cardTitle" style={{ margin: 0 }}>Calendario</h2>
+                    <div className="sectionRow" style={{ gap: 8, flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        className="btn btnGhost btnSm"
+                        onClick={() => {
+                          const [y, m] = calendarMonth.split('-').map(Number)
+                          setCalendarMonth(m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`)
+                        }}
+                      >
+                        ← Anterior
+                      </button>
+                      <span className="pill" style={{ minWidth: 120, textAlign: 'center' }}>
+                        {new Date(calendarMonth + '-01').toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })}
+                      </span>
+                      <button
+                        type="button"
+                        className="btn btnGhost btnSm"
+                        onClick={() => {
+                          const [y, m] = calendarMonth.split('-').map(Number)
+                          setCalendarMonth(m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`)
+                        }}
+                      >
+                        Siguiente →
+                      </button>
+                      <button type="button" className="btn btnPrimary btnSm no-print" onClick={() => window.print()} aria-label="Imprimir calendario">
+                        Imprimir
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btnSecondary btnSm no-print"
+                        onClick={() => {
+                          setNewCalendarEventDate(calendarMonth + '-01')
+                          setNewCalendarEventTitle('')
+                          setNewCalendarEventType('custom')
+                          setCalendarEventModalOpen(true)
+                        }}
+                      >
+                        Añadir evento
+                      </button>
+                    </div>
+                  </div>
+                  <div className="cardBody">
+                    {calendarData?.familyName != null || calendarMonth ? (
+                      <p className="print-only" style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>
+                        Calendario DOMUS — {calendarData?.familyName || 'Familia'} — {new Date(calendarMonth + '-01').toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })}
+                      </p>
+                    ) : null}
+                    {calendarData?.summary ? (
+                      <div className="no-print" style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 20 }}>
+                        <span className="pill">Eventos: {calendarData.summary.totalEvents}</span>
+                        <span className="pill pillWarn">Pendientes: {calendarData.summary.paymentsPending}</span>
+                        <span className="pill pillOk">Completados: {calendarData.summary.paymentsCompleted}</span>
+                        <span className="pill">Comprometido: {formatMoney(calendarData.summary.totalCommitted)}</span>
+                      </div>
+                    ) : null}
+                    {calendarLoading ? (
+                      <p className="muted">Cargando…</p>
+                    ) : calendarData ? (
+                      <DomusCalendar
+                        key={calendarMonth}
+                        events={calendarData.events}
+                        initialDate={`${calendarMonth}-01`}
+                        onEventClick={async (sourceTable, sourceId) => {
+                          if (sourceTable === 'transaction' && sourceId) openTx(sourceId)
+                          if (sourceTable === 'money_request' && sourceId) {
+                            setSelectedMoneyRequestId(sourceId)
+                            go('solicitudes')
+                          }
+                          if (sourceTable === 'family_calendar_event' && sourceId && window.confirm('¿Eliminar este evento del calendario?')) {
+                            try {
+                              const res = await fetch(`/api/calendar/family-events/${sourceId}`, { method: 'DELETE', credentials: 'include' })
+                              const data = await res.json()
+                              if (data?.ok) setCalendarRefreshTrigger((t) => t + 1)
+                            } catch { /* ignore */ }
+                          }
+                        }}
+                        onDatesSet={(start) => {
+                          setCalendarMonth(`${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`)
+                        }}
+                      />
+                    ) : (
+                      <p className="muted">No se pudo cargar el calendario. Revisa tu conexión.</p>
+                    )}
+                  </div>
+                </section>
+              ) : view === 'dashboard' ? (
                 <>
+                  {meOk && !onboardingDismissed ? (
+                    <div className="chartBox" style={{ background: 'var(--color-primary-bg, rgba(15, 61, 145, 0.08))', borderColor: 'var(--color-primary, #0f3d91)' }}>
+                      <div className="sectionRow" style={{ justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+                        <div>
+                          <h3 className="chartTitle" style={{ margin: 0 }}>Bienvenido a DOMUS</h3>
+                          <p className="muted" style={{ marginTop: 6, marginBottom: 0 }}>
+                            Aquí puedes registrar gastos, subir comprobantes, ver transacciones y gestionar el presupuesto de tu familia. Usa el menú para navegar. Si eres admin, configura partidas y categorías en Presupuesto.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn btnPrimary btnSm"
+                          onClick={() => {
+                            if (typeof window !== 'undefined') window.localStorage.setItem('domus_onboarding_done', '1')
+                            setOnboardingDismissed(true)
+                          }}
+                        >
+                          Entendido
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                  <div className="dashboardQuickActionsMobile">
+                    <button type="button" className="dashboardQuickBtn dashboardQuickBtnPrimary" onClick={() => { go('transacciones'); setTxReceiptWizardOpen(true); }}>
+                      Subir comprobante
+                    </button>
+                    <button type="button" className="dashboardQuickBtn dashboardQuickBtnSecondary" onClick={() => go('solicitudes')}>
+                      Solicitudes
+                    </button>
+                    {meOk?.isFamilyAdmin ? (
+                      <button type="button" className="dashboardQuickBtn dashboardQuickBtnApprovals" onClick={() => go('solicitudes')}>
+                        Aprobaciones de solicitudes
+                      </button>
+                    ) : null}
+                  </div>
                   {seedResult?.demoUsers?.length ? (
                     <>
                       <div className="chartBox">
@@ -3869,6 +5092,19 @@ export default function UiPage() {
                             </div>
                           </>
                         ) : null}
+                        {(seedResult.createdTransactions12M ?? 0) > 0 ? (
+                          <div className="spacer8">
+                            <div className="muted">
+                              Se añadieron <strong>{seedResult.createdTransactions12M}</strong> transacciones del historial de 12 meses. En <strong>Transacciones</strong> o <strong>Reportes</strong>, cambia el filtro de fechas a &quot;Todo&quot; o &quot;Últimos 6 meses&quot; para verlas.
+                            </div>
+                          </div>
+                        ) : seedResult.seedHint ? (
+                          <div className="spacer8">
+                            <div className="muted" style={{ color: 'var(--color-warning, #b8860b)' }}>
+                              {seedResult.seedHint}
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
                       <div className="spacer16" />
                     </>
@@ -3889,7 +5125,7 @@ export default function UiPage() {
                         </div>
                         <div className="spacer8" />
                         <div className="muted">
-                          1) Crea al menos 1 <b>objeto</b> • 2) Crea <b>categorías</b> • 3) Asigna <b>montos</b> • 4) Confirma el plan.
+                          1) Crea al menos 1 <b>partida</b> • 2) Crea <b>categorías</b> • 3) Asigna <b>montos</b> • 4) Confirma el plan.
                         </div>
                         <div className="spacer8" />
                         <div className="sectionRow">
@@ -3905,7 +5141,7 @@ export default function UiPage() {
                     </>
                   ) : null}
 
-                  <div className="kpiStrip">
+                  <div className="kpiStrip kpiStripFive">
                     <div className="kpiCard">
                       <div className="kpiTitle">Presupuesto total</div>
                       <div className="kpiValue">{formatMoney(dashboard.budgetTotal, currency)}</div>
@@ -3926,7 +5162,82 @@ export default function UiPage() {
                       <div className="kpiValue">{dashboard.overspend}</div>
                       <div className="kpiDelta">sobregasto</div>
                     </div>
+                    <div
+                      className={`kpiCard ${txPendingConfirm.count > 0 ? 'kpiCardAction kpiWarn' : ''}`}
+                      role={txPendingConfirm.count > 0 ? 'button' : undefined}
+                      tabIndex={txPendingConfirm.count > 0 ? 0 : undefined}
+                      onClick={txPendingConfirm.count > 0 ? () => { setTxFltReceipt('to_confirm'); go('transacciones') } : undefined}
+                      onKeyDown={txPendingConfirm.count > 0 ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setTxFltReceipt('to_confirm'); go('transacciones') } } : undefined}
+                      aria-label={txPendingConfirm.count > 0 ? `${txPendingConfirm.count} gastos por confirmar. Ir a Transacciones` : 'Nada por confirmar'}
+                    >
+                      <div className="kpiTitle">Por confirmar</div>
+                      <div className="kpiValue">{txPendingConfirm.count}</div>
+                      <div className="kpiDelta">{txPendingConfirm.count > 0 ? 'asignar y confirmar recibos' : 'Todo al día'}</div>
+                    </div>
                   </div>
+
+                  {txPendingConfirm.count > 0 ? (
+                    <>
+                      <div className="spacer16" />
+                      <div className="chartBox dashboardPendingCard" role="alert">
+                        <div className="dashboardPendingCardHeader">
+                          <div>
+                            <h3 className="chartTitle" style={{ margin: 0 }}>Pendientes de asignar</h3>
+                            <p className="muted" style={{ marginTop: 4, marginBottom: 0, fontSize: 13 }}>
+                              {txPendingConfirm.count} gasto{txPendingConfirm.count !== 1 ? 's' : ''} con recibo listo para asignar categoría y confirmar.
+                            </p>
+                          </div>
+                          <div className="dashboardPendingCardActions">
+                            <button type="button" className="btn btnPrimary btnSm" onClick={() => { setTxFltReceipt('to_confirm'); go('transacciones') }}>
+                              Asignar y confirmar
+                            </button>
+                            <button type="button" className="btn btnGhost btnSm" onClick={() => { setTxFltReceipt('to_confirm'); go('transacciones') }}>
+                              Ver lista de pendientes
+                            </button>
+                          </div>
+                        </div>
+                        {Object.keys(txPendingConfirm.byUser).length > 0 ? (
+                          <>
+                            <div className="spacer8" />
+                            <div className="dashboardPendingPills">
+                              <span className="muted" style={{ fontSize: 12 }}>Por usuario:</span>
+                              {Object.entries(txPendingConfirm.byUser).map(([name, n]) => (
+                                <span key={name} className="pill pillWarn">{name}: {n}</span>
+                              ))}
+                            </div>
+                          </>
+                        ) : null}
+                      </div>
+                    </>
+                  ) : null}
+
+                  {txPendingCategoryUser.count > 0 ? (
+                    <>
+                      <div className="spacer16" />
+                      <div className="chartBox dashboardPendingCard" role="alert">
+                        <div className="dashboardPendingCardHeader">
+                          <div>
+                            <h3 className="chartTitle" style={{ margin: 0 }}>Pendientes de categoría / usuario</h3>
+                            <p className="muted" style={{ marginTop: 4, marginBottom: 0, fontSize: 13 }}>
+                              {txPendingCategoryUser.count} gasto{txPendingCategoryUser.count !== 1 ? 's' : ''} sin asignación clara. Reasigna en Transacciones o por WhatsApp con la clave (ej. E-XXXX cumpleaños Sofía).
+                            </p>
+                          </div>
+                          <div className="dashboardPendingCardActions">
+                            <button type="button" className="btn btnPrimary btnSm" onClick={() => go('transacciones')}>
+                              Ver y reasignar
+                            </button>
+                          </div>
+                        </div>
+                        <div className="spacer8" />
+                        <div className="dashboardPendingPills">
+                          <span className="muted" style={{ fontSize: 12 }}>Quién registró:</span>
+                          {Object.entries(txPendingCategoryUser.byUser).map(([name, n]) => (
+                            <span key={name} className="pill pillWarn">{name}: {n}</span>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  ) : null}
 
                   <div className="spacer16" />
 
@@ -4000,6 +5311,7 @@ export default function UiPage() {
                             <th>Categoría</th>
                             <th>Usuario</th>
                             <th>Monto</th>
+                            <th>Registro</th>
                             <th>Recibos</th>
                           </tr>
                         </thead>
@@ -4011,31 +5323,36 @@ export default function UiPage() {
                               <td>{t.allocation?.category?.name || '—'}</td>
                               <td>{t.user?.name || t.user?.email || '—'}</td>
                               <td style={{ fontWeight: 900 }}>{formatMoney(Number(t.amount), currency)}</td>
+                              <td className="muted" style={{ fontFamily: 'ui-monospace, monospace', fontSize: 12 }}>{t.registrationCode || '—'}</td>
                               <td className="muted">{Array.isArray(t.receipts) ? t.receipts.length : 0}</td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     ) : (
-                      <div className="muted">Aún no hay transacciones.</div>
+                      <div>
+                        <p className="muted" style={{ marginBottom: 8 }}>Aún no hay transacciones. Registra tu primer gasto con comprobante o desde Transacciones.</p>
+                        <button type="button" className="btn btnPrimary btnSm" onClick={() => { go('transacciones'); setTxReceiptWizardOpen(true); }}>
+                          Subir comprobante
+                        </button>
+                      </div>
                     )}
                   </div>
                 </>
               ) : null}
 
-              {reportsOpen ? (
-                <div className="modalOverlay modalOverlayFull" onClick={() => setReportsOpen(false)}>
+              {reportsOpen && typeof document !== 'undefined' && createPortal(
+                <div className="modalOverlay modalOverlayFull modalOverlayOpaque reportsOverlay" onClick={() => setReportsOpen(false)} role="dialog" aria-modal="true" aria-label="Reportes">
                   <div className="modalPanel reportsStudioPanel" onClick={(e) => e.stopPropagation()}>
-            <button
-              className="btn btnDanger btnSm modalClose"
-              onClick={() => {
-                setReportsMenuOpen(false)
-                setReportsOpen(false)
-              }}
-              type="button"
-            >
-              Cerrar
-            </button>
+                    <div className="reportsStudioHeader">
+                      <button type="button" className="btn btnGhost btnSm" onClick={() => { setReportsOpen(false); setMobileNavOpen(true); }} aria-label="Menú">
+                        Menú
+                      </button>
+                      <span className="reportsStudioBrand">DOMUS+</span>
+                      <button type="button" className="btn btnGhost btnSm reportsStudioHeaderClose" onClick={() => setReportsOpen(false)} aria-label="Cerrar reportes">
+                        Cerrar
+                      </button>
+                    </div>
                     <div className="modalToolbar reportsStudioToolbar">
                       <div className="reportsToolbarRow">
                         <div className="reportsToolbarLeft">
@@ -4068,11 +5385,20 @@ export default function UiPage() {
                             >
                               Tablas
                             </button>
+                            <button
+                              className={`tabBtn ${reportsTab === 'consumo' ? 'tabBtnActive' : ''}`}
+                              onClick={() => setReportsTab('consumo')}
+                              type="button"
+                              role="tab"
+                              aria-selected={reportsTab === 'consumo'}
+                            >
+                              Consumo
+                            </button>
                           </div>
                         </div>
 
                         <div className="reportsToolbarFilters" role="group" aria-label="Filtros">
-                          <div className="reportsFilterItem" title="Cuenta (persona u objeto)">
+                          <div className="reportsFilterItem" title="Cuenta (persona o partida)">
                             <span>Cuenta</span>
                             <select className="select selectXs" value={fltEntityId} onChange={(e) => setFltEntityId(e.target.value)}>
                               <option value="all">Todas</option>
@@ -4236,16 +5562,6 @@ export default function UiPage() {
                               </div>
                             ) : null}
                           </div>
-                          <button
-                            className="btn btnGhost btnSm modalClose"
-                            onClick={() => {
-                              setReportsMenuOpen(false)
-                              setReportsOpen(false)
-                            }}
-                            type="button"
-                          >
-                            Cerrar
-                          </button>
                         </div>
                       </div>
                     </div>
@@ -4309,7 +5625,7 @@ export default function UiPage() {
                               </select>
                             </label>
                             <label>
-                              Objeto
+                              Partida
                               <select className="select" value={fltEntityId} onChange={(e) => setFltEntityId(e.target.value)}>
                                 <option value="all">Todos</option>
                                 {entityItems
@@ -4345,9 +5661,9 @@ export default function UiPage() {
                               background: 'rgba(245, 158, 11, 0.08)',
                             }}
                           >
-                            <div className="subTitle">Objeto excluido de reportes</div>
+                            <div className="subTitle">Partida excluida de reportes</div>
                             <div className="muted" style={{ marginTop: 6 }}>
-                              Este objeto está marcado como “no participa en reportes”. Inclúyelo para verlo aquí.
+                              Esta partida está marcada como “no participa en reportes”. Inclúyela para verla aquí.
                             </div>
                             <div className="spacer8" />
                             <button
@@ -4376,9 +5692,9 @@ export default function UiPage() {
                               background: 'rgba(245, 158, 11, 0.08)',
                             }}
                           >
-                            <div className="subTitle">Objeto excluido de reportes</div>
+                            <div className="subTitle">Partida excluida de reportes</div>
                             <div className="muted" style={{ marginTop: 6 }}>
-                              Este objeto está marcado como “no participa en reportes”. Inclúyelo para verlo aquí.
+                              Esta partida está marcada como “no participa en reportes”. Inclúyela para verla aquí.
                             </div>
                             <div className="spacer8" />
                             <button
@@ -4404,7 +5720,7 @@ export default function UiPage() {
                                     Presupuesto (según filtros)
                                   </h3>
                                   <div className="muted" style={{ marginTop: 6 }}>
-                                    Presupuesto = límite configurado del objeto/categoría. Gastado = transacciones filtradas (usuario/recibos/rango).
+                                    Presupuesto = límite configurado de la partida/categoría. Gastado = transacciones filtradas (usuario/recibos/rango).
                                   </div>
                                 </div>
                               </div>
@@ -4493,7 +5809,7 @@ export default function UiPage() {
                                 <>
                                   <div className="spacer8" />
                                   <div className="muted">
-                                    Tip: para editar aquí, selecciona un <b>Objeto</b> y una <b>Categoría</b> específicos.
+                                    Tip: para editar aquí, selecciona un <b>Partida</b> y una <b>Categoría</b> específicos.
                                   </div>
                                 </>
                               )}
@@ -4532,6 +5848,7 @@ export default function UiPage() {
                                             <th className="reportsColAmount" style={{ textAlign: 'right' }}>
                                               Monto
                                             </th>
+                                            <th className="reportsColRegistro">Registro</th>
                                             <th className="reportsColReceipts" style={{ textAlign: 'right' }}>
                                               Recibos
                                             </th>
@@ -4567,6 +5884,7 @@ export default function UiPage() {
                                                 <td className="reportsColAmount" style={{ textAlign: 'right', fontWeight: 900 }}>
                                                   {formatMoney(Number(t?.amount || 0), currency)}
                                                 </td>
+                                                <td className="muted reportsColRegistro" style={{ fontFamily: 'ui-monospace, monospace', fontSize: 12 }}>{t?.registrationCode || '—'}</td>
                                                 <td className="muted reportsColReceipts" style={{ textAlign: 'right' }}>
                                                   {receiptsCount}
                                                 </td>
@@ -4664,7 +5982,196 @@ export default function UiPage() {
                           </>
                         ) : null}
 
-                        {reportsTab === 'tablas' ? (
+                        {reportsTab === 'consumo' ? (
+                          <div className="chartBox">
+                            <h3 className="chartTitle" style={{ margin: 0 }}>Reportes de consumo</h3>
+                            <p className="muted" style={{ marginTop: 8 }}>
+                              Basado en la <strong>extracción de datos del recibo (IA)</strong>: luz (kWh), agua (m³), productos con cantidad/unidad. El rango de fechas aplica a la fecha del comprobante.
+                            </p>
+                            <div className="spacer8" />
+                            <button
+                              type="button"
+                              className="btn btnGhost btnSm"
+                              disabled={consumptionSeeding}
+                              onClick={() => loadConsumptionSeed()}
+                              title="Crea 3 recibos de ejemplo (super, luz, agua) con extracciones para ver este reporte"
+                            >
+                              {consumptionSeeding ? 'Cargando…' : 'Cargar datos de consumo de ejemplo'}
+                            </button>
+                            <div className="spacer12" />
+                            {consumptionLoading ? (
+                              <p className="muted">Cargando consumo…</p>
+                            ) : consumptionData ? (
+                              <>
+                                {(() => {
+                                  const kwh = (consumptionData.utility || []).filter((u) => u.unit === 'kWh')
+                                  const m3 = (consumptionData.utility || []).filter((u) => u.unit === 'm3')
+                                  const sumKwh = kwh.reduce((a, u) => a + u.quantity, 0)
+                                  const sumM3 = m3.reduce((a, u) => a + u.quantity, 0)
+                                  return (sumKwh > 0 || sumM3 > 0) ? (
+                                    <div className="consumoReportBlock" style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+                                      {sumKwh > 0 && (
+                                        <div className="kpiCard" style={{ minWidth: 120 }}>
+                                          <div className="kpiValue">{sumKwh.toFixed(1)}</div>
+                                          <div className="kpiDelta">kWh (luz)</div>
+                                        </div>
+                                      )}
+                                      {sumM3 > 0 && (
+                                        <div className="kpiCard" style={{ minWidth: 120 }}>
+                                          <div className="kpiValue">{sumM3.toFixed(2)}</div>
+                                          <div className="kpiDelta">m³ (agua)</div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : null
+                                })()}
+                                {consumptionData.utility.length > 0 && (
+                                  <div className="consumoReportBlock" style={{ marginBottom: 12 }}>
+                                    <details className="consumoSectionDetails">
+                                      <summary className="chartTitle" style={{ fontSize: 14, margin: 0, cursor: 'pointer' }}>Luz y agua por recibo ({consumptionData.utility.length})</summary>
+                                      <div className="spacer8" />
+                                      <div style={{ maxHeight: 220, overflow: 'auto' }}>
+                                        <table className="table tableSm" style={{ width: '100%' }}>
+                                          <thead>
+                                            <tr>
+                                              <th>Fecha</th>
+                                              <th>Periodo</th>
+                                              <th>Unidad</th>
+                                              <th>Cantidad</th>
+                                              <th>Comercio</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {consumptionData.utility.map((u, i) => (
+                                              <tr key={`${u.receiptId}-${i}`}>
+                                                <td>{u.receiptDate || '—'}</td>
+                                                <td>{u.periodStart && u.periodEnd ? `${u.periodStart} – ${u.periodEnd}` : '—'}</td>
+                                                <td>{u.unit}</td>
+                                                <td>{u.quantity}</td>
+                                                <td>{u.merchantName || '—'}</td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </details>
+                                  </div>
+                                )}
+                                {((consumptionView === 'agrupado' && (consumptionData.productsGrouped?.length ?? 0) > 0) || (consumptionView === 'detalle' && consumptionData.products.length > 0)) && (
+                                  <div className="consumoReportBlock" style={{ marginBottom: 12 }}>
+                                    <details className="consumoSectionDetails">
+                                      <summary className="sectionRow" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, cursor: 'pointer', listStyle: 'none' }}>
+                                        <span className="chartTitle" style={{ fontSize: 14, margin: 0 }}>
+                                          {consumptionView === 'agrupado' ? 'Productos (agrupado)' : 'Productos (detalle)'} — {(consumptionView === 'agrupado' ? consumptionData.productsGrouped?.length : consumptionData.products.length) ?? 0} filas
+                                        </span>
+                                        <button
+                                          type="button"
+                                          className="btn btnGhost btnSm"
+                                          onClick={(e) => { e.preventDefault(); setConsumptionView((v) => (v === 'agrupado' ? 'detalle' : 'agrupado')) }}
+                                        >
+                                          {consumptionView === 'agrupado' ? 'Ver detalle' : 'Ver agrupado'}
+                                        </button>
+                                      </summary>
+                                      <p className="muted" style={{ marginTop: 4, fontSize: 12 }}>
+                                        {consumptionView === 'agrupado' ? 'Mismo producto de varios tickets sumado.' : 'Cada línea del ticket con cantidad/unidad.'}
+                                      </p>
+                                      <div className="spacer8" />
+                                      <div style={{ maxHeight: 280, overflow: 'auto' }}>
+                                        {consumptionView === 'agrupado' ? (
+                                          <table className="table tableSm" style={{ width: '100%' }}>
+                                            <thead>
+                                              <tr>
+                                                <th>Producto</th>
+                                                <th>Unidad</th>
+                                                <th>Cantidad total</th>
+                                                <th>Veces</th>
+                                                <th>Recibos</th>
+                                              </tr>
+                                            </thead>
+                                            <tbody>
+                                              {(consumptionData.productsGrouped || []).slice(0, 80).map((p, i) => (
+                                                <tr key={`${p.displayName}-${p.unit}-${i}`}>
+                                                  <td>{p.displayName}</td>
+                                                  <td>{p.unit}</td>
+                                                  <td>{p.totalQuantity}</td>
+                                                  <td>{p.count}</td>
+                                                  <td>{p.receiptCount}</td>
+                                                </tr>
+                                              ))}
+                                            </tbody>
+                                          </table>
+                                        ) : (
+                                          <table className="table tableSm" style={{ width: '100%' }}>
+                                            <thead>
+                                              <tr>
+                                                <th>Producto</th>
+                                                <th>Unidad</th>
+                                                <th>Cantidad total</th>
+                                                <th>Veces</th>
+                                              </tr>
+                                            </thead>
+                                            <tbody>
+                                              {consumptionData.products.slice(0, 50).map((p, i) => (
+                                                <tr key={`${p.description}-${p.unit}-${i}`}>
+                                                  <td>{p.description}</td>
+                                                  <td>{p.unit}</td>
+                                                  <td>{p.totalQuantity}</td>
+                                                  <td>{p.count}</td>
+                                                </tr>
+                                              ))}
+                                            </tbody>
+                                          </table>
+                                        )}
+                                      </div>
+                                      {((consumptionView === 'agrupado' && (consumptionData.productsGrouped?.length ?? 0) > 80) || (consumptionView === 'detalle' && consumptionData.products.length > 50)) && (
+                                        <p className="muted" style={{ marginTop: 6, fontSize: 12 }}>
+                                          Mostrando {consumptionView === 'agrupado' ? 80 : 50} de {consumptionView === 'agrupado' ? consumptionData.productsGrouped?.length : consumptionData.products.length}. Scroll en la tabla para ver más.
+                                        </p>
+                                      )}
+                                    </details>
+                                  </div>
+                                )}
+                                {consumptionData.reposicion.length > 0 && (
+                                  <div className="consumoReportBlock">
+                                    <details className="consumoSectionDetails">
+                                      <summary className="chartTitle" style={{ fontSize: 14, margin: 0, cursor: 'pointer' }}>Reposición — días entre compras ({consumptionData.reposicion.length})</summary>
+                                      <p className="muted" style={{ marginTop: 4, fontSize: 12 }}>Productos en más de un recibo: intervalo entre compras.</p>
+                                      <div className="spacer8" />
+                                      <div style={{ maxHeight: 200, overflow: 'auto' }}>
+                                        <table className="table tableSm" style={{ width: '100%' }}>
+                                          <thead>
+                                            <tr>
+                                              <th>Producto</th>
+                                              <th>Unidad</th>
+                                              <th>Intervalos</th>
+                                              <th>Promedio días</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {consumptionData.reposicion.slice(0, 30).map((r, i) => (
+                                              <tr key={`${r.description}-${r.unit}-${i}`}>
+                                                <td>{r.description}</td>
+                                                <td>{r.unit}</td>
+                                                <td>{r.betweenPurchasesDays.join(', ')}</td>
+                                                <td>{r.avgDays}</td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </details>
+                                  </div>
+                                )}
+                                {consumptionData.utility.length === 0 && consumptionData.products.length === 0 && (consumptionData.productsGrouped?.length ?? 0) === 0 && consumptionData.reposicion.length === 0 && (
+                                  <div>
+                                    <p className="muted">No hay datos de consumo en el rango seleccionado. Sube recibos de luz, agua o tickets con cantidades (ej. 500 g, 1 L) para que la IA los extraiga.</p>
+                                    <p className="muted" style={{ marginTop: 8 }}>O pulsa <strong>&quot;Cargar datos de consumo de ejemplo&quot;</strong> arriba para generar datos ficticios (super, luz, agua).</p>
+                                  </div>
+                                )}
+                              </>
+                            ) : null}
+                          </div>
+                        ) : reportsTab === 'tablas' ? (
                           <div className="chartBox">
                             <div className="sectionRow" style={{ justifyContent: 'space-between' }}>
                               <h3 className="chartTitle" style={{ margin: 0 }}>
@@ -4737,7 +6244,7 @@ export default function UiPage() {
                                 <table className="table">
                                   <thead>
                                     <tr>
-                                      <th>Objeto</th>
+                                      <th>Partida</th>
                                       <th>Presup.</th>
                                       <th>Gastado</th>
                                       <th>Disp.</th>
@@ -4791,15 +6298,19 @@ export default function UiPage() {
                       </div>
                     </div>
                   </div>
-                </div>
-              ) : null}
+                </div>,
+                document.body
+              )}
 
               {view === 'presupuesto' ? (
                 <>
                   {budgetModalOpen ? (
-                    <div className="modalOverlay modalOverlayFull" onClick={closeBudgetModal}>
+                    <div className="modalOverlay modalOverlayFull modalOverlayOpaque" onClick={closeBudgetModal}>
                       <div className="modalPanel budgetStudioPanel" onClick={(e) => e.stopPropagation()}>
-                        <button className="btn btnDanger btnSm modalClose" onClick={closeBudgetModal} type="button">
+                        <button className="btn btnGhost btnSm modalMenuBtn" type="button" onClick={() => { closeBudgetModal(); setMobileNavOpen(true); }} title="Abrir menú">
+                          Menú
+                        </button>
+                        <button className="btn btnDanger btnSm modalClose" onClick={closeBudgetModal} type="button" aria-label="Cerrar">
                           Cerrar
                         </button>
                         <div className="modalToolbar budgetStudioToolbar">
@@ -4810,9 +6321,6 @@ export default function UiPage() {
                               </h2>
                               <div className="muted">Editar cuentas, partidas, categorías y montos desde un solo lugar</div>
                             </div>
-                            <button className="btn btnDanger btnSm modalClose" onClick={closeBudgetModal} type="button">
-                              Cerrar
-                            </button>
                           </div>
 
                           <div className="spacer8" />
@@ -4868,8 +6376,75 @@ export default function UiPage() {
 
                         <div className="budgetStudioBody">
                           {!meOk.isFamilyAdmin ? (
-                            <div className="muted">
-                              Tu usuario no es <b>Admin</b>. Puedes ver el presupuesto, pero no editarlo. Pide al Admin que te cambie el rol en “Usuarios”.
+                            <div className="sectionRow" style={{ flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
+                              <div className="muted">
+                                Tu usuario no es <b>Admin</b>. Puedes ver el presupuesto, pero no editarlo. Pide al Admin que te cambie el rol en “Usuarios”.
+                              </div>
+                              <label className="sectionRow" style={{ alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                                <input
+                                  type="checkbox"
+                                  checked={soloMisPartidas}
+                                  onChange={(e) => {
+                                    const next = e.target.checked
+                                    setSoloMisPartidas(next)
+                                    refreshBudget({ mine: next, silent: true })
+                                  }}
+                                />
+                                <span style={{ fontSize: 13 }}>Solo mis partidas</span>
+                              </label>
+                              {!suggestionOpen ? (
+                                <button type="button" className="btn btnGhost btnSm" onClick={() => setSuggestionOpen(true)}>
+                                  Sugerir ajuste al presupuesto
+                                </button>
+                              ) : (
+                                <div className="sectionRow" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 8, width: '100%', maxWidth: 360 }}>
+                                  <select className="input inputSm" value={suggestionType} onChange={(e) => setSuggestionType(e.target.value)}>
+                                    <option value="SUBDIVIDE_CATEGORY">Subdividir categoría</option>
+                                    <option value="CHANGE_LIMIT">Cambiar límite</option>
+                                    <option value="NEW_CATEGORY">Nueva categoría</option>
+                                    <option value="OTHER">Otro</option>
+                                  </select>
+                                  <textarea className="input" rows={2} placeholder="Describe tu sugerencia…" value={suggestionText} onChange={(e) => setSuggestionText(e.target.value)} style={{ width: '100%' }} />
+                                  <div className="sectionRow" style={{ gap: 8 }}>
+                                    <button type="button" className="btn btnPrimary btnSm" onClick={sendBudgetSuggestion} disabled={suggestionSending || !suggestionText.trim()}>
+                                      {suggestionSending ? 'Enviando…' : 'Enviar'}
+                                    </button>
+                                    <button type="button" className="btn btnGhost btnSm" onClick={() => { setSuggestionOpen(false); setSuggestionText('') }}>
+                                      Cancelar
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ) : null}
+                          {meOk?.isFamilyAdmin ? (
+                            <div className="sectionRow" style={{ flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+                              <button type="button" className="btn btnGhost btnSm" onClick={() => { setSuggestionsOpen(!suggestionsOpen); if (!suggestionsOpen) loadSuggestions() }}>
+                                {suggestionsOpen ? 'Ocultar sugerencias' : 'Ver sugerencias'}
+                              </button>
+                              {suggestionsOpen && Array.isArray(suggestionsList) ? (
+                                <div style={{ width: '100%', marginTop: 8 }}>
+                                  {suggestionsList.length === 0 ? (
+                                    <p className="muted" style={{ fontSize: 13 }}>No hay sugerencias.</p>
+                                  ) : (
+                                    <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                                      {suggestionsList.map((s: any) => (
+                                        <li key={s.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                                          <span style={{ fontSize: 13 }}><strong>{s.type}</strong>: {typeof s.payload?.text === 'string' ? s.payload.text : JSON.stringify(s.payload)}</span>
+                                          {s.status === 'PENDING' ? (
+                                            <div className="sectionRow" style={{ gap: 6 }}>
+                                              <button type="button" className="btn btnSm" style={{ background: 'var(--success)', color: '#fff' }} onClick={() => resolveSuggestion(s.id, 'APPROVED')}>Aprobar</button>
+                                              <button type="button" className="btn btnDanger btnSm" onClick={() => resolveSuggestion(s.id, 'REJECTED')}>Rechazar</button>
+                                            </div>
+                                          ) : (
+                                            <span className="muted" style={{ fontSize: 12 }}>{s.status}</span>
+                                          )}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </div>
+                              ) : null}
                             </div>
                           ) : null}
 
@@ -4877,9 +6452,10 @@ export default function UiPage() {
                           <div className="modalOverlay" onClick={closeEntityOwnersModal} style={{ zIndex: 80 }}>
                             <div className="modalPanel" onClick={(e) => e.stopPropagation()} style={{ width: 'min(860px, 100%)' }}>
                               <button
-                                className="btn btnDanger btnSm modalClose"
+                                className="btn btnGhost btnSm modalClose"
                                 onClick={closeEntityOwnersModal}
                                 type="button"
+                                aria-label="Cerrar"
                                 disabled={entityOwnersSaving}
                               >
                                 Cerrar
@@ -4894,14 +6470,6 @@ export default function UiPage() {
                                       Asigna dueños/responsables para comparar <b>Esperado vs Real</b> sin duplicar cuentas.
                                     </div>
                                   </div>
-                                  <button
-                                    className="btn btnGhost btnSm modalClose"
-                                    onClick={closeEntityOwnersModal}
-                                    type="button"
-                                    disabled={entityOwnersSaving}
-                                  >
-                                    Cerrar
-                                  </button>
                                 </div>
                               </div>
 
@@ -4909,7 +6477,7 @@ export default function UiPage() {
 
                               {(() => {
                                 const ent = entityItems.find((x: any) => String(x?.id || '') === String(entityOwnersEntityId || ''))
-                                if (!ent) return <div className="muted">Objeto no encontrado.</div>
+                                if (!ent) return <div className="muted">Partida no encontrada.</div>
 
                                 const pctSum =
                                   entityOwnersMode === 'percent'
@@ -5100,7 +6668,7 @@ export default function UiPage() {
                                         <th style={{ textAlign: 'right' }}>Gastado</th>
                                         <th style={{ textAlign: 'right' }}>Disponible</th>
                                         <th style={{ textAlign: 'center' }}>Estado</th>
-                                        <th title="Se define por el tipo de objeto (Persona = Individual; otros = Compartido)">Tipo (auto)</th>
+                                        <th title="Se define por el tipo de partida (Persona = Individual; otros = Compartido)">Tipo (auto)</th>
                                       </tr>
                                     </thead>
                                     <tbody>
@@ -5266,12 +6834,12 @@ export default function UiPage() {
                                       <div className="subTitle">Dividir (personal vs compartido)</div>
                                       <div className="spacer8" />
                                       <div className="muted" style={{ marginBottom: 10 }}>
-                                        “Individual / Compartido” se define por el <b>Objeto</b>. Para separar (ej. Gasolina personal vs Casa), duplica la
-                                        cuenta a otro objeto.
+                                        “Individual / Compartido” se define por el <b>Partida</b>. Para separar (ej. Gasolina personal vs Casa), duplica la
+                                        cuenta a otra partida.
                                       </div>
                                       <div className="fieldGrid">
                                         <label>
-                                          Duplicar esta cuenta a otro objeto
+                                          Duplicar esta cuenta a otra partida
                                           <select
                                             className="select"
                                             value={budgetDupEntityId}
@@ -5336,7 +6904,7 @@ export default function UiPage() {
                             <div className="spacer12" />
 
                             <div className="cardSub">
-                              <div className="subTitle">Agregar objeto</div>
+                              <div className="subTitle">Agregar partida</div>
                               <div className="spacer8" />
                               <div className="grid grid2">
                                 <label>
@@ -5368,7 +6936,7 @@ export default function UiPage() {
                                   Participa en reportes
                                 </label>
                                 <button className="btn btnPrimary btnSm" onClick={createEntity} disabled={!meOk.isFamilyAdmin || loading} type="button">
-                                  Crear objeto
+                                  Crear partida
                                 </button>
                               </div>
                             </div>
@@ -5533,9 +7101,11 @@ export default function UiPage() {
                                               >
                                                 Guardar
                                               </button>
+                                              {(meOk?.isFamilyAdmin || (Array.isArray((e as any)?.owners) && (e as any).owners.some((o: any) => String(o?.userId || o?.user?.id) === meOk?.user?.id))) ? (
+                                                <>
                                               <button
                                                 className="btn btnGhost btnSm"
-                                                disabled={!meOk.isFamilyAdmin || adminSavingId === e.id || entityImageUploadingId === e.id}
+                                                disabled={adminSavingId === e.id || entityImageUploadingId === e.id}
                                                 onClick={() => {
                                                   try {
                                                     const el = document.getElementById(`entityImg-${String(e.id)}`) as any
@@ -5551,12 +7121,14 @@ export default function UiPage() {
                                               {e?.imageUrl ? (
                                                 <button
                                                   className="btn btnGhost btnSm"
-                                                  disabled={!meOk.isFamilyAdmin || adminSavingId === e.id || entityImageUploadingId === e.id}
+                                                  disabled={adminSavingId === e.id || entityImageUploadingId === e.id}
                                                   onClick={() => patchBudgetEntity(e.id, { imageUrl: null })}
                                                   type="button"
                                                 >
                                                   Quitar foto
                                                 </button>
+                                              ) : null}
+                                                </>
                                               ) : null}
                                               {String(e?.type || '') !== 'PERSON' ? (
                                                 <button
@@ -5710,7 +7282,7 @@ export default function UiPage() {
                                   Montos / asignaciones
                                 </h3>
                                 <div className="muted" style={{ marginTop: 6 }}>
-                                  Asigna un monto mensual por objeto + categoría. Aquí creas las “cuentas” del presupuesto.
+                                  Asigna un monto mensual por partida + categoría. Aquí creas las “cuentas” del presupuesto.
                                 </div>
                               </div>
                             </div>
@@ -5722,7 +7294,7 @@ export default function UiPage() {
                               <div className="spacer8" />
                               <div className="grid grid2">
                                 <label>
-                                  Objeto
+                                  Partida
                                   <select className="select" value={alEntityId} onChange={(e) => setAlEntityId(e.target.value)} disabled={!meOk.isFamilyAdmin || loading}>
                                     <option value="">Selecciona…</option>
                                     {entityItems
@@ -5765,7 +7337,7 @@ export default function UiPage() {
                                 <table className="table">
                                   <thead>
                                     <tr>
-                                      <th>Objeto</th>
+                                      <th>Partida</th>
                                       <th>Categoría</th>
                                       <th>Monto mensual</th>
                                       <th>Activo</th>
@@ -5851,56 +7423,58 @@ export default function UiPage() {
                         </div>
                       </div>
 
-                      <div className="sectionRow" style={{ flexWrap: 'wrap' }}>
-                        <label style={{ maxWidth: 140 }}>
-                          Año
-                          <select className="select" value={String(budgetConcentrado.year)} onChange={(e) => setBudgetYear(e.target.value)} disabled={loading}>
-                            {(() => {
-                              const nowY = new Date().getFullYear()
-                              const years = [nowY - 2, nowY - 1, nowY, nowY + 1]
-                              return years.map((y) => (
-                                <option key={y} value={String(y)}>
-                                  {y}
-                                </option>
-                              ))
-                            })()}
-                          </select>
-                        </label>
+                      <div className="sectionRow" style={{ flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
                         <span className={`pill ${setupChecklist.hasObject ? 'pillOk' : 'pillWarn'}`}>Partidas: {setupChecklist.objectCount}</span>
                         <span className={`pill ${setupChecklist.hasCategory ? 'pillOk' : 'pillWarn'}`}>Categorías: {setupChecklist.categoryCount}</span>
                         <span className={`pill ${setupChecklist.hasAllocation ? 'pillOk' : 'pillWarn'}`}>Montos: {setupChecklist.allocationCount}</span>
-                        <button
-                          className="btn btnGhost btnSm"
-                          onClick={() => setPeopleBudgetOpen(true)}
-                          disabled={loading}
-                          type="button"
-                          title="Análisis por integrante (presupuesto individual)"
-                        >
-                          Integrantes
-                        </button>
-                        {meOk.isFamilyAdmin ? (
-                          <>
-                            <button
-                              className="btn btnGhost btnSm"
-                              onClick={() => openBudgetModal(undefined, 'montos')}
-                              type="button"
-                              title="Crea/edita los montos del presupuesto (por cuenta y categoría)"
-                            >
-                              {setupChecklist.needsSetup ? 'Crear presupuesto' : 'Editar presupuesto'}
-                            </button>
-                            <button
-                              className={`btn btnPrimary btnSm ${
-                                !setupChecklist.needsSetup && familyDetails && !familyDetails.setupComplete ? 'pulseAction' : ''
-                              }`}
-                              onClick={confirmPlan}
-                              disabled={loading || setupChecklist.needsSetup}
-                              type="button"
-                              title={setupChecklist.needsSetup ? 'Completa partidas/categorías/montos antes de confirmar' : 'Confirma el plan'}
-                            >
-                              Confirmar plan
-                            </button>
-                          </>
-                        ) : null}
+                        <div className="presupuestoConcentradoActions">
+                          <label style={{ maxWidth: 140 }}>
+                            Año
+                            <select className="select" value={String(budgetConcentrado.year)} onChange={(e) => setBudgetYear(e.target.value)} disabled={loading}>
+                              {(() => {
+                                const nowY = new Date().getFullYear()
+                                const years = [nowY - 2, nowY - 1, nowY, nowY + 1]
+                                return years.map((y) => (
+                                  <option key={y} value={String(y)}>
+                                    {y}
+                                  </option>
+                                ))
+                              })()}
+                            </select>
+                          </label>
+                          <button
+                            className="btn btnGhost btnSm"
+                            onClick={() => setPeopleBudgetOpen(true)}
+                            disabled={loading}
+                            type="button"
+                            title="Análisis por integrante (presupuesto individual)"
+                          >
+                            Integrantes
+                          </button>
+                          {meOk.isFamilyAdmin ? (
+                            <>
+                              <button
+                                className="btn btnGhost btnSm"
+                                onClick={() => openBudgetModal(undefined, 'montos')}
+                                type="button"
+                                title="Crea/edita los montos del presupuesto (por cuenta y categoría)"
+                              >
+                                {setupChecklist.needsSetup ? 'Crear presupuesto' : 'Editar presupuesto'}
+                              </button>
+                              <button
+                                className={`btn btnPrimary btnSm ${
+                                  !setupChecklist.needsSetup && familyDetails && !familyDetails.setupComplete ? 'pulseAction' : ''
+                                }`}
+                                onClick={confirmPlan}
+                                disabled={loading || setupChecklist.needsSetup}
+                                type="button"
+                                title={setupChecklist.needsSetup ? 'Completa partidas/categorías/montos antes de confirmar' : 'Confirma el plan'}
+                              >
+                                Confirmar plan
+                              </button>
+                            </>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
 
@@ -5953,7 +7527,7 @@ export default function UiPage() {
                     >
                       <div className="modalPanel peopleStudioPanel" onClick={(e) => e.stopPropagation()}>
                       <button
-                        className="btn btnDanger btnSm modalClose"
+                        className="btn btnGhost btnSm modalClose" aria-label="Cerrar"
                         onClick={() => {
                           setPeopleBudgetOpen(false)
                           setPeopleBudgetNamesOpen(false)
@@ -5972,18 +7546,6 @@ export default function UiPage() {
                               </h2>
                               <div className="muted">Análisis + modificación con layout tipo “studio”.</div>
                             </div>
-                            <button
-                              className="btn btnDanger btnSm modalClose"
-                              onClick={() => {
-                                setPeopleBudgetOpen(false)
-                                setPeopleBudgetNamesOpen(false)
-                                setPeopleBudgetQuery('')
-                                setPeopleBudgetCategoryFocusId('all')
-                              }}
-                              type="button"
-                            >
-                              Cerrar
-                            </button>
                           </div>
                         </div>
 
@@ -6020,7 +7582,7 @@ export default function UiPage() {
 
                                 <div className="spacer12" />
 
-                                <div className="tabRow" role="tablist" aria-label="Vista de análisis">
+                                <div className="tabRow peoplePivotRow" role="tablist" aria-label="Vista de análisis">
                                   <button
                                     className={`tabBtn ${peopleBudgetTab === 'vertical' ? 'tabBtnActive' : ''}`}
                                     onClick={() => setPeopleBudgetTab('vertical')}
@@ -6169,7 +7731,7 @@ export default function UiPage() {
                                   <>
                                     <div className="spacer12" />
                                     <label>
-                                      Objeto
+                                      Partida
                                       <select
                                         className="select"
                                         value={peopleBudgetEntityId}
@@ -6185,7 +7747,7 @@ export default function UiPage() {
                                     </label>
 
                                     <label>
-                                      Categoría (en este objeto)
+                                      Categoría (en esta partida)
                                       <select
                                         className="select"
                                         value={peopleBudgetCategoryFocusId}
@@ -6222,7 +7784,7 @@ export default function UiPage() {
                                           className="input inputSm"
                                           value={peopleBudgetQuery}
                                           onChange={(e) => setPeopleBudgetQuery(e.target.value)}
-                                          placeholder="Buscar objeto…"
+                                          placeholder="Buscar partida…"
                                         />
                                         <div className="spacer8" />
                                         <div className="peopleList" role="listbox" aria-label="Lista de partidas">
@@ -6353,7 +7915,7 @@ export default function UiPage() {
                                 <div className="peopleHint">
                                   {peopleBudgetPivot === 'people'
                                     ? 'Tip: “Todo (según historial)” agrega cuentas compartidas (Casa/Auto) si el integrante las usó.'
-                                    : 'Tip: en “Detalle” verás “A quién” por cuenta (ej. Gasolina/Supermercado). En “Matriz” verás Consumo → Objeto.'}
+                                    : 'Tip: en “Detalle” verás “A quién” por cuenta (ej. Gasolina/Supermercado). En “Matriz” verás Consumo → Partida.'}
                                 </div>
                               </div>
                             </div>
@@ -6499,7 +8061,7 @@ export default function UiPage() {
                                           ) : (
                                             <div className="peopleEmpty">
                                               <div className="muted">
-                                                Sin cuentas para este integrante con la cobertura actual. Tip: crea un objeto <b>PERSON</b> con su nombre y
+                                                Sin cuentas para este integrante con la cobertura actual. Tip: crea una partida <b>PERSON</b> con su nombre y
                                                 asigna categorías (ej. Colegiaturas, Gasolina, etc.).
                                               </div>
                                             </div>
@@ -6540,7 +8102,7 @@ export default function UiPage() {
                                             <tr>
                                               <th>
                                                 {budgetPeopleMatrix.effectiveRows === 'objects'
-                                                  ? 'De qué (Objeto)'
+                                                  ? 'De qué (Partida)'
                                                   : budgetPeopleMatrix.effectiveRows === 'accounts'
                                                     ? 'De qué (Cuenta)'
                                                     : 'De qué (Categoría)'}
@@ -6658,7 +8220,7 @@ export default function UiPage() {
                                             <div className="kpiValue">
                                               {formatMoney(Number(budgetObjectsSelectedView.budgetAnnualView) || 0, currency)}
                                             </div>
-                                            <div className="kpiDelta">Asignado al objeto</div>
+                                            <div className="kpiDelta">Asignado a la partida</div>
                                           </div>
                                           <div className="kpiCard kpiWarn">
                                             <div className="kpiTitle">Gastado</div>
@@ -6780,7 +8342,7 @@ export default function UiPage() {
                                                         <span
                                                           key={uid}
                                                           className="peopleChip"
-                                                          title="Gastó en este objeto, pero no está marcado como responsable"
+                                                          title="Gastó en esta partida, pero no está marcado como responsable"
                                                         >
                                                           {nm}: {formatMoney(Number(s?.amount) || 0, currency)}
                                                         </span>
@@ -6805,7 +8367,7 @@ export default function UiPage() {
                                     <div className="card">
                                       <div className="cardHeader">
                                         <div>
-                                          <h3 className="cardTitle">Cuentas del objeto</h3>
+                                          <h3 className="cardTitle">Cuentas de la partida</h3>
                                           <div className="cardDesc">Presupuesto vs Gastado vs Disponible + “A quién”.</div>
                                         </div>
                                         <span className="pill">Editar abre configuración</span>
@@ -6889,8 +8451,8 @@ export default function UiPage() {
                                           <div className="peopleEmpty">
                                             <div className="muted">
                                               {budgetObjectsSelectedView.categoryNameView
-                                                ? `Sin cuentas para ${budgetObjectsSelectedView.categoryNameView} en este objeto.`
-                                                : 'Sin cuentas para este objeto.'}{' '}
+                                                ? `Sin cuentas para ${budgetObjectsSelectedView.categoryNameView} en esta partida.`
+                                                : 'Sin cuentas para esta partida.'}{' '}
                                               Tip: asigna montos en “Configurar presupuesto”.
                                             </div>
                                           </div>
@@ -6900,7 +8462,7 @@ export default function UiPage() {
                                   </>
                                 ) : (
                                   <div className="card">
-                                    <div className="cardBody muted">Selecciona un objeto.</div>
+                                    <div className="cardBody muted">Selecciona una partida.</div>
                                   </div>
                                 )
                               ) : (
@@ -7026,7 +8588,7 @@ export default function UiPage() {
                         />
                       </label>
                       <label>
-                        Objeto
+                        Partida
                         <select className="select" value={budgetListEntityId} onChange={(e) => setBudgetListEntityId(e.target.value)}>
                           <option value="all">Todos</option>
                           {budgetListEntityOptions.map((o) => (
@@ -7102,7 +8664,7 @@ export default function UiPage() {
                             <th style={{ textAlign: 'right' }}>Gastado</th>
                             <th style={{ textAlign: 'right' }}>Disponible</th>
                             <th style={{ textAlign: 'center' }}>Estado</th>
-                            <th title="Se define por el tipo de objeto (Persona = Individual; otros = Compartido)">Tipo (auto)</th>
+                            <th title="Se define por el tipo de partida (Persona = Individual; otros = Compartido)">Tipo (auto)</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -7246,10 +8808,11 @@ export default function UiPage() {
                         <thead>
                           <tr>
                             <th>Fecha</th>
-                            <th>Objeto</th>
+                            <th>Partida</th>
                             <th>Categoría</th>
                             <th>Usuario</th>
                             <th>Monto</th>
+                            <th>Registro</th>
                             <th>Comprobante</th>
                           </tr>
                         </thead>
@@ -7263,6 +8826,7 @@ export default function UiPage() {
                               <td>{t.allocation?.category?.name || '—'}</td>
                               <td>{t.user?.name || t.user?.email || '—'}</td>
                               <td style={{ fontWeight: 900 }}>{formatMoney(Number(t.amount), currency)}</td>
+                              <td className="muted" style={{ fontFamily: 'ui-monospace, monospace', fontSize: 12 }}>{t.registrationCode || '—'}</td>
                               <td className="muted">{Array.isArray(t.receipts) ? t.receipts.length : 0}</td>
                             </tr>
                           ))}
@@ -7351,7 +8915,7 @@ export default function UiPage() {
                                 onClick={createEntity}
                                 disabled={loading || !meOk.isFamilyAdmin || !beName.trim()}
                               >
-                                Crear objeto
+                                Crear partida
                               </button>
                             </div>
                           </div>
@@ -7456,15 +9020,15 @@ export default function UiPage() {
                       <div className="cardHeader">
                         <div>
                           <h2 className="cardTitle">Asignar montos</h2>
-                          <p className="cardDesc">Objeto + Categoría + Monto mensual</p>
+                          <p className="cardDesc">Partida + Categoría + Monto mensual</p>
                         </div>
                       </div>
                       <div className="cardBody">
                         <div className="fieldRow">
                           <label>
-                            Objeto
+                            Partida
                             <select className="select" value={alEntityId} onChange={(e) => setAlEntityId(e.target.value)}>
-                              <option value="">Objeto…</option>
+                              <option value="">Partida…</option>
                               {entityItems.map((e: any) => (
                                 <option key={e.id} value={e.id}>
                                   {entityTypeLabel(e.type)}: {e.name}
@@ -7511,7 +9075,7 @@ export default function UiPage() {
                           <table className="table">
                             <thead>
                               <tr>
-                                <th>Objeto</th>
+                                <th>Partida</th>
                                 <th>Categoría</th>
                                 <th>Monto</th>
                                 <th>Activo</th>
@@ -7543,21 +9107,22 @@ export default function UiPage() {
 
               {view === 'transacciones' ? (
                 <>
-                  <div className="chartBox txBoxTight txCompact">
-                    <div
-                      className="sectionRow txAddHeader"
-                      style={{ justifyContent: 'space-between', flexWrap: 'wrap', alignItems: 'flex-end' }}
-                    >
-                      <div>
-                        <h3 className="chartTitle" style={{ margin: 0 }}>
-                          Registrar gasto
-                        </h3>
-                        <div className="muted">Con o sin comprobante (ticket).</div>
+                  {lastDuplicateWarning && (
+                    <div className="backgroundDoneBanner sectionRow" role="alert" style={{ marginBottom: 12, background: 'var(--color-warning-bg, #fff8e1)', borderColor: 'var(--color-warning, #f59e0b)' }}>
+                      <span className="backgroundDoneText">Posible duplicado: ya existe un gasto del {lastDuplicateWarning.date} por {formatMoney(Number(lastDuplicateWarning.amount))}{lastDuplicateWarning.description ? ` — ${lastDuplicateWarning.description.slice(0, 35)}${lastDuplicateWarning.description.length > 35 ? '…' : ''}` : ''}.</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <button type="button" className="btn btnGhost btnSm" onClick={() => { openTx(lastDuplicateWarning.transactionId); setLastDuplicateWarning(null) }}>Ver gasto existente</button>
+                        <button type="button" className="btn btnGhost btnSm" aria-label="Cerrar" onClick={() => setLastDuplicateWarning(null)}>×</button>
                       </div>
-
-                      <div className="tabRow" role="tablist" aria-label="Modo para registrar gasto">
+                    </div>
+                  )}
+                  <div className="chartBox txBoxTight txCompact txAddBlock">
+                    <div className="txAddHeader">
+                      <h3 className="txAddTitle">Registrar gasto</h3>
+                      <p className="txAddSubtitle">Con o sin comprobante (ticket).</p>
+                      <div className="txAddSegmented" role="tablist" aria-label="Modo para registrar gasto">
                         <button
-                          className={`tabBtn ${txAddMode === 'with_receipt' ? 'tabBtnActive' : ''}`}
+                          className={`txAddSegment ${txAddMode === 'with_receipt' ? 'txAddSegmentActive' : ''}`}
                           type="button"
                           role="tab"
                           aria-selected={txAddMode === 'with_receipt'}
@@ -7566,7 +9131,7 @@ export default function UiPage() {
                           Con comprobante
                         </button>
                         <button
-                          className={`tabBtn ${txAddMode === 'without_receipt' ? 'tabBtnActive' : ''}`}
+                          className={`txAddSegment ${txAddMode === 'without_receipt' ? 'txAddSegmentActive' : ''}`}
                           type="button"
                           role="tab"
                           aria-selected={txAddMode === 'without_receipt'}
@@ -7577,62 +9142,25 @@ export default function UiPage() {
                       </div>
                     </div>
 
-                    <div className="spacer8" />
-
                     {txAddMode === 'with_receipt' ? (
-                      <div className="txAddReceiptGrid">
-                        <div className="txFileField">
-                          <div className="txFieldLabel">Fotos (1–8)</div>
-                          <div className="txFileRow">
-                            <input
-                              id="txReceiptFiles"
-                              className="txFileInput"
-                              type="file"
-                              multiple
-                              accept="image/*"
-                              onChange={(e) => setTxNewReceiptFiles(Array.from(e.target.files || []))}
-                              disabled={loading || txNewReceiptBusy}
-                            />
-                            <label htmlFor="txReceiptFiles" className="btn btnGhost btnSm">
-                              Seleccionar
-                            </label>
-                            <span className="muted txFileStatus">
-                              {txNewReceiptFiles.length
-                                ? `${txNewReceiptFiles.length} foto${txNewReceiptFiles.length === 1 ? '' : 's'}`
-                                : 'Ninguna seleccionada'}
-                            </span>
-                          </div>
-                          <div className="muted txHelper">Tip: ticket largo → 20–30% de traslape.</div>
-                        </div>
-
-                        <label>
-                          Cuenta (opcional)
-                          <select
-                            className="select"
-                            value={txNewReceiptAllocationId}
-                            onChange={(e) => setTxNewReceiptAllocationId(e.target.value)}
-                            disabled={loading || txNewReceiptBusy}
-                          >
-                            <option value="">Auto (recomendado)</option>
-                            {(allocations || []).map((a: any) => (
-                              <option key={a.id} value={a.id}>
-                                {a.entity?.name} → {a.category?.name} (límite {formatMoney(Number(a.monthlyLimit), currency)})
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-
-                        <div className="txAddActions">
-                          <button
-                            className={`btn btnPrimary btnSm ${txNewReceiptFiles.length && !txNewReceiptBusy ? 'pulseAction' : ''}`}
-                            onClick={createTransactionFromReceipt}
-                            disabled={loading || txNewReceiptBusy || !txNewReceiptFiles.length}
-                            type="button"
-                          >
-                            {txNewReceiptBusy ? 'Registrando…' : 'Registrar gasto con comprobante'}
-                          </button>
-                          <span className="muted">DOMUS extrae proveedor/total y te lleva a revisar.</span>
-                        </div>
+                      <div className="txAddReceiptIntro">
+                        <p className="txAddReceiptText">
+                          Sube la foto del ticket; puedes asignar categoría y cuenta después. La extracción sigue en segundo plano.
+                        </p>
+                        <button
+                          className="txAddReceiptBtn"
+                          type="button"
+                          onClick={() => {
+                            setTxReceiptWizardOpen(true)
+                            setTxReceiptWizardStep('capture')
+                            setTxReceiptAssignTo('me')
+                            setTxNewReceiptAllocationId('')
+                            setTxReceiptManualAmount('')
+                            setTxReceiptAssignUserId('')
+                          }}
+                        >
+                          Registrar gasto con comprobante
+                        </button>
                       </div>
                     ) : (
                       <div className="txAddManualGrid">
@@ -7674,7 +9202,7 @@ export default function UiPage() {
                         </label>
                         <div className="txAddActions txSpanAll">
                           <button
-                            className="btn btnPrimary btnSm"
+                            className="txAddManualSubmit btn btnPrimary"
                             onClick={createTransaction}
                             disabled={loading || !txAllocationId || !txAmount.trim()}
                             type="button"
@@ -7685,6 +9213,342 @@ export default function UiPage() {
                       </div>
                     )}
                   </div>
+
+                  {txReceiptWizardOpen ? (
+                    <div
+                      className="modalOverlay txReceiptWizardOverlay modalOverlayOpaque"
+                      onClick={() => {
+                        if (!txNewReceiptBusy) {
+                          setTxReceiptWizardOpen(false)
+                          setTxReceiptWizardStep('capture')
+                        }
+                      }}
+                    >
+                      <div
+                        className="modalPanel receiptWizardPanel"
+                        onClick={(e) => e.stopPropagation()}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="receipt-wizard-title"
+                      >
+                        <button
+                          type="button"
+                          className="btn btnGhost btnSm modalMenuBtn"
+                          title="Abrir menú"
+                          onClick={() => {
+                            if (!txNewReceiptBusy) {
+                              setTxReceiptWizardOpen(false)
+                              setTxReceiptWizardStep('capture')
+                              setMobileNavOpen(true)
+                            }
+                          }}
+                        >
+                          Menú
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btnDanger btnSm modalClose"
+                          aria-label="Cerrar"
+                          onClick={() => {
+                            if (!txNewReceiptBusy) {
+                              setTxReceiptWizardOpen(false)
+                              setTxReceiptWizardStep('capture')
+                            }
+                          }}
+                        >
+                          Cerrar
+                        </button>
+                        <div className="modalToolbar">
+                          <h2 id="receipt-wizard-title" className="cardTitle" style={{ margin: 0 }}>
+                            {txReceiptWizardStep === 'capture' ? 'Nuevo gasto con comprobante' : 'Asignar a quién'}
+                          </h2>
+                          <div className="muted" style={{ fontSize: 12 }}>
+                            {txReceiptWizardStep === 'capture'
+                              ? '1) Añade fotos (Cámara o Seleccionar). 2) "Registrar otro gasto" guarda en Transacciones y puedes repetir. 3) "Asignar" → eliges categoría → Guardar. La extracción del texto es en segundo plano.'
+                              : 'Elige categoría y pulsa Guardar. El gasto queda en Transacciones.'}
+                          </div>
+                        </div>
+
+                        {lastBackgroundReceiptDone && (
+                          <div className="backgroundDoneBanner" role="status">
+                            <span className="backgroundDoneText">✓ {lastBackgroundReceiptDone.message} · {lastBackgroundReceiptDone.at}</span>
+                            <button type="button" className="btn btnGhost btnSm" aria-label="Cerrar aviso" onClick={() => setLastBackgroundReceiptDone(null)}>×</button>
+                          </div>
+                        )}
+
+                        {lastDuplicateWarning && (
+                          <div className="backgroundDoneBanner" role="alert" style={{ background: 'var(--color-warning-bg, #fff8e1)', borderColor: 'var(--color-warning, #f59e0b)' }}>
+                            <span className="backgroundDoneText">
+                              Posible duplicado: ya existe un gasto del {lastDuplicateWarning.date} por {formatMoney(Number(lastDuplicateWarning.amount))}{lastDuplicateWarning.description ? ` — ${lastDuplicateWarning.description.slice(0, 40)}${lastDuplicateWarning.description.length > 40 ? '…' : ''}` : ''}.
+                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <button type="button" className="btn btnGhost btnSm" onClick={() => { openTx(lastDuplicateWarning.transactionId); setLastDuplicateWarning(null) }}>
+                                Ver gasto existente
+                              </button>
+                              <button type="button" className="btn btnGhost btnSm" aria-label="Cerrar aviso" onClick={() => setLastDuplicateWarning(null)}>×</button>
+                            </div>
+                          </div>
+                        )}
+
+                        {duplicateConfirmPending ? (
+                          <div className="chartBox" style={{ borderColor: 'var(--color-danger, #c62828)', background: 'rgba(198, 40, 40, 0.06)' }}>
+                            <div className="sectionRow" style={{ flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                              <span className="muted">
+                                Posible duplicado. Ya existe un gasto similar: ${duplicateConfirmPending.duplicateWarning.amount}, {duplicateConfirmPending.duplicateWarning.date}. ¿Descartar o registrar de todos modos?
+                              </span>
+                              <button type="button" className="btn btnGhost btnSm" onClick={() => { setDuplicateConfirmPending(null); duplicateConfirmFileRef.current = null }}>Descartar</button>
+                              <button type="button" className="btn btnPrimary btnSm" disabled={txNewReceiptBusy} onClick={() => confirmDuplicateAndRegister()}>Registrar de todos modos</button>
+                              <button type="button" className="btn btnGhost btnSm" aria-label="Cerrar" onClick={() => { setDuplicateConfirmPending(null); duplicateConfirmFileRef.current = null }}>×</button>
+                            </div>
+                          </div>
+                        ) : null}
+
+                        {txReceiptWizardStep === 'capture' ? (
+                          <div className="receiptWizardCapture">
+                            <label>
+                              A. Monto (opcional)
+                              <input
+                                className="input"
+                                type="text"
+                                inputMode="decimal"
+                                placeholder="Ej. 1000"
+                                value={txReceiptManualAmount}
+                                onChange={(e) => setTxReceiptManualAmount(e.target.value)}
+                                disabled={txNewReceiptBusy}
+                              />
+                            </label>
+                            <label>
+                              B. Categoría (opcional)
+                              <span className="muted" style={{ fontSize: 11, fontWeight: 400 }}>
+                                La categoría puede sugerirse cuando termine la extracción del ticket.
+                              </span>
+                              <select
+                                className="select"
+                                value={txNewReceiptAllocationId}
+                                onChange={(e) => setTxNewReceiptAllocationId(e.target.value)}
+                                disabled={txNewReceiptBusy}
+                              >
+                                <option value="">Asignar después</option>
+                                {(allocations || []).map((a: any) => (
+                                  <option key={a.id} value={a.id}>
+                                    {a.entity?.name} → {a.category?.name} (límite {formatMoney(Number(a.monthlyLimit), currency)})
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <div className="txFileField">
+                              <div className="txFieldLabel">C. Fotos (1–8) *</div>
+                              <div className="txFileRow">
+                                <input
+                                  key={txReceiptWizardFileInputKey}
+                                  id="txReceiptWizardFiles"
+                                  className="txFileInput"
+                                  type="file"
+                                  multiple
+                                  accept="image/*"
+                                  onChange={(e) => {
+                                    const added = Array.from(e.target.files || [])
+                                    setTxNewReceiptFiles((p) => [...p, ...added].slice(0, 8))
+                                    e.target.value = ''
+                                    if (added.length > 0) {
+                                      if (added.length === 1) {
+                                        showToast('info', 'Se añadió 1 foto. Para más recibos, pulsa otra vez "Seleccionar" o "Cámara" (en móvil suele añadirse de una en una).')
+                                      } else {
+                                        showToast('info', `Se añadieron ${added.length} fotos.`)
+                                      }
+                                    }
+                                  }}
+                                  disabled={loading || txNewReceiptBusy}
+                                />
+                                <label htmlFor="txReceiptWizardFiles" className="btn receiptWizardPhotoBtn">
+                                  <span className="receiptWizardPhotoIcon" aria-hidden>
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                      <rect x="2" y="2" width="12" height="12" rx="2" />
+                                      <rect x="10" y="10" width="12" height="12" rx="2" />
+                                    </svg>
+                                  </span>
+                                  Seleccionar
+                                </label>
+                                <button
+                                  type="button"
+                                  className="btn receiptWizardPhotoBtn"
+                                  disabled={loading || txNewReceiptBusy || txNewReceiptFiles.length >= 8}
+                                  onClick={() => setTxScanOpen(true)}
+                                  aria-label="Abrir cámara para escanear"
+                                >
+                                  <span className="receiptWizardPhotoIcon" aria-hidden>
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                      <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+                                      <circle cx="12" cy="13" r="4" />
+                                    </svg>
+                                  </span>
+                                  Cámara
+                                </button>
+                                <span className="muted txFileStatus">
+                                  {txNewReceiptFiles.length
+                                    ? `${txNewReceiptFiles.length} foto${txNewReceiptFiles.length === 1 ? '' : 's'}`
+                                    : 'Ninguna seleccionada'}
+                                </span>
+                              </div>
+                              <div className="muted txHelper">Tip: ticket largo → 20–30% de traslape.</div>
+                            </div>
+                            {txScanOpen ? (
+                              <TicketCaptureModal
+                                onConfirm={(file, _bwFile) => {
+                                  setTxNewReceiptFiles((prev) => [...prev, file].slice(0, 8))
+                                }}
+                                onClose={() => setTxScanOpen(false)}
+                                maxFiles={8}
+                                currentCount={txNewReceiptFiles.length}
+                              />
+                            ) : null}
+                            <p className="muted receiptWizardHelper" style={{ fontSize: 12 }}>
+                              Cada foto = un gasto. En muchos móviles al elegir &quot;varias&quot; solo se añade 1: pulsa <strong>Seleccionar</strong> o <strong>Cámara</strong> varias veces (una por recibo). Revisa el número al lado: &quot;3 fotos&quot; = 3 gastos. Luego &quot;Registrar otro gasto&quot; o &quot;Asignar → Guardar&quot;.
+                            </p>
+                            <div className="receiptWizardActions">
+                              <button
+                                className="btn btnPrimary"
+                                type="button"
+                                disabled={txNewReceiptBusy || !txNewReceiptFiles.length}
+                                onClick={async () => {
+                                  await createTransactionFromReceipt({ openDetail: false, awaitExtraction: false })
+                                  setTxReceiptManualAmount('')
+                                  setTxNewReceiptAllocationId('')
+                                  setTxReceiptWizardFileInputKey((k) => k + 1)
+                                }}
+                              >
+                                {txNewReceiptUploadProgress
+                                  ? `Subiendo ${txNewReceiptUploadProgress.current}/${txNewReceiptUploadProgress.total}…`
+                                  : txNewReceiptBusy
+                                    ? 'Registrando…'
+                                    : 'Registrar otro gasto'}
+                              </button>
+                              <button
+                                className="btn btnGhost"
+                                type="button"
+                                disabled={txNewReceiptBusy || !txNewReceiptFiles.length}
+                                onClick={() => setTxReceiptWizardStep('assign')}
+                              >
+                                Asignar
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="receiptWizardAssign">
+                            <div className="tabRow" role="tablist" aria-label="A quién">
+                              <button
+                                type="button"
+                                role="tab"
+                                aria-selected={txReceiptAssignTo === 'me'}
+                                className={`tabBtn ${txReceiptAssignTo === 'me' ? 'tabBtnActive' : ''}`}
+                                onClick={() => setTxReceiptAssignTo('me')}
+                              >
+                                Yo
+                              </button>
+                              <button
+                                type="button"
+                                role="tab"
+                                aria-selected={txReceiptAssignTo === 'others'}
+                                className={`tabBtn ${txReceiptAssignTo === 'others' ? 'tabBtnActive' : ''}`}
+                                onClick={() => setTxReceiptAssignTo('others')}
+                              >
+                                Otros usuarios
+                              </button>
+                            </div>
+                            <div className="spacer8" />
+                            {txReceiptAssignTo === 'me' ? (
+                              <>
+                                <label>
+                                  {receiptWizardAllocationsForMe.length === 0 ? 'Cuenta / categoría' : 'Mi cuenta / categoría'}
+                                  <select
+                                    className="select"
+                                    value={txNewReceiptAllocationId}
+                                    onChange={(e) => setTxNewReceiptAllocationId(e.target.value)}
+                                    disabled={txNewReceiptBusy}
+                                  >
+                                    <option value="">Elige…</option>
+                                    {(receiptWizardAllocationsForMe.length > 0 ? receiptWizardAllocationsForMe : allocationItems.filter((a: any) => a?.isActive !== false)).map((a: any) => (
+                                      <option key={a.id} value={a.id}>
+                                        {a.entity?.name} → {a.category?.name} (límite {formatMoney(Number(a.monthlyLimit), currency)})
+                                      </option>
+                                    ))}
+                                  </select>
+                                </label>
+                                {receiptWizardAllocationsForMe.length === 0 ? (
+                                  <p className="muted" style={{ margin: 0, fontSize: 12 }}>
+                                    No hay partida con tu nombre; aquí puedes asignar a Casa, Auto, etc. Para crear partidas propias:{' '}
+                                    <button
+                                      type="button"
+                                      className="btn btnGhost btnSm"
+                                      style={{ padding: 0, minHeight: 0, fontWeight: 700, textDecoration: 'underline' }}
+                                      onClick={() => {
+                                        setTxReceiptWizardOpen(false)
+                                        setTxReceiptWizardStep('capture')
+                                        setBudgetModalOpen(true)
+                                      }}
+                                    >
+                                      Crear partidas en Presupuesto
+                                    </button>
+                                  </p>
+                                ) : null}
+                              </>
+                            ) : (
+                              <>
+                                <label>
+                                  Asignar gasto a (niño, enfermo, etc.)
+                                  <select
+                                    className="select"
+                                    value={txReceiptAssignUserId}
+                                    onChange={(e) => setTxReceiptAssignUserId(e.target.value)}
+                                    disabled={txNewReceiptBusy}
+                                  >
+                                    <option value="">Selecciona usuario…</option>
+                                    {receiptWizardOtherUsers.map((u: any) => (
+                                      <option key={u.id} value={u.id}>
+                                        {u.name}{u.isAdmin ? ' (Admin)' : ''}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </label>
+                                <p className="muted" style={{ margin: 0, fontSize: 12 }}>
+                                  Para gastos que no son tuyos (ej. medicina para otro familiar). El gasto se registra en la cuenta de esa persona.
+                                </p>
+                              </>
+                            )}
+                            <div className="spacer12" />
+                            <div className="sectionRow" style={{ gap: 8, flexWrap: 'wrap' }}>
+                              <button
+                                className="btn btnGhost"
+                                type="button"
+                                disabled={txNewReceiptBusy}
+                                onClick={() => setTxReceiptWizardStep('capture')}
+                              >
+                                Atrás
+                              </button>
+                              <button
+                                className="btn btnPrimary"
+                                type="button"
+                                disabled={txNewReceiptBusy || !txNewReceiptFiles.length || (txReceiptAssignTo === 'me' && !txNewReceiptAllocationId && (receiptWizardAllocationsForMe.length > 0 || allocationItems.filter((a: any) => a?.isActive !== false).length > 0)) || (txReceiptAssignTo === 'others' && !txReceiptAssignUserId)}
+                                onClick={async () => {
+                                  await createTransactionFromReceipt({ openDetail: false, awaitExtraction: false })
+                                  setTxReceiptWizardOpen(false)
+                                  setTxReceiptWizardStep('capture')
+                                  setTxReceiptManualAmount('')
+                                  setTxNewReceiptAllocationId('')
+                                }}
+                              >
+                                {txNewReceiptUploadProgress
+                                  ? `Subiendo ${txNewReceiptUploadProgress.current}/${txNewReceiptUploadProgress.total}…`
+                                  : txNewReceiptBusy
+                                    ? 'Guardando…'
+                                    : 'Guardar'}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : null}
 
                   <div className="spacer8" />
 
@@ -7737,6 +9601,21 @@ export default function UiPage() {
                   <div className="spacer8" />
 
                   <div className="chartBox txBoxTight txCompact">
+                    {lastBackgroundReceiptDone && (
+                      <div className="backgroundDoneBanner sectionRow" role="status">
+                        <span className="backgroundDoneText">✓ {lastBackgroundReceiptDone.message} · {lastBackgroundReceiptDone.at}</span>
+                        <button type="button" className="btn btnGhost btnSm" aria-label="Cerrar aviso" onClick={() => setLastBackgroundReceiptDone(null)}>×</button>
+                      </div>
+                    )}
+                    {lastDuplicateWarning && (
+                      <div className="backgroundDoneBanner sectionRow" role="alert" style={{ background: 'var(--color-warning-bg, #fff8e1)', borderColor: 'var(--color-warning, #f59e0b)' }}>
+                        <span className="backgroundDoneText">Posible duplicado: gasto del {lastDuplicateWarning.date} por {formatMoney(Number(lastDuplicateWarning.amount))}.</span>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button type="button" className="btn btnGhost btnSm" onClick={() => { openTx(lastDuplicateWarning.transactionId); setLastDuplicateWarning(null) }}>Ver</button>
+                          <button type="button" className="btn btnGhost btnSm" aria-label="Cerrar" onClick={() => setLastDuplicateWarning(null)}>×</button>
+                        </div>
+                      </div>
+                    )}
                     <div className="sectionRow" style={{ justifyContent: 'space-between' }}>
                       <h3 className="chartTitle" style={{ margin: 0 }}>
                         Transacciones
@@ -7746,7 +9625,7 @@ export default function UiPage() {
                       </span>
                     </div>
                     <div className="spacer8" />
-                    <div className="txFilterBar">
+                    <div className="txFilterBar txFilterBarIphone">
                       <label>
                         Rango
                         <select className="select" value={txFltRange} onChange={(e) => setTxFltRange(e.target.value as RangeKey)}>
@@ -7757,9 +9636,18 @@ export default function UiPage() {
                         </select>
                       </label>
                       <label>
+                        Desde
+                        <input type="date" className="input" value={txFltFrom} onChange={(e) => setTxFltFrom(e.target.value)} />
+                      </label>
+                      <label>
+                        Hasta
+                        <input type="date" className="input" value={txFltTo} onChange={(e) => setTxFltTo(e.target.value)} />
+                      </label>
+                      <label>
                         Comprobante
                         <select className="select" value={txFltReceipt} onChange={(e) => setTxFltReceipt(e.target.value as ReceiptFilter)}>
                           <option value="all">Todos</option>
+                          <option value="to_confirm">Por confirmar</option>
                           <option value="with">Con comprobante</option>
                           <option value="without">Sin comprobante</option>
                         </select>
@@ -7778,7 +9666,7 @@ export default function UiPage() {
                         </select>
                       </label>
                       <label>
-                        Objeto
+                        Partida
                         <select className="select" value={txFltEntityId} onChange={(e) => setTxFltEntityId(e.target.value)}>
                           <option value="all">Todos</option>
                           {entityItems
@@ -7803,7 +9691,7 @@ export default function UiPage() {
                       </label>
                       <label className="txFilterSpan2">
                         Buscar
-                        <input className="input" placeholder="Ej. HEB, gasolina, renta…" value={txSearch} onChange={(e) => setTxSearch(e.target.value)} />
+                        <input className="input" placeholder="Ej. HEB, gasolina, renta…" value={globalSearch} onChange={(e) => setGlobalSearch(e.target.value)} />
                       </label>
                     </div>
 
@@ -7813,6 +9701,7 @@ export default function UiPage() {
                       <table className="table">
                         <thead>
                           <tr>
+                            <th style={{ minWidth: 72 }}>Clave</th>
                             <th>Monto</th>
                             <th>Fecha</th>
                             <th>Asignación</th>
@@ -7828,27 +9717,33 @@ export default function UiPage() {
                             const toConfirm = receipts.filter((r: any) => r?.extraction && !r?.extraction?.confirmedAt).length
                             const confirmed = receipts.filter((r: any) => r?.extraction?.confirmedAt).length
                             const hasReceipt = receipts.length > 0
+                            const needsAction = toConfirm > 0 || pending > 0
                             const status =
                               !hasReceipt
                                 ? { cls: 'pill', label: 'Sin' }
                                 : toConfirm > 0
-                                  ? { cls: 'pill pillWarn', label: `Por confirmar (${toConfirm})` }
+                                  ? { cls: 'pill pillWarn pillPendientePulse', label: `Por confirmar (${toConfirm})` }
                                   : pending > 0
-                                    ? { cls: 'pill pillWarn', label: `Pendiente (${pending})` }
+                                    ? { cls: 'pill pillWarn pillPendientePulse', label: `Pendiente (${pending})` }
                                     : confirmed > 0
                                       ? { cls: 'pill pillOk', label: `Confirmado (${confirmed})` }
                                       : { cls: 'pill', label: `Con (${receipts.length})` }
                             return (
                             <tr key={t.id} onClick={() => openTx(t.id)} style={{ cursor: 'pointer' }}>
+                              <td className="muted" style={{ fontFamily: 'ui-monospace, monospace', fontSize: 12, fontWeight: 600 }} title="Clave de registro">{t.registrationCode || '—'}</td>
                               <td style={{ fontWeight: 900 }}>{formatMoney(Number(t.amount), currency)}</td>
                               <td>{new Date(t.date).toLocaleDateString('es-MX')}</td>
                               <td>
                                 {t.allocation?.entity?.name} / {t.allocation?.category?.name}
                               </td>
                               <td className="muted">{t.user?.name || t.user?.email || '—'}</td>
-                              <td className="muted">{t.description || '—'}</td>
+                              <td className="muted">
+                                {t.description || '—'}
+                                {(t.description || '').startsWith('Solicitud efectivo') ? <span className="pill pillOk" style={{ marginLeft: 6 }} title="Movimiento por entrega de solicitud de efectivo">Solicitud efectivo</span> : null}
+                                {t.pendingReason ? <span className="pill pillWarn" style={{ marginLeft: 6 }} title="Pendiente de categoría/usuario">Pend.</span> : null}
+                              </td>
                               <td>
-                                <span className={status.cls}>{status.label}</span>
+                                <span className={status.cls} title={needsAction ? 'Pendiente por asignar o confirmar' : ''}>{status.label}</span>
                               </td>
                             </tr>
                             )
@@ -7856,91 +9751,145 @@ export default function UiPage() {
                         </tbody>
                       </table>
                     ) : (
-                      <div className="muted">No hay transacciones con este filtro.</div>
+                      <div className="muted">
+                        <p style={{ margin: 0 }}>No hay transacciones con este filtro.</p>
+                        {txFltReceipt === 'to_confirm' ? (
+                          <p style={{ marginTop: 8, marginBottom: 0 }}>Si buscabas gastos por confirmar, están al día. Cambia el filtro «Comprobante» a «Todos» para ver todas las transacciones.</p>
+                        ) : null}
+                      </div>
                     )}
                   </div>
                 </>
               ) : null}
 
               {view === 'usuarios' ? (
-                <section className="card">
-                  <div className="cardHeader">
-                    <div>
-                      <h2 className="cardTitle">Usuarios (familia activa)</h2>
-                      <p className="cardDesc">Agrega usuarios, edita nombres, cambia roles y elimina accesos.</p>
+                <section className="card usuariosCardCompact">
+                    <div className="cardHeader" style={{ padding: '12px 16px' }}>
+                      <div>
+                        <h2 className="cardTitle" style={{ margin: 0, fontSize: 18 }}>Usuarios (familia activa)</h2>
+                        <p className="cardDesc muted" style={{ marginTop: 4, fontSize: 12 }}>
+                          Solo Admin ve «Agregar / invitar». «Ver como» (solo Admin) abre la app como ese usuario; si es no-admin verás menú y permisos limitados. «Probar Twilio» envía prueba a WhatsApp.
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="cardBody">
-                    <div className="grid grid2">
-                      <div className="cardSub">
-                        <div className="subTitle">Agregar / invitar</div>
-                        <div className="spacer8" />
-                        <div className="fieldGrid">
+                  <div className="cardBody" style={{ padding: '12px 16px' }}>
+                    <div className="grid grid2" style={{ gap: 16 }}>
+                      {meOk.isFamilyAdmin ? (
+                      <div className="cardSub usuariosAddCard">
+                        <div className="subTitle" style={{ fontSize: 13, marginBottom: 10, fontWeight: 700 }}>Agregar / invitar</div>
+                        <div className="usuariosAddForm">
                           <label>
-                            Nombre (opcional)
-                            <input className="input" placeholder="Nombre" value={mName} onChange={(e) => setMName(e.target.value)} />
+                            <span className="muted" style={{ fontSize: 11, display: 'block', marginBottom: 4 }}>Nombre (opcional)</span>
+                            <input className="input" placeholder="Ej. Juan Pérez" value={mName} onChange={(e) => setMName(e.target.value)} style={{ width: '100%', minHeight: 40 }} />
                           </label>
                           <label>
-                            Email
-                            <input className="input" placeholder="Email" value={mEmail} onChange={(e) => setMEmail(e.target.value)} />
+                            <span className="muted" style={{ fontSize: 11, display: 'block', marginBottom: 4 }}>Email</span>
+                            <input className="input" type="email" placeholder="correo@ejemplo.com" value={mEmail} onChange={(e) => setMEmail(e.target.value)} style={{ width: '100%', minHeight: 40 }} />
                           </label>
                           <label>
-                            Contraseña (si es usuario nuevo)
-                            <input
-                              className="input"
-                              placeholder="Contraseña"
-                              type="password"
-                              value={mPass}
-                              onChange={(e) => setMPass(e.target.value)}
-                            />
+                            <span className="muted" style={{ fontSize: 11, display: 'block', marginBottom: 4 }}>Teléfono (opcional; para avisar por WhatsApp)</span>
+                            <input className="input" type="tel" placeholder="+52 686 123 4567" value={mPhone} onChange={(e) => setMPhone(e.target.value)} style={{ width: '100%', minHeight: 40 }} />
                           </label>
-                          <label className="checkboxRow">
+                          <label>
+                            <span className="muted" style={{ fontSize: 11, display: 'block', marginBottom: 4 }}>Contraseña (nuevo usuario)</span>
+                            <input className="input" placeholder="Mín. 6 caracteres" type="password" value={mPass} onChange={(e) => setMPass(e.target.value)} style={{ width: '100%', minHeight: 40 }} />
+                          </label>
+                          <label className="checkboxRow" style={{ alignItems: 'center', gap: 8, marginTop: 4 }}>
                             <input type="checkbox" checked={mAdmin} onChange={(e) => setMAdmin(e.target.checked)} />
-                            Hacer admin
+                            <span style={{ fontSize: 13 }}>Hacer admin</span>
                           </label>
-                          <div className="sectionRow">
+                          <div className="sectionRow" style={{ marginTop: 12, gap: 8, alignItems: 'center' }}>
                             <button className="btn btnPrimary" onClick={inviteMember} disabled={loading || memberSavingId !== null}>
                               Agregar usuario
                             </button>
+                            <span className="muted" style={{ fontSize: 11 }}>Solo Admin.</span>
                           </div>
-                          <div className="note">Solo Admin puede agregar o cambiar roles.</div>
+                        </div>
+                        <div className="subTitle" style={{ fontSize: 13, marginTop: 16, marginBottom: 8, fontWeight: 700 }}>Enlace de invitación</div>
+                        <p className="muted" style={{ fontSize: 12, marginBottom: 8 }}>Genera un enlace para que alguien se una a la familia sin que tengas que agregar su email aquí.</p>
+                        <div className="sectionRow" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                          <button type="button" className="btn btnGhost btnSm" onClick={createInviteLink} disabled={inviteLoading}>
+                            {inviteLoading ? 'Generando…' : 'Generar enlace'}
+                          </button>
+                          {lastInviteUrl ? (
+                            <div style={{ flex: '1', minWidth: 200 }}>
+                              <input readOnly className="input" value={lastInviteUrl} style={{ fontSize: 12 }} onClick={(e) => (e.target as HTMLInputElement).select()} />
+                              <span className="muted" style={{ fontSize: 11 }}> Caduca en 7 días.</span>
+                            </div>
+                          ) : null}
                         </div>
                       </div>
+                      ) : null}
 
-                      <div className="cardSub">
-                        <div className="subTitle">Lista</div>
-                        <div className="spacer8" />
+                      <div className="cardSub usuariosListaCard" style={{ padding: 12, gridColumn: meOk.isFamilyAdmin ? undefined : '1 / -1' }}>
+                        <div className="subTitle" style={{ fontSize: 13, marginBottom: 8 }}>Lista</div>
                         {Array.isArray(members) ? (
                           members.length ? (
-                            <table className="table">
+                            <div className="usuariosTableWrap">
+                            <input
+                              ref={avatarFileInputRef}
+                              type="file"
+                              accept="image/*"
+                              style={{ position: 'absolute', width: 1, height: 1, opacity: 0 }}
+                              onChange={(e) => {
+                                const f = e.target.files?.[0]
+                                if (f) uploadAvatar(f)
+                              }}
+                              aria-label="Subir avatar"
+                            />
+                            <table className="table tableSm usuariosTable">
                               <thead>
                                 <tr>
-                                  <th>Nombre</th>
-                                  <th>Email</th>
-                                  <th>Admin</th>
-                                  <th>Acciones</th>
+                                  <th style={{ width: 52 }}>Avatar</th>
+                                  <th style={{ minWidth: 120 }}>Nombre</th>
+                                  <th style={{ minWidth: 160 }}>Email</th>
+                                  <th style={{ minWidth: 150 }}>Teléfono</th>
+                                  <th style={{ minWidth: 100 }}>Ciudad</th>
+                                  <th style={{ width: 56 }}>Admin</th>
+                                  <th className="thAcciones">Acciones</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {members.map((m: any) => {
                                   const isSelf = m.id === meOk.user.id
-                                  const canEditName = meOk.isFamilyAdmin || isSelf
-                                  const draft = memberNameDraft[m.id] ?? String(m.name || '')
-                                  const changed = draft.trim() !== String(m.name || '')
+                                  const canEdit = meOk.isFamilyAdmin || isSelf
+                                  const nameD = memberNameDraft[m.id] ?? String(m.name || '')
+                                  const phoneD = memberPhoneDraft[m.id] ?? String(m.phone || '')
+                                  const cityD = memberCityDraft[m.id] ?? String(m.city || '')
+                                  const changed =
+                                    nameD.trim() !== String(m.name || '') ||
+                                    phoneD.trim() !== String(m.phone || '') ||
+                                    cityD.trim() !== String(m.city || '')
+                                  const hasPhone = (phoneD || m.phone || '').replace(/\D/g, '').length >= 10
                                   return (
                                     <tr key={m.id}>
-                                      <td style={{ minWidth: 220 }}>
-                                        {canEditName ? (
+                                      <td style={{ verticalAlign: 'middle' }}>
+                                        {m.avatarUrl ? (
+                                          <img src={m.avatarUrl} alt="" width={36} height={36} style={{ borderRadius: '50%', objectFit: 'cover' }} />
+                                        ) : (
+                                          <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'var(--muted)' }}>?</div>
+                                        )}
+                                        {isSelf ? (
+                                          <button
+                                            type="button"
+                                            className="btn btnGhost btnSm"
+                                            style={{ display: 'block', marginTop: 4, fontSize: 11 }}
+                                            onClick={() => avatarFileInputRef.current?.click()}
+                                            disabled={avatarUploading}
+                                          >
+                                            {avatarUploading ? 'Subiendo…' : 'Subir avatar'}
+                                          </button>
+                                        ) : null}
+                                      </td>
+                                      <td style={{ minWidth: 140 }}>
+                                        {canEdit ? (
                                           <input
                                             className="input"
-                                            value={draft}
+                                            value={nameD}
                                             placeholder="Nombre"
                                             disabled={memberSavingId === m.id}
                                             onChange={(e) =>
-                                              setMemberNameDraft((prev) => ({
-                                                ...prev,
-                                                [m.id]: e.target.value,
-                                              }))
+                                              setMemberNameDraft((prev) => ({ ...prev, [m.id]: e.target.value }))
                                             }
                                           />
                                         ) : (
@@ -7948,6 +9897,38 @@ export default function UiPage() {
                                         )}
                                       </td>
                                       <td className="muted">{m.email}</td>
+                                      <td style={{ minWidth: 150 }}>
+                                        {canEdit ? (
+                                          <input
+                                            className="input"
+                                            type="tel"
+                                            value={phoneD}
+                                            placeholder="+52 686 569 0472"
+                                            disabled={memberSavingId === m.id}
+                                            onChange={(e) =>
+                                              setMemberPhoneDraft((prev) => ({ ...prev, [m.id]: e.target.value }))
+                                            }
+                                            style={{ minWidth: 130 }}
+                                          />
+                                        ) : (
+                                          <span className="muted">{m.phone || '—'}</span>
+                                        )}
+                                      </td>
+                                      <td style={{ minWidth: 100 }}>
+                                        {canEdit ? (
+                                          <input
+                                            className="input"
+                                            value={cityD}
+                                            placeholder="Ciudad"
+                                            disabled={memberSavingId === m.id}
+                                            onChange={(e) =>
+                                              setMemberCityDraft((prev) => ({ ...prev, [m.id]: e.target.value }))
+                                            }
+                                          />
+                                        ) : (
+                                          <span className="muted">{m.city || '—'}</span>
+                                        )}
+                                      </td>
                                       <td className="muted">
                                         {meOk.isFamilyAdmin ? (
                                           <input
@@ -7962,15 +9943,34 @@ export default function UiPage() {
                                           'No'
                                         )}
                                       </td>
-                                      <td>
-                                        <div className="sectionRow">
-                                          {canEditName ? (
+                                      <td className="tdAcciones">
+                                        <div className="usuariosAccionesRow">
+                                          {canEdit ? (
                                             <button
                                               className="btn btnGhost btnSm"
-                                              onClick={() => saveUserName(m.id)}
+                                              onClick={() => saveUserProfile(m.id)}
                                               disabled={memberSavingId === m.id || !changed}
                                             >
                                               Guardar
+                                            </button>
+                                          ) : null}
+                                          {isSelf ? (
+                                            <button
+                                              className="btn btnGhost btnSm"
+                                              onClick={() => sendTwilioTest(m.id)}
+                                              disabled={twilioTestSendingId !== null || !hasPhone}
+                                              title={hasPhone ? 'Envía un mensaje de prueba a tu WhatsApp' : 'Añade y guarda tu teléfono (mín. 10 dígitos) para probar'}
+                                            >
+                                              {twilioTestSendingId === m.id ? 'Enviando…' : hasPhone ? 'Probar Twilio' : 'Probar Twilio (añade teléfono)'}
+                                            </button>
+                                          ) : null}
+                                          {meOk.isFamilyAdmin ? (
+                                            <button
+                                              className="btn btnGhost btnSm"
+                                              onClick={() => setViewingAsUser({ userId: m.id, name: String(m.name || m.email || 'Usuario') })}
+                                              title={isSelf ? 'Ver la app con tu propia vista (modo usuario)' : `Ver la app como ${m.name || m.email || 'este usuario'}`}
+                                            >
+                                              Ver como {isSelf ? 'yo' : (m.name || m.email || 'usuario')}
                                             </button>
                                           ) : null}
                                           {meOk.isFamilyAdmin ? (
@@ -7989,6 +9989,7 @@ export default function UiPage() {
                                 })}
                               </tbody>
                             </table>
+                            </div>
                           ) : (
                             <div className="muted">Aún no hay usuarios.</div>
                           )
@@ -8002,300 +10003,320 @@ export default function UiPage() {
               ) : null}
 
               {view === 'configuracion' ? (
+                <>
                 <section className="card">
                   <div className="cardHeader">
                     <div>
-                      <h2 className="cardTitle">Tu sesión</h2>
-                      <p className="cardDesc">Familias, rol y datos básicos.</p>
+                      <h2 className="cardTitle">Editar familia</h2>
+                      <p className="cardDesc">Familias, sesión y estado del plan. Solo el Admin puede cambiar estos datos.</p>
                     </div>
                   </div>
                   <div className="cardBody">
-                    <div className="grid">
-                      <div className="fieldRow">
-                        <div>
-                          <div className="muted" style={{ fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: 12 }}>
-                            Usuario
-                          </div>
-                          <div style={{ fontWeight: 900, marginTop: 6 }}>{meOk.user.name || '(Sin nombre)'}</div>
-                          <div className="muted">{meOk.user.email}</div>
-                        </div>
-                        <div>
-                          <div className="muted" style={{ fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: 12 }}>
-                            Familia activa
-                          </div>
-                          <div style={{ fontWeight: 900, marginTop: 6 }}>{meOk.activeFamily?.name || '(Ninguna)'}</div>
-                          <div className="muted">Rol: {meOk.isFamilyAdmin ? 'Administrador' : 'Usuario'}</div>
-                        </div>
-                      </div>
-
-                      <div className="hr" />
-
-                      <div className="grid grid2">
-                        <div className="cardSub">
-                          <div className="subTitle">Seleccionar familia</div>
-                          <div className="spacer8" />
-                          <div className="sectionRow">
-                            {meOk.families?.length ? (
-                              meOk.families.map((f) => (
-                                <button
-                                  key={f.id}
-                                  className={`btn ${f.id === activeFamilyId ? 'btnPrimary' : 'btnGhost'} btnSm`}
-                                  onClick={() => switchFamily(f.id)}
-                                  disabled={loading || f.id === activeFamilyId}
-                                >
-                                  {f.name}
-                                </button>
-                              ))
-                            ) : (
-                              <span className="muted">No hay familias.</span>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="cardSub">
-                          <div className="subTitle">Crear nueva familia</div>
-                          <div className="spacer8" />
+                    <p className="muted">Para cambiar de familia activa o cerrar sesión, usa el menú superior (Familia, Cerrar sesión).</p>
+                    {familyDetails && meOk?.isFamilyAdmin ? (
+                      <>
+                        <div className="spacer16" />
+                        <div className="fieldGrid">
                           <label>
-                            Nombre
+                            Nombre de la familia
                             <input
                               className="input"
-                              placeholder="Nombre de la familia"
-                              value={newFamilyName}
-                              onChange={(e) => setNewFamilyName(e.target.value)}
+                              value={famName}
+                              onChange={(e) => setFamName(e.target.value)}
+                              disabled={savingFamily}
+                              placeholder="Ej. Familia Pérez"
                             />
                           </label>
-                          <div className="spacer8" />
-                          <div className="sectionRow">
-                            <button className="btn btnPrimary btnSm" onClick={createFamily} disabled={loading || !newFamilyName.trim()}>
-                              Crear y seleccionar
-                            </button>
-                            <button className="btn btnGhost btnSm" onClick={() => go('usuarios')} disabled={loading}>
-                              Ver usuarios
-                            </button>
-                          </div>
+                          <label>
+                            Moneda
+                            <input
+                              className="input"
+                              value={famCurrency}
+                              onChange={(e) => setFamCurrency((e.target.value || 'MXN').toUpperCase().slice(0, 6))}
+                              disabled={savingFamily}
+                              placeholder="MXN"
+                            />
+                          </label>
+                          <label>
+                            Día de corte (1–28)
+                            <input
+                              className="input"
+                              type="number"
+                              min={1}
+                              max={28}
+                              value={famCutoffDay}
+                              onChange={(e) => setFamCutoffDay(e.target.value)}
+                              disabled={savingFamily}
+                            />
+                          </label>
+                          <label>
+                            Fecha inicio presupuesto (opcional)
+                            <input
+                              className="input"
+                              type="date"
+                              value={famBudgetStartDate}
+                              onChange={(e) => setFamBudgetStartDate(e.target.value)}
+                              disabled={savingFamily}
+                            />
+                          </label>
                         </div>
-                      </div>
-
-                      <div className="hr" />
-
-                      <div className="grid grid2">
-                        <div className="cardSub">
-                          <div className="subTitle">Editar familia activa</div>
-                          <div className="spacer8" />
-                          {!familyDetails ? (
-                            <div className="muted">Cargando familia…</div>
-                          ) : (
-                            <div className="fieldGrid">
-                              <label>
-                                Nombre
-                                <input className="input" value={famName} onChange={(e) => setFamName(e.target.value)} />
-                              </label>
-                              <div className="fieldRow">
-                                <label>
-                                  Moneda
-                                  <input className="input" value={famCurrency} onChange={(e) => setFamCurrency(e.target.value)} />
-                                </label>
-                                <label>
-                                  Día de corte (1–28)
-                                  <input
-                                    className="input"
-                                    inputMode="numeric"
-                                    value={famCutoffDay}
-                                    onChange={(e) => setFamCutoffDay(e.target.value)}
-                                  />
-                                </label>
-                              </div>
-                              <label>
-                                Inicio de presupuesto
-                                <input
-                                  className="input"
-                                  type="date"
-                                  value={famBudgetStartDate}
-                                  onChange={(e) => setFamBudgetStartDate(e.target.value)}
-                                />
-                              </label>
-                              <div className="sectionRow">
-                                <button className="btn btnPrimary btnSm" onClick={updateFamily} disabled={savingFamily || loading || !famName.trim()}>
-                                  {savingFamily ? 'Guardando…' : 'Guardar cambios'}
-                                </button>
-                                <button className="btn btnDanger btnSm" onClick={deleteActiveFamily} disabled={savingFamily || loading || !meOk.isFamilyAdmin}>
-                                  Eliminar familia
-                                </button>
-                              </div>
-                              <div className="note">
-                                Solo <b>Admin</b> puede editar. Cambios aplican a la familia activa.
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="cardSub">
-                          <div className="subTitle">Resumen de organización</div>
-                          <div className="spacer8" />
-                          <div className="sectionRow" style={{ flexWrap: 'wrap', gap: 8 }}>
-                            <span className="pill">Usuarios: {familySummary.memberCount}</span>
-                            <span className="pill">Admins: {familySummary.adminCount}</span>
-                            <span className="pill">Partidas activas: {familySummary.objectCount}</span>
-                            <span className="pill">En presupuesto: {familySummary.budgetObjectCount}</span>
-                            <span className="pill">En reportes: {familySummary.reportObjectCount}</span>
-                            <span className="pill">Categorías: {familySummary.categoryCount}</span>
-                            <span className="pill">Montos: {familySummary.allocationCount}</span>
-                            <span className="pill">Presupuesto total: {formatMoney(familySummary.budgetTotal, currency)}</span>
-                          </div>
-                          <div className="spacer8" />
-                          <div className="orgCard">
-                            <div className="orgTree">
-                              <div className="orgRowCenter">
-                                <div className="orgNode orgNodeMain">
-                                  <div className="orgNodeSquare">{(familyDetails?.name || activeFamilyName || 'F')[0] || 'F'}</div>
-                                  <div className="orgLabel">
-                                    <span className="name">{familyDetails?.name || activeFamilyName || 'Familia'}</span>
-                                    <span className="muted">Familia</span>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="orgBridge" aria-hidden="true">
-                                <span className="orgBridgeTap" style={{ left: '33.33%' }} />
-                                <span className="orgBridgeTap" style={{ left: '66.66%' }} />
-                              </div>
-                              <div className="orgBranches">
-                                <div className="orgBranch">
-                                  <div className="orgBranchTitle">Usuarios</div>
-                                  <div className="orgRowWrap">
-                                    {orgUsers.length ? (
-                                      orgUsers.map((u) => (
-                                        <div key={u.id} className="orgNode">
-                                          <div className="orgNodeCircle">{initialsFromName(u.name)}</div>
-                                          <div className="orgLabel">
-                                            <span className="name">{u.name}</span>
-                                            <span className="muted">{u.subtitle || (u.isAdmin ? 'Admin' : 'Usuario')}</span>
-                                          </div>
-                                          {u.isAdmin ? <span className="orgTag">Admin</span> : null}
-                                        </div>
-                                      ))
-                                    ) : (
-                                      <div className="muted">Sin usuarios.</div>
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="orgBranch">
-                                  <div className="orgBranchTitle">Partidas</div>
-                                  <div className="orgRowWrap">
-                                    {orgEntities.length ? (
-                                      orgEntities.map((o) => (
-                                        <div key={o.id} className="orgNode">
-                                          <div className="orgNodeSquare">{initialsFromName(o.name)}</div>
-                                          <div className="orgLabel">
-                                            <span className="name">{o.name}</span>
-                                            <span className="muted">{o.type}</span>
-                                          </div>
-                                          <span className="orgTag">{o.inBudget ? 'Presupuesto' : 'Sin presupuesto'}</span>
-                                          <span className="orgTag">{o.inReports ? 'Reportes' : 'Sin reportes'}</span>
-                                        </div>
-                                      ))
-                                    ) : (
-                                      <div className="muted">Sin partidas.</div>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="spacer8" />
-                          {entityItems.length ? (
-                            <table className="table">
-                              <thead>
-                                <tr>
-                                  <th>Objeto</th>
-                                  <th>Presupuesto</th>
-                                  <th>Reportes</th>
-                                  <th>Activo</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {entityItems
-                                  .filter((e: any) => e?.isActive !== false)
-                                  .slice(0, 12)
-                                  .map((e: any) => (
-                                    <tr key={e.id}>
-                                      <td>
-                                        <span className="muted">{entityTypeLabel(e.type)}:</span> {e.name}
-                                      </td>
-                                      <td className="muted">{e.participatesInBudget ? 'Sí' : 'No'}</td>
-                                      <td className="muted">{e.participatesInReports ? 'Sí' : 'No'}</td>
-                                      <td className="muted">{e.isActive ? 'Sí' : 'No'}</td>
-                                    </tr>
-                                  ))}
-                              </tbody>
-                            </table>
-                          ) : (
-                            <div className="muted">Aún no hay partidas.</div>
-                          )}
-                          {familySummary.excludedFromReports?.length ? (
-                            <>
-                              <div className="spacer8" />
-                              <div className="muted">
-                                Excluidos de reportes:{' '}
-                                {familySummary.excludedFromReports
-                                  .slice(0, 6)
-                                  .map((e: any) => `${entityTypeLabel(e.type)}: ${e.name}`)
-                                  .join(' • ')}
-                                {familySummary.excludedFromReports.length > 6 ? ' • …' : ''}
-                              </div>
-                            </>
-                          ) : null}
-                        </div>
-                      </div>
-
-                      <div className="hr" />
-
-                      <div className="cardSub">
-                        <div className="subTitle">Administración (Admin)</div>
                         <div className="spacer8" />
-                        {!meOk.isFamilyAdmin ? (
-                          <div className="muted">Solo Admin puede administrar usuarios y presupuesto.</div>
-                        ) : (
-                          <>
-                            <div className="muted">Accesos rápidos (sin tablas aquí).</div>
-                            <div className="spacer8" />
-                            <div className="sectionRow">
-                              <button className="btn btnGhost btnSm" onClick={() => go('usuarios')} disabled={loading} type="button">
-                                Usuarios
-                              </button>
-                              <button
-                                className="btn btnGhost btnSm"
-                                onClick={() => {
-                                  go('presupuesto')
-                                  setTimeout(() => openBudgetModal(), 50)
-                                }}
-                                disabled={loading}
-                                type="button"
-                              >
-                                Presupuesto
-                              </button>
-                              <button
-                                className="btn btnGhost btnSm"
-                                onClick={() => {
-                                  setReportsTab('detalle')
-                                  setReportsTableTab('categorias')
-                                  setReportsOpen(true)
-                                }}
-                                disabled={loading}
-                                type="button"
-                              >
-                                Reportes
-                              </button>
-                            </div>
-                          </>
-                        )}
-                      </div>
+                        <div className="sectionRow" style={{ flexWrap: 'wrap', gap: 8 }}>
+                          <button className="btn btnPrimary btnSm" onClick={updateFamily} disabled={savingFamily} type="button">
+                            {savingFamily ? 'Guardando…' : 'Guardar cambios'}
+                          </button>
+                          <button className="btn btnDanger btnSm" onClick={deleteActiveFamily} type="button">
+                            Eliminar familia
+                          </button>
+                        </div>
+                      </>
+                    ) : familyDetails && !meOk?.isFamilyAdmin ? (
+                      <div className="muted" style={{ marginTop: 8 }}>Solo el administrador puede editar nombre, moneda y día de corte.</div>
+                    ) : null}
+                  </div>
+                </section>
+                </>
+              ) : null}
+
+              {view === 'solicitudes' ? (
+                <section className="card">
+                  <div className="cardHeader" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                    <div>
+                      <h2 className="cardTitle">Solicitudes de efectivo o pago</h2>
+                      <p className="cardDesc">Solicita efectivo o pago de servicios (colegiatura, cine, préstamo). Crear aquí o por WhatsApp. Flujo: crear → Pendiente → Admin aprueba → Registrar entrega (comprobante) → Entregada (operación cerrada).</p>
                     </div>
+                    <button
+                      type="button"
+                      className="btn btnPrimary"
+                      onClick={() => {
+                        setSolicitudEfectivoDone(null)
+                        setSolicitudEfectivoReason('')
+                        setSolicitudEfectivoAmount('')
+                        const def = receiptWizardAllocationsForMe?.[0] ?? allocationItems?.[0]
+                        setSolicitudEfectivoAllocationId(def?.id ?? '')
+                        setSolicitudEfectivoOpen(true)
+                      }}
+                      aria-label="Nueva solicitud de efectivo"
+                    >
+                      Nueva solicitud de efectivo
+                    </button>
+                  </div>
+                  <div className="cardBody">
+                    <div className="sectionRow" style={{ flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                      <label className="sectionRow" style={{ gap: 6, alignItems: 'center' }}>
+                        Estado
+                        <select
+                          className="input"
+                          style={{ width: 'auto' }}
+                          value={fltMoneyRequestStatus}
+                          onChange={(e) => setFltMoneyRequestStatus(e.target.value)}
+                        >
+                          <option value="all">Todos</option>
+                          <option value="PENDING">Pendiente</option>
+                          <option value="APPROVED">Aprobada</option>
+                          <option value="REJECTED">Rechazada</option>
+                          <option value="DELIVERED">Entregada</option>
+                        </select>
+                      </label>
+                    </div>
+                    {moneyRequestsLoading ? (
+                      <div className="muted">Cargando solicitudes…</div>
+                    ) : (
+                      <>
+                        <table className="table">
+                          <thead>
+                            <tr>
+                              <th>Código</th>
+                              <th>Motivo</th>
+                              <th>Monto</th>
+                              <th>Solicitante</th>
+                              <th>Fecha</th>
+                              <th>Estado</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(fltMoneyRequestStatus === 'all'
+                              ? moneyRequests
+                              : moneyRequests.filter((r: any) => r.status === fltMoneyRequestStatus)
+                            ).map((r: any) => (
+                              <tr
+                                key={r.id}
+                                style={{ cursor: 'pointer', background: selectedMoneyRequestId === r.id ? 'var(--color-bg-elevated, #f5f5f5)' : undefined }}
+                                onClick={() => setSelectedMoneyRequestId(selectedMoneyRequestId === r.id ? null : r.id)}
+                              >
+                                <td style={{ fontWeight: 700 }}>{r.registrationCode ?? '—'}</td>
+                                <td>{r.reason ?? '—'}</td>
+                                <td style={{ fontWeight: 900 }}>{formatMoney(Number(r.amount), r.currency || currency)}</td>
+                                <td>{r.createdBy?.name ?? r.createdBy?.email ?? '—'}</td>
+                                <td>{r.date ? new Date(r.date).toLocaleDateString('es-MX') : '—'}</td>
+                                <td>
+                                  <span className={`pill ${r.status === 'PENDING' ? 'pillWarn' : r.status === 'APPROVED' ? 'pillOk' : r.status === 'DELIVERED' ? 'pillOk' : ''}`}>
+                                    {r.status === 'PENDING' ? 'Pendiente' : r.status === 'APPROVED' ? 'Aprobada' : r.status === 'REJECTED' ? 'Rechazada' : 'Entregada'}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        {moneyRequests.length === 0 && !moneyRequestsLoading ? (
+                          <div className="muted" style={{ marginTop: 12 }}>No hay solicitudes.</div>
+                        ) : null}
+                        {selectedMoneyRequestId ? (() => {
+                          const mr = moneyRequests.find((r: any) => r.id === selectedMoneyRequestId)
+                          if (!mr) return null
+                          return (
+                            <div className="chartBox" style={{ marginTop: 24 }}>
+                              <div className="sectionRow" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                                <h3 className="chartTitle" style={{ margin: 0 }}>{mr.registrationCode} — {mr.reason}</h3>
+                                <button className="btn btnGhost btnSm" type="button" onClick={() => setSelectedMoneyRequestId(null)}>Cerrar detalle</button>
+                              </div>
+                              <div className="spacer8" />
+                              <p className="muted">Solicitante: {mr.createdBy?.name ?? mr.createdBy?.email} • Monto: {formatMoney(Number(mr.amount), mr.currency || currency)} • Fecha: {mr.date ? new Date(mr.date).toLocaleDateString('es-MX') : '—'}</p>
+                              {mr.allocation ? <p className="muted">Partida: {mr.allocation.entity?.name} → {mr.allocation.category?.name}</p> : null}
+                              <div className="spacer12" />
+                              {meOk?.isFamilyAdmin && mr.status === 'PENDING' ? (
+                                <div className="sectionRow" style={{ gap: 8 }}>
+                                  <button
+                                    className="btn btnPrimary btnSm"
+                                    type="button"
+                                    disabled={deliverBusy}
+                                    onClick={async () => {
+                                      try {
+                                        await patchJson(`/api/money-requests/${mr.id}`, { action: 'approve' })
+                                        setMessage('Solicitud aprobada.')
+                                        loadMoneyRequests()
+                                        setSelectedMoneyRequestId(null)
+                                      } catch (e: any) {
+                                        setMessage(e?.message || 'Error al aprobar')
+                                      }
+                                    }}
+                                  >
+                                    Aprobar
+                                  </button>
+                                  <button
+                                    className="btn btnDanger btnSm"
+                                    type="button"
+                                    disabled={deliverBusy}
+                                    onClick={async () => {
+                                      try {
+                                        await patchJson(`/api/money-requests/${mr.id}`, { action: 'reject' })
+                                        setMessage('Solicitud rechazada.')
+                                        loadMoneyRequests()
+                                        setSelectedMoneyRequestId(null)
+                                      } catch (e: any) {
+                                        setMessage(e?.message || 'Error al rechazar')
+                                      }
+                                    }}
+                                  >
+                                    Rechazar
+                                  </button>
+                                </div>
+                              ) : null}
+                              {meOk?.isFamilyAdmin && mr.status === 'APPROVED' ? (
+                                <div style={{ marginTop: 16 }}>
+                                  <h4 className="chartTitle" style={{ fontSize: 14, margin: 0 }}>Registrar entrega</h4>
+                                  <p className="muted" style={{ marginTop: 4 }}>Sube la imagen del comprobante de la transferencia. Opcional: monto realmente enviado.</p>
+                                  <div className="sectionRow" style={{ flexWrap: 'wrap', gap: 8, alignItems: 'flex-end', marginTop: 8 }}>
+                                    <input
+                                      ref={deliverFileInputRef}
+                                      type="file"
+                                      accept="image/*"
+                                      multiple
+                                      className="input"
+                                      onChange={(e) => setDeliverFilesCount(e.target.files?.length ?? 0)}
+                                    />
+                                    <label className="sectionRow" style={{ gap: 6, alignItems: 'center' }}>
+                                      Monto enviado (opcional)
+                                      <input
+                                        className="input"
+                                        style={{ width: 100 }}
+                                        placeholder={String(mr.amount)}
+                                        value={deliverAmountSent}
+                                        onChange={(e) => setDeliverAmountSent(e.target.value)}
+                                        disabled={deliverBusy}
+                                      />
+                                    </label>
+                                    <button
+                                      className="btn btnPrimary btnSm"
+                                      type="button"
+                                      disabled={deliverBusy || deliverFilesCount === 0}
+                                      onClick={async () => {
+                                        const files = deliverFileInputRef.current?.files
+                                        if (!files?.length) return
+                                        setDeliverBusy(true)
+                                        try {
+                                          const form = new FormData()
+                                          for (let i = 0; i < files.length; i++) form.append('file', files[i])
+                                          if (deliverAmountSent.trim()) form.set('amountSent', deliverAmountSent.trim())
+                                          if (mr.allocationId) form.set('allocationId', mr.allocationId)
+                                          const res = await fetch(`/api/money-requests/${mr.id}/deliver`, {
+                                            method: 'POST',
+                                            credentials: 'include',
+                                            headers: viewAsHeaders(false),
+                                            body: form,
+                                          })
+                                          const data = await res.json().catch(() => ({}))
+                                          if (!res.ok) throw new Error(data.detail || `Error ${res.status}`)
+                                          setMessage('Entrega registrada.')
+                                          setDeliverAmountSent('')
+                                          setDeliverFilesCount(0)
+                                          if (deliverFileInputRef.current) deliverFileInputRef.current.value = ''
+                                          loadMoneyRequests()
+                                          setSelectedMoneyRequestId(null)
+                                        } catch (e: any) {
+                                          setMessage(e?.message || 'Error al registrar entrega')
+                                        } finally {
+                                          setDeliverBusy(false)
+                                        }
+                                      }}
+                                    >
+                                      {deliverBusy ? 'Enviando…' : 'Registrar entrega'}
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : null}
+                            </div>
+                          )
+                        })() : null}
+                      </>
+                    )}
                   </div>
                 </section>
               ) : null}
 
               {view === 'tx' ? (
-                <div className="chartBox">
+                <div className="txDetailView">
+                  <div className="txDetailHeader">
+                    <button
+                      type="button"
+                      className="btn btnGhost btnSm txDetailBack"
+                      onClick={() => { setSelectedTxId(null); go('transacciones') }}
+                      aria-label="Volver a lista de transacciones"
+                    >
+                      ← Volver
+                    </button>
+                    <div className="txDetailNav">
+                      <button
+                        type="button"
+                        className="btn btnGhost btnSm"
+                        disabled={!txPrevId}
+                        onClick={() => txPrevId && openTx(txPrevId)}
+                        aria-label="Transacción anterior"
+                      >
+                        ← Anterior
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btnGhost btnSm"
+                        disabled={!txNextId}
+                        onClick={() => txNextId && openTx(txNextId)}
+                        aria-label="Siguiente transacción"
+                      >
+                        Siguiente →
+                      </button>
+                    </div>
+                  </div>
+                  <div className="chartBox">
                   <div className="sectionRow" style={{ justifyContent: 'space-between' }}>
                     <div>
                       <h3 className="chartTitle" style={{ margin: 0 }}>
@@ -8330,7 +10351,7 @@ export default function UiPage() {
                       {txTab === 'Detalle' ? (
                         <div ref={txSplitWrapRef} className="txSplitGrid" style={{ ['--split-left' as any]: `${txDetailSplitPct}%` }}>
                           <div
-                            className="sectionRow"
+                            className="sectionRow txDetailAdjust"
                             style={{ justifyContent: 'space-between', flexWrap: 'wrap', alignItems: 'center', gridColumn: '1 / -1' }}
                           >
                             <div className="muted" style={{ fontWeight: 950 }}>
@@ -8359,6 +10380,10 @@ export default function UiPage() {
                                   <div className="spacer8" />
                                   <div className="fieldGrid">
                                     <label>
+                                      Clave de registro
+                                      <input className="input" value={selectedTx.registrationCode || '—'} readOnly style={{ fontFamily: 'ui-monospace, monospace' }} />
+                                    </label>
+                                    <label>
                                       Fecha
                                       <input className="input" value={new Date(selectedTx.date).toISOString().slice(0, 10)} readOnly />
                                     </label>
@@ -8385,12 +10410,78 @@ export default function UiPage() {
                                   </div>
                                 </div>
 
+                                {(() => {
+                                  const toConfirmReceipts = selectedTxReceipts.filter((r: any) => r?.extraction && !r?.extraction?.confirmedAt)
+                                  const firstToConfirm = toConfirmReceipts[0]
+                                  const hasToConfirm = !!firstToConfirm
+                                  const activeAllocations = allocationItems.filter((a: any) => a?.isActive !== false)
+                                  const hasPartidas = activeAllocations.length > 0
+                                  return hasToConfirm ? (
+                                    <div className="chartBox txAssignConfirmBox">
+                                      <h3 className="chartTitle">Asignar este gasto a quién / a qué categoría</h3>
+                                      <p className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                                        Elige la cuenta (entidad y categoría) y confirma. Así queda asignado el gasto.
+                                      </p>
+                                      <div className="spacer8" />
+                                      {hasPartidas ? (
+                                        <label className="txAssignSelectLabel">
+                                          Cuenta / categoría
+                                          <select
+                                            className="select selectAssignCategory"
+                                            value={receiptConfirmAllocationId || String((selectedTx as any)?.allocation?.id || '')}
+                                            onChange={(e) => setReceiptConfirmAllocationId(e.target.value)}
+                                            disabled={receiptConfirming}
+                                          >
+                                            {activeAllocations.map((a: any) => (
+                                              <option key={a.id} value={a.id}>
+                                                {a.entity?.name} → {a.category?.name} (límite {formatMoney(Number(a.monthlyLimit), currency)})
+                                              </option>
+                                            ))}
+                                          </select>
+                                        </label>
+                                      ) : (
+                                        <div className="muted" style={{ fontSize: 13 }}>
+                                          No hay partidas configuradas. Puedes confirmar el ticket igual (queda sin asignar a una cuenta) o crear partidas en Presupuesto y volver a asignar después.
+                                          <div className="spacer8" />
+                                          <button
+                                            type="button"
+                                            className="btn btnGhost btnSm"
+                                            style={{ fontWeight: 700 }}
+                                            onClick={() => setBudgetModalOpen(true)}
+                                          >
+                                            Crear partidas en Presupuesto
+                                          </button>
+                                        </div>
+                                      )}
+                                      <div className="spacer12" />
+                                      <button
+                                        type="button"
+                                        className="btn btnAssignConfirm"
+                                        onClick={() => confirmReceipt(String(firstToConfirm.id))}
+                                        disabled={receiptConfirming}
+                                        aria-label={hasPartidas ? 'Asignar y confirmar recibo' : 'Confirmar recibo sin asignar'}
+                                      >
+                                        {receiptConfirming ? 'Confirmando…' : hasPartidas ? 'Asignar y confirmar' : 'Confirmar (sin asignar)'}
+                                      </button>
+                                    </div>
+                                  ) : null
+                                })()}
+
                                 <div className="chartBox">
                                   <h3 className="chartTitle">Auditoría</h3>
                                   <div className="spacer8" />
                                   <div className="muted">
                                     Creado: {selectedTx.createdAt ? new Date(selectedTx.createdAt).toLocaleString('es-MX') : '—'}
                                   </div>
+                                  {selectedTxReceipts.some((r: any) => r?.extraction?.confirmedAt) ? (
+                                    <div className="muted" style={{ marginTop: 6 }}>
+                                      Recibo confirmado: {(() => {
+                                        const r = selectedTxReceipts.find((x: any) => x?.extraction?.confirmedAt)
+                                        const at = r?.extraction?.confirmedAt
+                                        return at ? new Date(at).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }) : '—'
+                                      })()}
+                                    </div>
+                                  ) : null}
                                   <div className="muted">ID: {selectedTx.id}</div>
                                 </div>
                               </div>
@@ -8433,14 +10524,17 @@ export default function UiPage() {
                                         const isConfirmed = !!confirmedAt
                                         const isActive = rid && rid === txDetailReceiptId
                                         const cls = isConfirmed ? 'pill pillOk pillBtn' : hasExtraction ? 'pill pillWarn pillBtn' : 'pill pillBtn'
-                                        const label = isConfirmed ? 'Confirmado' : hasExtraction ? 'Por confirmar' : 'Pendiente'
+                                        const confirmedAtStr = r?.extraction?.confirmedAt
+                                          ? new Date(r.extraction.confirmedAt).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })
+                                          : ''
+                                        const label = isConfirmed ? `Confirmado ${confirmedAtStr ? `· ${confirmedAtStr}` : ''}` : hasExtraction ? 'Por confirmar' : 'Pendiente'
                                         return (
                                           <button
                                             key={rid}
                                             className={`${cls} ${isActive ? 'pillActive' : ''}`}
                                             onClick={() => selectTxDetailReceipt(rid)}
                                             type="button"
-                                            title={`Recibo ${rid.slice(0, 6)}… • ${label}`}
+                                            title={isConfirmed && confirmedAtStr ? `Recibo confirmado el ${confirmedAtStr}` : `Recibo ${rid.slice(0, 6)}… • ${label}`}
                                           >
                                             Recibo {rid.slice(0, 6)}… • {label}
                                           </button>
@@ -8502,6 +10596,10 @@ export default function UiPage() {
                                                 <img className="receiptImage" src={receiptPreviewUrl} alt="Ticket" />
                                                 <div className="ticketMagnifier" style={{ backgroundImage: `url(${receiptPreviewUrl})` }} />
                                               </div>
+                                            ) : receiptImagesForId === txDetailReceiptId && receiptImages.some((i) => !i.url) ? (
+                                              <div className="muted">
+                                                Comprobante por WhatsApp; imagen no guardada. Configura DO_SPACES en el servidor para que las próximas fotos se guarden.
+                                              </div>
                                             ) : (
                                               <div className="muted">No hay imagen disponible.</div>
                                             )}
@@ -8548,11 +10646,11 @@ export default function UiPage() {
                                                       <span>Total</span>
                                                     </div>
                                                     <div className="receiptTicketList">
-                                                      {receiptExtraction.items.map((it: any) => {
-                                                        const id = String(it?.id || '')
+                                                      {(Array.isArray(receiptExtraction.items) ? receiptExtraction.items : []).map((it: any, idx: number) => {
+                                                        const id = String(it?.id ?? '')
                                                         const locked = !!it?.isAdjustment || !!it?.isPlaceholder
-                                                        const lineNo = it.lineNumber || '—'
-                                                        const desc = String(it?.description || '—')
+                                                        const lineNo = it?.lineNumber ?? '—'
+                                                        const desc = String(it?.description ?? '—')
 
                                                         const hasQty = it?.quantity !== null && it?.quantity !== undefined && String(it.quantity) !== ''
                                                         const qty = hasQty
@@ -8570,7 +10668,7 @@ export default function UiPage() {
 
                                                         return (
                                                           <div
-                                                            key={id || it.lineNumber}
+                                                            key={id || String(it?.lineNumber ?? '') || `item-${idx}`}
                                                             className={`receiptTicketRow ${locked ? 'receiptTicketRowLocked' : ''}`}
                                                           >
                                                             <div className="receiptTicketMain">
@@ -8724,7 +10822,7 @@ export default function UiPage() {
                                 <span className="pill pillOk">Ticket extraído</span>
                                 {receiptExtractionForId ? (
                                   <button
-                                    className={`pill pillOk pillBtn ${
+                                    className={`pill pillBtn btnConfirmApple ${
                                       !receiptConfirming &&
                                       !!receiptExtractionForId &&
                                       !!receiptExtraction?.merchantName &&
@@ -8927,13 +11025,24 @@ export default function UiPage() {
                                 </div>
 
                                 <div className="receiptPanel receiptPanelFields">
-                                  <div className="receiptPanelHeader">
+                                  <div className="receiptPanelHeader" style={{ flexWrap: 'wrap', gap: 8 }}>
                                     <div>
                                       <div className="receiptPanelTitle">Datos extraídos</div>
                                       <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
                                         Proveedor y total no se editan por seguridad.
                                       </div>
                                     </div>
+                                    {receiptExtractionForId && receiptExtraction?.merchantName != null && receiptExtraction.total != null ? (
+                                      <button
+                                        className="btn btnConfirmApple btnSm"
+                                        onClick={() => confirmReceipt(receiptExtractionForId)}
+                                        disabled={receiptConfirming}
+                                        type="button"
+                                        title="Confirma y pasa al siguiente"
+                                      >
+                                        {receiptConfirming ? 'Confirmando…' : 'Confirmar'}
+                                      </button>
+                                    ) : null}
                                   </div>
 
                                   <div className="fieldGrid">
@@ -9120,6 +11229,7 @@ export default function UiPage() {
 
                     </>
                   )}
+                </div>
                 </div>
               ) : null}
 

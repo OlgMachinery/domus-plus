@@ -7,10 +7,11 @@ Si en **domus-plus.vercel.app** o **domus-fam.com** ves "Load failed" al iniciar
 ## 1. Variables de entorno en Vercel
 
 1. **Vercel:** https://vercel.com → proyecto **domus-plus** → **Settings** → **Environment Variables**.
-2. Deben existir:
-   - `NEXT_PUBLIC_SUPABASE_URL` (de Supabase → Project Settings → API → Project URL)
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` (anon public, no service_role)
-3. Después: **Deployments** → ⋯ del último deploy → **Redeploy**.
+2. Deben existir (para **Production** y, si usas preview, **Preview**):
+   - `NEXT_PUBLIC_SUPABASE_URL` (Supabase → Project Settings → API → Project URL)
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` (anon public, **nunca** service_role)
+   - `SUPABASE_SERVICE_ROLE_KEY` (Supabase → API → **Legacy API Keys** → service_role, formato JWT `eyJ...`). Necesaria para que el registro confirme el email automáticamente y para crear integrantes desde el setup. No exponer en cliente.
+3. Después: **Deployments** → ⋯ del último deploy → **Redeploy** (las variables solo se aplican en nuevos builds).
 
 ---
 

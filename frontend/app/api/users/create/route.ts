@@ -17,7 +17,17 @@ const getAuthUser = async (supabase: Awaited<ReturnType<typeof createClient>>, r
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { email, password, phone, name, family_id } = body
+    const {
+      email,
+      password,
+      phone,
+      name,
+      family_id,
+      can_register_expenses = true,
+      can_upload_receipts = true,
+      can_create_events = false,
+      can_view_global_summary = false,
+    } = body
 
     // Validaciones básicas
     if (!email || !password || !phone || !name) {
@@ -117,6 +127,10 @@ export async function POST(request: NextRequest) {
         is_active: true,
         is_family_admin: false,
         family_id: targetFamilyId,
+        can_register_expenses: body.can_register_expenses !== false,
+        can_upload_receipts: body.can_upload_receipts !== false,
+        can_create_events: Boolean(body.can_create_events),
+        can_view_global_summary: Boolean(body.can_view_global_summary),
       })
       .select()
       .single()

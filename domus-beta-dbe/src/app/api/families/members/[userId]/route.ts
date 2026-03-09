@@ -17,8 +17,10 @@ export async function PATCH(
     const name = nameRaw !== undefined ? (nameRaw.trim() ? nameRaw.trim() : null) : undefined
     const phoneRaw = typeof body.phone === 'string' ? body.phone.trim() : undefined
     const phone = phoneRaw !== undefined ? (phoneRaw ? phoneRaw : null) : undefined
+    const cityRaw = typeof body.city === 'string' ? body.city.trim() : undefined
+    const city = cityRaw !== undefined ? (cityRaw || null) : undefined
 
-    const wantsUserUpdate = name !== undefined || phone !== undefined
+    const wantsUserUpdate = name !== undefined || phone !== undefined || city !== undefined
     if (!wantsRoleChange && !wantsUserUpdate) return jsonError('Nada que actualizar', 400)
 
     const isSelf = targetUserId === requesterId
@@ -44,11 +46,15 @@ export async function PATCH(
         })
       }
       if (wantsUserUpdate) {
+        if (phone !== undefined && phone !== null && phone.replace(/\D/g, '').length < 10) {
+          throw new Error('El teléfono debe tener al menos 10 dígitos')
+        }
         await tx.user.update({
           where: { id: targetUserId },
           data: {
             ...(name !== undefined ? { name } : {}),
             ...(phone !== undefined ? { phone } : {}),
+            ...(city !== undefined ? { city } : {}),
           },
           select: { id: true },
         })

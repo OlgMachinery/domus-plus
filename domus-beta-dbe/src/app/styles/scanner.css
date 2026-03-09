@@ -1,0 +1,415 @@
+/**
+ * Document scanner and ticket capture modal — full-screen camera and crop UI.
+ */
+
+.scanOverlay {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  z-index: 65;
+  padding: 0;
+  padding-top: env(safe-area-inset-top, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
+}
+.scanPanel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 100dvh;
+  overflow: hidden;
+  background: #000;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+  padding-right: 0;
+  display: flex;
+  flex-direction: column;
+}
+.scanPanel.scanPanelClean {
+  padding: max(10px, env(safe-area-inset-top, 0)) 14px env(safe-area-inset-bottom, 0) 14px;
+  justify-content: flex-start;
+  align-items: center;
+}
+.scanPanelClean .cardTitle { font-size: 1.1rem; }
+.scanToolbar {
+  flex-shrink: 0;
+  margin-bottom: 0;
+  padding: max(10px, env(safe-area-inset-top, 0)) 52px 10px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.5);
+}
+.scanToolbar .cardTitle { font-size: 1rem; color: #fff; }
+.scanToolbar .muted { color: rgba(255,255,255,0.75); }
+.scanCameraWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  flex: 1;
+  min-height: 0;
+}
+.scanVideoContainer {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  min-height: 200px;
+  background: #000;
+  overflow: hidden;
+}
+.scanVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.scanDocumentOverlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.scanDocumentOverlay svg {
+  width: 100%;
+  height: 100%;
+  opacity: 0.85;
+}
+.scanDocumentOverlayCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.scanCameraPlaceholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 14px;
+}
+.scanCameraError { color: var(--danger); }
+.scanCameraActions {
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: max(14px, env(safe-area-inset-bottom, 0)) 14px 14px;
+  background: rgba(0,0,0,0.6);
+}
+.scanCaptureBtn { min-height: 52px; padding: 14px 28px; font-size: 1rem; }
+.scanPreviewWrap { display: flex; flex-direction: column; gap: var(--space-12); flex: 1; min-height: 0; }
+.scanPreviewBox {
+  width: 100%;
+  flex: 1;
+  min-height: 200px;
+  border-radius: 0;
+  overflow: hidden;
+  background: #111;
+}
+.scanPreviewImg { width: 100%; height: auto; display: block; vertical-align: top; max-height: 70vh; object-fit: contain; }
+.scanPreviewActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-12);
+  justify-content: center;
+  flex-shrink: 0;
+  padding: var(--space-12);
+}
+.scanPreviewActions .btn { min-height: 48px; }
+.scanFooter {
+  margin-top: 0;
+  padding: var(--space-12) var(--space-12) max(var(--space-12), env(safe-area-inset-bottom, 0));
+  border-top: 1px solid rgba(255,255,255,0.12);
+  flex-shrink: 0;
+  background: rgba(0,0,0,0.5);
+}
+.scanProcessing {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  border-radius: 0;
+  z-index: 2;
+}
+.scanPanel .modalClose {
+  color: #fff;
+  top: max(10px, env(safe-area-inset-top, 0));
+  right: max(10px, env(safe-area-inset-right, 0));
+}
+.scanPanel .modalClose:hover { background: rgba(255,255,255,0.15); color: #fff; }
+.scanFooter .btn,
+.scanPreviewWrap .muted { color: rgba(255,255,255,0.9); }
+.scanFooter .btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+
+/* Ticket capture modal */
+.ticketCaptureOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  z-index: 65;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.ticketCapturePanel {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  height: 100%;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+.ticketCaptureHeader {
+  flex-shrink: 0;
+  padding: var(--space-16) var(--space-16) var(--space-12) var(--space-16);
+  padding-right: var(--space-12);
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.ticketCaptureTitle { margin: 0; font-size: 1.15rem; font-weight: 600; color: #1d1d1f; padding-right: 100px; }
+.ticketCaptureSubtitle { margin: 4px 0 0; font-size: var(--font-body); color: #6e6e73; padding-right: 100px; }
+.ticketCaptureClose {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  min-width: 52px;
+  min-height: 48px;
+  padding: 10px 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: #1d1d1f;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--sap-shadow-sm);
+  -webkit-tap-highlight-color: transparent;
+}
+.ticketCaptureCloseIcon {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+.ticketCaptureCloseText {
+  font-size: 0.95rem;
+}
+.ticketCaptureClose:hover {
+  background: #f2f2f7;
+  border-color: #c7c7cc;
+}
+.ticketCaptureClose:active {
+  transform: scale(0.98);
+}
+@media (max-width: 420px) {
+  .ticketCaptureClose {
+    min-width: 56px;
+    min-height: 48px;
+    padding: 12px 14px;
+  }
+  .ticketCaptureTitle { padding-right: 90px; }
+  .ticketCaptureSubtitle { padding-right: 90px; }
+}
+.ticketCaptureBody {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  background: #f2f2f7;
+}
+.ticketCapturePlaceholder {
+  padding: var(--space-32) var(--space-24);
+  text-align: center;
+  color: #6e6e73;
+  font-size: 0.9rem;
+}
+.ticketCaptureVideoWrap {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  min-height: 200px;
+  background: #000;
+  border-radius: 0 0 16px 16px;
+}
+.ticketCaptureVideo { width: 100%; height: 100%; object-fit: contain; }
+.ticketCaptureCropWrap {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: #e5e5ea;
+}
+.ticketCaptureProcessing {
+  padding: var(--space-32) var(--space-24);
+  text-align: center;
+  color: #6e6e73;
+  font-size: 0.9rem;
+}
+.ticketCapturePreviewWrap {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16);
+  background: #f2f2f7;
+}
+.ticketCapturePreviewImg {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+}
+.ticketCaptureFooter {
+  flex-shrink: 0;
+  padding: 14px 16px;
+  padding-bottom: max(14px, env(safe-area-inset-bottom));
+  background: #fff;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+.ticketCaptureStatus { font-size: 0.75rem; color: #6e6e73; }
+.ticketCaptureFooterActions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-12);
+  flex-wrap: wrap;
+}
+.ticketCaptureFooterActions .btn { min-height: 48px; }
+.ticketCapturePrimaryHint { font-size: 0.8rem; color: #6e6e73; }
+
+.ticketCaptureConfirmHint {
+  margin: var(--space-8) 0 0;
+  font-size: var(--font-body);
+  color: var(--muted);
+  text-align: center;
+}
+.ticketCaptureConfirmBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-12);
+  width: 100%;
+}
+@keyframes ticketConfirmPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(11, 169, 91, 0.35); }
+  70%  { box-shadow: 0 0 0 10px rgba(11, 169, 91, 0); }
+}
+.btnConfirmTicket {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-12);
+  min-height: 56px;
+  padding: 14px 24px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fff !important;
+  background: var(--success) !important;
+  border: none !important;
+  border-radius: var(--radius);
+  cursor: pointer;
+  animation: ticketConfirmPulse 2.2s ease-in-out infinite;
+  transition: filter 0.15s, transform 0.1s;
+  width: 100%;
+}
+.btnConfirmTicketIcon {
+  font-size: 1.25rem;
+  line-height: 1;
+  opacity: 0.95;
+}
+.btnConfirmTicket:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+.btnConfirmTicket:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.btnConfirmTicket:disabled {
+  opacity: 0.7;
+  animation: none;
+}
+
+.txAssignConfirmBox .txAssignSelectLabel {
+  display: block;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.txAssignConfirmBox .selectAssignCategory {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  font-size: 1rem;
+  font-weight: 500;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.txAssignConfirmBox .selectAssignCategory:hover:not(:disabled) {
+  border-color: var(--primary);
+}
+.txAssignConfirmBox .selectAssignCategory:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: var(--ring);
+}
+.txAssignConfirmBox .btnAssignConfirm {
+  width: 100%;
+  min-height: 52px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #fff !important;
+  background: var(--success) !important;
+  border: none !important;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.txAssignConfirmBox .btnAssignConfirm:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.ticketCaptureToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  font-size: var(--font-label);
+  color: #6e6e73;
+  cursor: pointer;
+}
+.ticketCaptureToggle input { width: 18px; height: 18px; }
+.ticketCaptureBwNote {
+  margin: 0;
+  font-size: 0.7rem;
+  color: #8e8e93;
+}

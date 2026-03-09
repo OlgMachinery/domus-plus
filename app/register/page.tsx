@@ -25,6 +25,8 @@ export default function Register() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
+  const [city, setCity] = useState('')
+  const [belongsToFamily, setBelongsToFamily] = useState<'yes' | 'no'>('no')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
@@ -36,8 +38,8 @@ export default function Register() {
     setError('')
 
     // Validaciones
-    if (!name || !email || !phone || !password || !confirmPassword) {
-      setError('Todos los campos son requeridos')
+    if (!name || !email || !phone || !city?.trim() || !password || !confirmPassword) {
+      setError('Todos los campos son requeridos (nombre, email, teléfono, ciudad, contraseña)')
       setLoading(false)
       return
     }
@@ -64,6 +66,8 @@ export default function Register() {
       name: name.trim(),
       email: email.trim(),
       phone: phone.trim(),
+      city: city.trim() || undefined,
+      belongs_to_family: belongsToFamily === 'yes',
       password,
     }
     const url = '/api/auth/register'
@@ -113,6 +117,9 @@ export default function Register() {
         <div className="text-center mb-8">
           <h1 className="text-display font-semibold text-sap-text tracking-tight">Domus Fam</h1>
           <p className="text-body text-sap-text-secondary mt-2">Crea tu cuenta</p>
+          <p className="text-xs text-sap-text-tertiary mt-3 max-w-sm mx-auto">
+            Teléfono, correo, ciudad y si perteneces a una familia son necesarios para la app y para que funcione el envío de comprobantes por WhatsApp (Twilio).
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -155,15 +162,57 @@ export default function Register() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-sap-text mb-1">Teléfono</label>
+            <label className="block text-sm font-medium text-sap-text mb-1">Teléfono <span className="text-sap-text-tertiary font-normal">(requerido)</span></label>
             <input
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               className="sap-input"
-              placeholder="+526865690472"
+              placeholder="+52 686 569 0472"
+              required
+              minLength={10}
+            />
+            <p className="text-xs text-sap-text-tertiary mt-1">Mínimo 10 dígitos. Se usa para identificar tu cuenta y enviar comprobantes por WhatsApp.</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-sap-text mb-1">Ciudad <span className="text-sap-text-tertiary font-normal">(requerido)</span></label>
+            <input
+              type="text"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              className="sap-input"
+              placeholder="Ej. Hermosillo, CDMX"
               required
             />
+            <p className="text-xs text-sap-text-tertiary mt-1">Requerido para la app y para comprobantes por WhatsApp.</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-sap-text mb-1">¿Perteneces a una familia?</label>
+            <div className="flex gap-4 mt-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="belongs_to_family"
+                  checked={belongsToFamily === 'yes'}
+                  onChange={() => setBelongsToFamily('yes')}
+                  className="text-sap-primary"
+                />
+                <span className="text-sm text-sap-text">Sí</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="belongs_to_family"
+                  checked={belongsToFamily === 'no'}
+                  onChange={() => setBelongsToFamily('no')}
+                  className="text-sap-primary"
+                />
+                <span className="text-sm text-sap-text">No</span>
+              </label>
+            </div>
+            <p className="text-xs text-sap-text-tertiary mt-1">Sí = ya tienes o crearás una familia. No = registrarás solo tú. Afecta invitaciones y comprobantes por WhatsApp.</p>
           </div>
 
           <div>

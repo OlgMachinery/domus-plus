@@ -40,8 +40,9 @@ export async function POST(req: NextRequest) {
     )
     setSessionCookie(req, res, token)
     return res
-  } catch {
-    return jsonError('No se pudo iniciar sesión', 500)
+  } catch (err) {
+    console.error('[auth/login] Error:', err)
+    return jsonError('No se pudo iniciar sesión. Revisa que la base de datos esté accesible.', 500)
   }
 }
 

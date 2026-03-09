@@ -2,19 +2,18 @@
 
 import { useEffect } from 'react'
 
-export default function Error({
-  error,
-  reset,
-}: {
-  error: Error & { digest?: string }
-  reset: () => void
+export default function Error(props: {
+  error?: Error & { digest?: string }
+  reset?: () => void
 }) {
+  const error = props.error ?? new Error('Error desconocido')
+  const reset = props.reset ?? (() => window.location.reload())
+
   useEffect(() => {
-    // Log del error para debugging
     console.error('❌ [ERROR BOUNDARY] Error capturado:', error)
-    console.error('   Mensaje:', error.message)
-    console.error('   Stack:', error.stack)
-    if (error.digest) {
+    console.error('   Mensaje:', error?.message)
+    console.error('   Stack:', error?.stack)
+    if (error?.digest) {
       console.error('   Digest:', error.digest)
     }
   }, [error])
@@ -34,16 +33,16 @@ export default function Error({
         }}>
           <h2 style={{ fontSize: '24px', marginBottom: '16px' }}>¡Algo salió mal!</h2>
           <p style={{ color: '#dc2626', margin: '20px 0', fontSize: '16px' }}>
-            {error.message || 'Error desconocido'}
+            {error?.message || 'Error desconocido'}
           </p>
-          {error.digest && (
+          {error?.digest && (
             <p style={{ color: '#6b7280', fontSize: '12px', marginTop: '8px' }}>
               Código de error: {error.digest}
             </p>
           )}
           <div style={{ marginTop: '24px', display: 'flex', gap: '12px' }}>
             <button
-              onClick={() => reset()}
+              onClick={() => reset?.()}
               style={{
                 padding: '12px 24px',
                 backgroundColor: '#2563eb',

@@ -1,0 +1,998 @@
+/**
+ * Dashboard: KPI strip, analytics row, charts, transaction compact UI, receipt review layout.
+ */
+
+/* Botones rápidos móvil (estilo Apple / iPhone) — solo visibles en vista móvil */
+.dashboardQuickActionsMobile {
+  display: none;
+}
+
+.dashboardQuickBtn {
+  display: block;
+  width: 100%;
+  padding: 14px 20px;
+  border: none;
+  border-radius: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dashboardQuickBtn:active {
+  opacity: 0.85;
+  transform: scale(0.98);
+}
+
+.dashboardQuickBtnPrimary {
+  background: #007AFF;
+  color: #ffffff;
+  margin-bottom: 10px;
+}
+
+.dashboardQuickBtnSecondary {
+  background: #34C759;
+  color: #ffffff;
+  margin-bottom: 10px;
+}
+
+.dashboardQuickBtnApprovals {
+  background: #FF9500;
+  color: #ffffff;
+}
+
+@media (max-width: 920px) {
+  .dashboardQuickActionsMobile {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-bottom: var(--space-16);
+    width: 100%;
+  }
+}
+
+/* KPI strip — auto-fit responsive grid, stacks vertically on small screens */
+.kpiStrip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
+  gap: var(--space-16);
+  min-width: 0;
+}
+
+.kpiStripFive {
+  grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
+}
+
+@media (max-width: 920px) {
+  .kpiStrip,
+  .kpiStripFive {
+    gap: var(--space-12);
+  }
+}
+
+/* Presupuesto en móvil: solo vista (ocultar edición / año / integrantes / confirmar) */
+@media (max-width: 920px) {
+  .presupuestoConcentradoActions {
+    display: none !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .kpiStrip,
+  .kpiStripFive {
+    grid-template-columns: 1fr;
+    gap: var(--space-12);
+  }
+}
+
+.kpiCardAction {
+  cursor: pointer;
+  transition: box-shadow 0.2s ease, transform 0.1s ease;
+}
+.kpiCardAction:hover {
+  box-shadow: var(--sap-shadow);
+}
+.kpiCardAction:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.kpiCard {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-16);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+}
+
+.kpiCard::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 3px;
+  background: var(--primary);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.kpiSuccess::before {
+  background: var(--success);
+}
+.kpiWarn::before {
+  background: var(--warning);
+}
+.kpiDanger::before {
+  background: var(--danger);
+}
+
+.kpiTitle {
+  font-size: var(--font-label);
+  color: var(--muted);
+  font-weight: 600;
+  letter-spacing: var(--letter-spacing-label);
+  line-height: var(--line-height-tight);
+}
+
+.kpiValue {
+  margin-top: var(--space-8);
+  font: var(--font-numeric);
+  color: var(--text);
+}
+
+.kpiDelta {
+  margin-top: var(--space-8);
+  font-size: var(--font-label);
+  color: var(--muted);
+  line-height: var(--line-height-body);
+}
+
+/* Analytics row — single column on mobile, same visual hierarchy */
+.analyticsRow {
+  display: grid;
+  grid-template-columns: 1.25fr 0.75fr;
+  margin-top: var(--layout-section-gap);
+  gap: var(--layout-section-gap);
+  align-items: start;
+  min-width: 0;
+}
+
+@media (max-width: 920px) {
+  .analyticsRow {
+    grid-template-columns: 1fr;
+    gap: var(--space-16);
+  }
+}
+
+@media (max-width: 768px) {
+  .analyticsRow {
+    margin-top: var(--space-16);
+    gap: var(--space-16);
+  }
+}
+
+.chartBox {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: var(--layout-modal-padding);
+}
+
+.chartTitle {
+  font-size: var(--font-section-title);
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: var(--letter-spacing-tight);
+  color: var(--text);
+  line-height: var(--line-height-tight);
+}
+
+@media (max-width: 768px) {
+  .kpiStrip {
+    gap: var(--space-12);
+  }
+  .kpiCard {
+    padding: var(--space-16) var(--space-12) var(--space-12);
+  }
+  .analyticsRow {
+    gap: var(--space-16);
+  }
+  .chartBox {
+    padding: var(--space-16);
+  }
+}
+
+/* Transacciones — Registrar gasto (estilo iPhone) */
+.txAddBlock {
+  padding: var(--space-20);
+  border-radius: 16px;
+  background: var(--card);
+  box-shadow: var(--shadow-sm);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, sans-serif;
+}
+
+.txAddHeader {
+  margin-bottom: var(--space-16);
+}
+
+.txAddTitle {
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0 0 4px 0;
+  color: var(--text);
+}
+
+.txAddSubtitle {
+  font-size: 0.9375rem;
+  color: var(--muted);
+  margin: 0 0 var(--space-16) 0;
+  line-height: 1.35;
+}
+
+.txAddSegmented {
+  display: inline-flex;
+  background: #E5E5EA;
+  border-radius: 10px;
+  padding: 3px;
+  gap: 0;
+}
+
+.txAddSegment {
+  padding: 10px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--muted);
+  transition: background 0.2s ease, color 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.txAddSegment:hover {
+  color: var(--text);
+}
+
+.txAddSegmentActive {
+  background: var(--card);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+
+.txAddReceiptIntro {
+  margin-top: var(--space-8);
+}
+
+.txAddReceiptText {
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--muted);
+  margin: 0 0 var(--space-16) 0;
+}
+
+.txAddReceiptBtn {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  padding: 14px 24px;
+  font-size: 17px;
+  font-weight: 600;
+  border: none;
+  border-radius: 12px;
+  background: #007AFF;
+  color: #ffffff;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  font-family: inherit;
+}
+
+.txAddReceiptBtn:hover {
+  opacity: 0.9;
+}
+
+.txAddReceiptBtn:active {
+  opacity: 0.85;
+}
+
+.txAddManualSubmit {
+  padding: 12px 24px !important;
+  font-size: 17px !important;
+  font-weight: 600 !important;
+  border-radius: 12px !important;
+  min-height: 48px;
+}
+
+@media (max-width: 920px) {
+  .txAddBlock {
+    padding: var(--space-16);
+  }
+  .txAddSegmented {
+    width: 100%;
+    display: flex;
+  }
+  .txAddSegment {
+    flex: 1;
+  }
+  .txAddReceiptBtn {
+    max-width: none;
+  }
+}
+
+/* Transacciones — UI compacta */
+.txBoxTight {
+  padding: var(--space-8);
+}
+
+.txCompact label {
+  gap: var(--space-8);
+  font-size: var(--font-label);
+}
+
+.txCompact .input,
+.txCompact .select,
+.txCompact .file,
+.txCompact textarea {
+  padding: var(--space-8);
+  font-size: var(--font-label);
+  border-radius: var(--radius-sm);
+}
+
+.txCompact .tabRow {
+  padding: var(--space-8);
+  border-radius: var(--radius);
+}
+.txCompact .tabBtn {
+  padding: var(--space-8);
+  font-size: var(--font-label);
+  border-radius: var(--radius-sm);
+}
+
+.txAddReceiptGrid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr auto;
+  gap: var(--layout-actions-gap);
+  align-items: end;
+}
+
+.txFileField {
+  display: grid;
+  gap: var(--space-8);
+}
+
+.txFieldLabel {
+  font-size: var(--font-label);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
+.txFileRow {
+  display: flex;
+  gap: var(--space-8);
+  align-items: center;
+  flex-wrap: wrap;
+  min-height: 34px;
+}
+
+.txFileInput {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.txFileStatus {
+  font-size: var(--font-label);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+.txAddManualGrid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: var(--layout-actions-gap);
+  align-items: end;
+}
+
+.txSpanAll {
+  grid-column: 1 / -1;
+}
+
+.txAddActions {
+  display: flex;
+  gap: var(--layout-actions-gap);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.txHelper {
+  margin-top: var(--space-8);
+  font-size: var(--font-label);
+  line-height: 1.35;
+}
+
+.txFilterBar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--layout-actions-gap);
+  align-items: end;
+}
+
+/* Filtros simétricos: misma anchura por control (4 columnas en desktop, 2 en móvil) */
+.txFilterBar.txFilterBarIphone {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-12);
+}
+@media (max-width: 768px) {
+  .txFilterBar.txFilterBarIphone {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.txFilterBarIphone {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, sans-serif;
+  padding: var(--space-16);
+  background: var(--card);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.txFilterBarIphone label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.txFilterBarIphone .select,
+.txFilterBarIphone .input {
+  width: 100%;
+  min-height: 40px;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.txFilterSpan2 {
+  grid-column: span 2;
+}
+
+@media (max-width: 920px) {
+  .txAddReceiptGrid,
+  .txAddManualGrid {
+    grid-template-columns: 1fr;
+  }
+  .txFilterBar.txFilterBarIphone .txFilterSpan2 {
+    grid-column: span 1;
+  }
+}
+@media (max-width: 768px) {
+  .txFilterBar.txFilterBarIphone .txFilterSpan2 {
+    grid-column: span 2;
+  }
+}
+
+.txCompact .table th,
+.txCompact .table td {
+  padding: var(--space-8);
+  font-size: var(--font-label);
+}
+.txCompact .table th {
+  font-size: var(--font-label);
+}
+
+/* Receipt review layout (Evidencias) */
+.receiptChipRow {
+  display: flex;
+  gap: var(--layout-actions-gap);
+  flex-wrap: wrap;
+}
+
+.receiptChip {
+  display: flex;
+  align-items: center;
+  gap: var(--layout-actions-gap);
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(15, 23, 42, 0.02);
+}
+
+.receiptChipId {
+  font-weight: 900;
+  font-size: var(--font-label);
+  color: #374151;
+}
+
+.receiptChipActions {
+  display: flex;
+  gap: var(--space-8);
+  flex-wrap: wrap;
+}
+
+.receiptPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  align-items: center;
+}
+
+.receiptReviewGrid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  grid-template-areas:
+    'image fields'
+    'items items'
+    'json json';
+  gap: var(--layout-form-field-gap);
+  align-items: start;
+}
+
+.receiptCompareGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: var(--layout-form-field-gap);
+  align-items: start;
+}
+
+.receiptCompareGridNarrow {
+  grid-template-columns: 1fr;
+}
+.receiptCompareGridNarrow .receiptImageBox {
+  height: 420px;
+}
+.receiptCompareGridNarrow .receiptItemsWrap {
+  max-height: 420px;
+}
+
+.receiptCompareGrid .receiptImageBox {
+  height: 520px;
+}
+
+.receiptCompareGrid .receiptItemsWrap {
+  max-height: 520px;
+}
+
+.receiptPanel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  padding: var(--space-16);
+  min-width: 0;
+  box-shadow: var(--shadow-sm);
+}
+
+.receiptPanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--layout-actions-gap);
+  margin-bottom: var(--layout-actions-gap);
+}
+
+.receiptPanelTitle {
+  font-weight: 700;
+  font-size: var(--font-section-title);
+  letter-spacing: var(--letter-spacing-tight);
+  color: var(--text);
+  line-height: var(--line-height-tight);
+}
+
+.receiptPanelImage {
+  grid-area: image;
+}
+
+.receiptPanelFields {
+  grid-area: fields;
+}
+
+.receiptPanelItems {
+  grid-area: items;
+}
+
+.receiptPanelJson {
+  grid-area: json;
+}
+
+.receiptImageBox {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  height: 380px;
+  min-height: 200px;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16);
+}
+
+.receiptImage {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.ticketMagnifyWrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-in;
+  --mag-x: 50%;
+  --mag-y: 50%;
+  --mag-left: 50%;
+  --mag-top: 50%;
+}
+.ticketMagnifier {
+  position: absolute;
+  left: var(--mag-left);
+  top: var(--mag-top);
+  width: 220px;
+  height: 220px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #fff;
+  background-repeat: no-repeat;
+  background-size: 280%;
+  background-position: var(--mag-x) var(--mag-y);
+  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.22);
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.98);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+.ticketMagnifyWrap:hover .ticketMagnifier {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+.ticketMagnifyOff {
+  cursor: default;
+}
+.ticketMagnifyOff .ticketMagnifier {
+  display: none;
+}
+@media (hover: none) {
+  .ticketMagnifier {
+    display: none;
+  }
+}
+
+.receiptItemsWrap {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  overflow: auto;
+  max-height: 420px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.receiptItemsWrap .table {
+  width: 100%;
+  table-layout: fixed;
+}
+.receiptItemsWrap .table th,
+.receiptItemsWrap .table td {
+  padding: var(--space-8) var(--space-12);
+  font-size: var(--font-label);
+}
+.receiptItemsWrap .table th:nth-child(1) {
+  width: 48px;
+}
+.receiptItemsWrap .table th:nth-child(3) {
+  width: 64px;
+}
+.receiptItemsWrap .table th:nth-child(4) {
+  width: 92px;
+}
+.receiptItemsWrap .table th:nth-child(5) {
+  width: 96px;
+}
+.receiptItemsWrap .table td:nth-child(2) {
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: auto;
+}
+.receiptItemsWrap .table td:nth-child(2) .muted {
+  overflow-wrap: break-word;
+}
+
+.receiptTicket {
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    'Liberation Mono',
+    'Courier New',
+    monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.receiptTicketHeader {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-12);
+  padding: var(--space-12);
+  background: #fff;
+  border-bottom: 1px dashed var(--border);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: var(--font-label);
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.receiptTicketList {
+  padding: var(--space-8) var(--space-12);
+}
+
+.receiptTicketRow {
+  padding: var(--space-12) 0;
+  border-bottom: 1px dashed var(--border);
+}
+.receiptTicketRow:last-child {
+  border-bottom: 0;
+}
+
+.receiptTicketMain {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-12);
+  align-items: start;
+}
+
+.receiptTicketLeft {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 3ch 1fr;
+  gap: 10px;
+}
+
+.receiptTicketLineNo {
+  color: var(--muted);
+  font-weight: 800;
+  text-align: right;
+  padding-top: 1px;
+}
+
+.receiptTicketDesc {
+  min-width: 0;
+  font-weight: 900;
+  font-size: 12px;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.receiptTicketSub {
+  margin-top: var(--space-8);
+  font-size: var(--font-label);
+  color: var(--muted);
+  display: flex;
+  gap: var(--space-12);
+  flex-wrap: wrap;
+}
+
+.receiptTicketOcr {
+  margin-top: var(--space-8);
+  font-size: var(--font-label);
+  color: var(--muted);
+  opacity: 0.9;
+  overflow-wrap: break-word;
+}
+
+.receiptTicketAmount {
+  white-space: nowrap;
+  text-align: right;
+  align-self: start;
+  font-weight: 900;
+  font-size: var(--font-label);
+}
+
+.receiptTicketRowLocked {
+  opacity: 0.7;
+}
+
+@media (max-width: 920px) {
+  .receiptReviewGrid {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'image'
+      'fields'
+      'items'
+      'json';
+  }
+  .receiptCompareGrid {
+    grid-template-columns: 1fr;
+  }
+  .receiptCompareGrid .receiptImageBox {
+    height: 340px;
+  }
+  .receiptCompareGrid .receiptItemsWrap {
+    max-height: 340px;
+  }
+  .receiptImageBox {
+    height: 320px;
+  }
+  .receiptItemsWrap {
+    max-height: 360px;
+  }
+}
+
+.bars {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  align-items: end;
+  gap: var(--space-12);
+  height: 120px;
+  margin-top: var(--space-16);
+}
+
+.bar {
+  background: rgba(0, 122, 255, 0.2);
+  border: 1px solid rgba(0, 122, 255, 0.35);
+  border-radius: var(--radius);
+}
+
+.barLabel {
+  margin-top: var(--space-8);
+  font-size: var(--font-label);
+  color: var(--muted);
+  text-align: center;
+}
+
+.donutWrap {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: var(--space-12);
+  align-items: center;
+  margin-top: var(--space-12);
+}
+
+.donut {
+  width: 120px;
+  height: 120px;
+  border-radius: 999px;
+  border: 10px solid #E5E5EA;
+  background: conic-gradient(var(--primary) 0deg, var(--primary) 60deg, rgba(0, 0, 0, 0.08) 60deg 360deg);
+  position: relative;
+}
+
+.donut::after {
+  content: '';
+  position: absolute;
+  inset: 18px;
+  background: var(--card);
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+
+.legend {
+  display: grid;
+  gap: var(--space-8);
+}
+
+.legendItem {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  gap: var(--space-8);
+  align-items: center;
+  font-size: var(--font-label);
+  color: #374151;
+}
+
+.legendDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+/* Dashboard pending card & background done banner */
+.dashboardPendingCard {
+  border: 1px solid rgba(255, 149, 0, 0.3);
+  background: var(--warning-bg);
+  padding: var(--space-16) var(--space-16);
+  border-radius: var(--radius);
+}
+.dashboardPendingCardHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--layout-actions-gap);
+}
+.dashboardPendingCardActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+  flex-shrink: 0;
+}
+.dashboardPendingCardHeader .btn {
+  flex-shrink: 0;
+}
+.dashboardPendingPills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+}
+.dashboardPendingPills .pill {
+  font-size: var(--font-label);
+}
+
+.backgroundDoneBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  padding: var(--space-12) var(--space-16);
+  background: var(--success-bg);
+  border: 1px solid rgba(52, 199, 89, 0.35);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-8);
+}
+.backgroundDoneText {
+  font-size: var(--font-body);
+  color: #0a7c47;
+  font-weight: 500;
+  line-height: var(--line-height-body);
+}
+
+@media (max-width: 520px) {
+  /* Pendientes de asignar: header y acciones en columna, botones a ancho completo */
+  .dashboardPendingCardHeader {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-12);
+  }
+  .dashboardPendingCardActions {
+    flex-direction: column;
+    width: 100%;
+    gap: var(--space-12);
+  }
+  .dashboardPendingCardActions .btn {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+  }
+  .backgroundDoneBanner {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+}
+
+.consumoReportBlock {
+  padding: var(--space-16) 0 0;
+  border-top: 1px solid var(--border);
+}

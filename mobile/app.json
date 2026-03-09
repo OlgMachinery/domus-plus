@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "Domus Mobile",
+    "slug": "domus-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "owner": null,
+    "jsEngine": "hermes",
+    "scheme": "domus",
+    "platforms": ["ios", "android"],
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.domus.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Necesitamos la cámara para adjuntar recibos.",
+        "NSPhotoLibraryUsageDescription": "Necesitamos acceso a fotos para adjuntar recibos."
+      }
+    },
+    "android": {
+      "package": "com.domus.app"
+    }
+  }
+}

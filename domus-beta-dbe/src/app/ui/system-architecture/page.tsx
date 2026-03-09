@@ -2,9 +2,10 @@
 
 import { type MutableRefObject, Component, Suspense, ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { toPng } from 'html-to-image'
+import { PDFDocument } from 'pdf-lib'
 import SAPLayout from '@/components/SAPLayout'
 import { useRouter, useSearchParams } from 'next/navigation'
-import ReactFlow, { Background, Panel, ReactFlowProvider, useEdgesState, useNodesState, type Edge, type FitViewOptions, type Node } from 'reactflow'
+import ReactFlow, { Background, ReactFlowProvider, useEdgesState, useNodesState, type Edge, type FitViewOptions, type Node } from 'reactflow'
 import 'reactflow/dist/style.css'
 
 export const dynamic = 'force-dynamic'
@@ -152,6 +153,7 @@ function DiagramInner(props: {
   zoomSlider: number
   zoomControlEnabled: boolean
   applyZoomSlider: (v: number) => void
+  onViewportZoom?: (zoom: number) => void
   focusEntityId: string | null
 }) {
   const [nodes, setNodes, onNodesChange] = useNodesState(props.initialNodes)
@@ -174,13 +176,14 @@ function DiagramInner(props: {
       fitViewOptions={{ padding: 0.06, includeHiddenNodes: true }}
       defaultViewport={{ x: 0, y: 0, zoom: 0.82 }}
       minZoom={0.1}
-      maxZoom={2}
+      maxZoom={3}
       nodesDraggable={props.customMode && !props.viewLocked}
       panOnDrag={props.isMobile ? [1, 2] : (props.customMode ? [1, 2] : [2])}
       panOnScroll={props.isMobile ? false : (!props.viewLocked && props.customMode)}
       zoomOnPinch={props.isMobile ? true : (!props.viewLocked && props.customMode)}
       selectionOnDrag={!props.customMode}
       onMoveEnd={props.onMoveEnd}
+      onMove={(_, viewport) => { if (viewport?.zoom != null) props.onViewportZoom?.(viewport.zoom) }}
       snapToGrid
       snapGrid={[20, 20]}
       nodesConnectable={false}
@@ -189,28 +192,6 @@ function DiagramInner(props: {
       onNodeDragStop={props.onNodeDragStop}
     >
       <Background gap={18} color="#e0e7f1" />
-      <Panel position="top-right" className="system-arch-panel-zoom" style={{ display: 'none', gap: 8, flexDirection: 'column', background: '#fff', padding: 8, borderRadius: 10, border: '1px solid rgba(15,23,42,0.1)', boxShadow: '0 6px 18px rgba(15,23,42,0.08)' }}>
-        <label className="pill" style={{ display: 'flex', alignItems: 'center', gap: 6 }} htmlFor="arch-zoom-slider">
-          Zoom
-          <input
-            id="arch-zoom-slider"
-            name="zoomSlider"
-            type="range"
-            min={0.2}
-            max={3}
-            step={0.05}
-            value={props.zoomSlider}
-            onChange={(e) => props.applyZoomSlider(parseFloat(e.target.value))}
-            style={{ width: 140 }}
-            disabled={!props.zoomControlEnabled}
-          />
-        </label>
-        <button type="button" className="btn btnGhost btnSm" onClick={() => props.flowApiRef.current?.fitView({ padding: 0.25, includeHiddenNodes: true })}>Auto ajustar</button>
-        <button type="button" className="btn btnGhost btnSm" onClick={() => {
-          const first = props.nodesRef.current.find((n) => n.id === props.focusEntityId) || props.nodesRef.current.find((n) => n.id === 'FAMILY_ROOT')
-          if (first) props.flowApiRef.current?.setCenter(first.position.x, first.position.y, { duration: 300, zoom: props.focusEntityId ? 2.2 : 1.8 })
-        }}>Centrar selección</button>
-      </Panel>
     </ReactFlow>
   )
 }
@@ -255,6 +236,7 @@ function SystemArchitecturePageInner() {
   const [mobileOptionsOpen, setMobileOptionsOpen] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
   const [allocWarning, setAllocWarning] = useState<string | null>(null)
+  const [downloadMenuOpen, setDownloadMenuOpen] = useState(false)
 
   // Detección móvil en cliente para que aplique desde el primer pintado (no depender del tamaño del diagrama)
   useLayoutEffect(() => {
@@ -374,7 +356,7 @@ function SystemArchitecturePageInner() {
         console.error('No se pudo cargar el organigrama', e)
         const msg =
           typeof e?.message === 'string' && e.message.includes('alloc=409')
-            ? 'Falta objeto presupuestal activo (alloc 409)'
+            ? 'Falta partida presupuestal activa (alloc 409)'
             : 'No se pudo cargar el organigrama.'
         setError(msg)
         setData(null)
@@ -1085,8 +1067,18 @@ function SystemArchitecturePageInner() {
     if (!zoomControlEnabled) return
     const api = flowApiRef.current
     if (api) {
-      api.zoomTo(clamped, { duration: 120 })
-      setUserMoved(true)
+      try {
+        if (typeof api.zoomTo === 'function') {
+          api.zoomTo(clamped, { duration: 120 })
+        } else {
+          const vp = typeof api.getViewport === 'function' ? api.getViewport() : { x: 0, y: 0, zoom: 1 }
+          if (typeof api.setViewport === 'function') api.setViewport({ ...vp, zoom: clamped })
+        }
+        setUserMoved(true)
+      } catch (_) {
+        if (typeof api.zoomTo === 'function') api.zoomTo(clamped, { duration: 120 })
+        setUserMoved(true)
+      }
     }
   }
 
@@ -1099,18 +1091,101 @@ function SystemArchitecturePageInner() {
     })
   }
 
-  const downloadDiagramImage = useCallback(() => {
+  // Tamaño carta (8.5" x 11"): 150 dpi base; pixelRatio 2 para PNG = 300 dpi equivalente (resolución correcta para impresión)
+  const LETTER_WIDTH = 1275
+  const LETTER_HEIGHT = 1650
+
+  const exportDate = useCallback(() => new Date().toISOString().slice(0, 10), [])
+  const exportDateTime = useCallback(() => new Date().toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' }).replace(/\//g, '-'), [])
+  const baseName = useCallback(() => `diagrama-${(data?.familyName ?? 'familia').replace(/\s+/g, '-')}-${exportDate()}`, [data?.familyName, exportDate])
+
+  const captureDiagramLetter = useCallback(() => {
     const el = document.getElementById('diagram-wrap')
-    if (!el) return
-    toPng(el, { cacheBust: true, pixelRatio: 2, backgroundColor: uiCanvasBg || '#fff' })
+    if (!el) return Promise.reject(new Error('No se encontró el diagrama'))
+    return toPng(el, {
+      cacheBust: true,
+      backgroundColor: uiCanvasBg || '#fff',
+      canvasWidth: LETTER_WIDTH,
+      canvasHeight: LETTER_HEIGHT,
+      pixelRatio: 2,
+    })
+  }, [uiCanvasBg])
+
+  const downloadExport = useCallback((blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    link.click()
+    URL.revokeObjectURL(url)
+  }, [])
+
+  const handleExportPNG = useCallback(() => {
+    captureDiagramLetter()
       .then((dataUrl) => {
         const link = document.createElement('a')
         link.href = dataUrl
-        link.download = `diagrama-${data?.familyName?.replace(/\s+/g, '-') || 'familia'}-${new Date().toISOString().slice(0, 10)}.png`
+        link.download = `${baseName()}.png`
         link.click()
       })
-      .catch((err) => console.error('Error al exportar diagrama:', err))
-  }, [data?.familyName, uiCanvasBg])
+      .catch((err) => console.error('Error al exportar PNG:', err))
+  }, [captureDiagramLetter, baseName])
+
+  const handleExportPDF = useCallback(async () => {
+    try {
+      const dataUrl = await captureDiagramLetter()
+      const pdfDoc = await PDFDocument.create()
+      const page = pdfDoc.addPage([612, 792]) // carta en puntos (72 dpi)
+      const imgBytes = Uint8Array.from(atob(dataUrl.split(',')[1] ?? ''), (c) => c.charCodeAt(0))
+      const img = await pdfDoc.embedPng(imgBytes)
+      const scale = Math.min(612 / img.width, 792 / img.height)
+      const w = img.width * scale
+      const h = img.height * scale
+      const x = (612 - w) / 2
+      const y = 792 - h - 36
+      page.drawImage(img, { x, y, width: w, height: h })
+      page.drawText(`Diagrama — ${data?.familyName ?? 'Familia'} — ${exportDate()} — ${exportDateTime()}`, {
+        x: 36,
+        y: 792 - 24,
+        size: 10,
+      })
+      const pdfBytes = await pdfDoc.save()
+      const bytes = new Uint8Array(pdfBytes.length)
+      bytes.set(pdfBytes)
+      downloadExport(new Blob([bytes], { type: 'application/pdf' }), `${baseName()}.pdf`)
+    } catch (err) {
+      console.error('Error al exportar PDF:', err)
+    }
+  }, [captureDiagramLetter, baseName, downloadExport, data?.familyName, exportDate, exportDateTime])
+
+  const handleExportHTML = useCallback(async () => {
+    try {
+      const dataUrl = await captureDiagramLetter()
+      const html = `<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="utf-8"><title>Diagrama ${data?.familyName ?? 'Familia'} ${exportDate()}</title>
+<style>body{font-family:system-ui,sans-serif;margin:0;padding:24px;background:#fff;} .meta{color:#64748b;font-size:12px;margin-bottom:12px;} img{max-width:100%;height:auto;display:block;object-fit:contain;} @media print{@page{size:letter;} body{padding:0;} img{width:100%;height:auto;}}</style></head>
+<body><p class="meta">Diagrama — ${data?.familyName ?? 'Familia'} — ${exportDate()} — ${exportDateTime()}</p><img src="${dataUrl}" alt="Diagrama" /></body></html>`
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+      downloadExport(blob, `${baseName()}.html`)
+    } catch (err) {
+      console.error('Error al exportar HTML:', err)
+    }
+  }, [captureDiagramLetter, baseName, downloadExport, data?.familyName, exportDate, exportDateTime])
+
+  const handleExportWord = useCallback(async () => {
+    try {
+      const dataUrl = await captureDiagramLetter()
+      const html = `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word">
+<head><meta charset="utf-8"/><title>Diagrama ${data?.familyName ?? 'Familia'} ${exportDate()}</title></head>
+<body><p>Diagrama — ${data?.familyName ?? 'Familia'} — ${exportDate()} — ${exportDateTime()}</p><img src="${dataUrl}" alt="Diagrama" width="816" height="1056" style="width:8.5in;height:11in;object-fit:contain;"/></body></html>`
+      const blob = new Blob(['\ufeff' + html], { type: 'application/msword' })
+      downloadExport(blob, `${baseName()}.doc`)
+    } catch (err) {
+      console.error('Error al exportar Word:', err)
+    }
+  }, [captureDiagramLetter, baseName, downloadExport, data?.familyName, exportDate, exportDateTime])
 
   if (error) {
     return (
@@ -1169,29 +1244,10 @@ function SystemArchitecturePageInner() {
               {allocWarning}
             </span>
             <span style={{ fontSize: 12, color: '#475569' }}>
-              Crea al menos un objeto presupuestal para ver asignaciones.
+              Crea al menos una partida presupuestal para ver asignaciones.
             </span>
           </div>
         ) : null}
-        {/* Señal de build: solo visible con ?signal=1 para comprobar que domus-fam.com sirve este código */}
-        {showBuildSignal && (
-          <div
-            role="status"
-            style={{
-              background: 'linear-gradient(135deg, #0f3d91 0%, #2f6fed 100%)',
-              color: '#fff',
-              padding: '10px 14px',
-              borderRadius: 8,
-              fontSize: 15,
-              fontWeight: 700,
-              textAlign: 'center',
-              boxShadow: '0 4px 14px rgba(15,61,145,0.4)',
-              flexShrink: 0,
-            }}
-          >
-            ✓ Estás viendo el build correcto: domus-beta-dbe (diagrama-ok)
-          </div>
-        )}
 
         <div
           style={{
@@ -1211,22 +1267,25 @@ function SystemArchitecturePageInner() {
             flexShrink: 0,
           }}
         >
-          {/* Mensaje prueba de versión en verde: si lo ves, estás en el build correcto (sin línea roja) */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-            <span
-              role="status"
-              style={{
-                background: '#15803d',
-                color: '#fff',
-                padding: '4px 10px',
-                borderRadius: 8,
-                fontSize: 12,
-                fontWeight: 700,
-                flexShrink: 0,
-              }}
-            >
-              ✓ Versión correcta (prueba)
-            </span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+            {/* Zoom en header del canvas (no flotante) */}
+            <label className="pill" style={{ display: 'flex', alignItems: 'center', gap: 6 }} htmlFor="arch-zoom-slider">
+              Zoom
+              <input
+                id="arch-zoom-slider"
+                name="zoomSlider"
+                type="range"
+                min={0.2}
+                max={3}
+                step={0.05}
+                value={zoomSlider}
+                onChange={(e) => applyZoomSlider(parseFloat(e.target.value))}
+                style={{ width: 100 }}
+                disabled={!zoomControlEnabled}
+              />
+            </label>
+            <button type="button" className="btn btnGhost btnSm" onClick={() => flowApiRef.current?.fitView({ padding: 0.25, includeHiddenNodes: true })} style={{ padding: '6px 10px', fontSize: 13 }}>Auto ajustar</button>
+            <button type="button" className="btn btnGhost btnSm" onClick={() => { const first = nodesRef.current.find((n) => n.id === focusEntityId) || nodesRef.current.find((n) => n.id === 'FAMILY_ROOT'); if (first) flowApiRef.current?.setCenter(first.position.x, first.position.y, { duration: 300, zoom: focusEntityId ? 2.2 : 1.8 }); }} style={{ padding: '6px 10px', fontSize: 13 }}>Centrar selección</button>
             <div className="tabRow" role="tablist" aria-label="Vista del diagrama" style={{ gap: 6, display: 'flex', flexWrap: 'wrap' }}>
               {(['jerarquia', 'responsables', 'presupuesto'] as Vista[]).map((v) => (
                 <button key={v} className={`tabBtn ${vista === v ? 'tabBtnActive' : ''}`} onClick={() => setVista(v)} type="button" role="tab" aria-selected={vista === v} style={{ padding: '6px 10px', fontSize: 13 }}>
@@ -1245,15 +1304,28 @@ function SystemArchitecturePageInner() {
             <button type="button" className="btn btnPrimary btnSm" onClick={() => flowApiRef.current?.fitView({ padding: isMobile ? 0.12 : 0.25, includeHiddenNodes: true, duration: 200 })} style={{ padding: '6px 10px', fontSize: 13 }}>Auto ajustar</button>
             <button type="button" className="btn btnGhost btnSm" onClick={() => { setRecalcKey((k) => k + 1); setInitialCentered(false); setUserMoved(false); setTimeout(() => flowApiRef.current?.fitView({ padding: isMobile ? 0.12 : 0.25, includeHiddenNodes: true, duration: 200 }), 220); }} style={{ padding: '6px 10px', fontSize: 13 }} title="Reaplicar el layout actual">Recalcular layout</button>
             <button type="button" className="btn btnGhost btnSm" onClick={() => { setCustomMode(false); setSavedPositions({}); localStorage.removeItem('domus-arch-custom-positions'); setRecalcKey((k) => k + 1); setInitialCentered(false); setUserMoved(false); setTimeout(() => flowApiRef.current?.fitView({ padding: isMobile ? 0.12 : 0.25, includeHiddenNodes: true, duration: 200 }), 220); }} style={{ padding: '6px 10px', fontSize: 13 }} title="Volver al layout automático">Reset layout</button>
-            <button type="button" className="btn btnGhost btnSm" onClick={downloadDiagramImage} style={{ padding: '6px 10px', fontSize: 13 }} title="Descargar el diagrama (canvas) como imagen PNG">Descargar imagen</button>
+            <div style={{ position: 'relative', display: 'inline-block' }}>
+              <button type="button" className="btn btnGhost btnSm" onClick={() => setDownloadMenuOpen((o) => !o)} style={{ padding: '6px 10px', fontSize: 13 }} title="Descargar diagrama (tamaño carta, con fecha)">Descargar</button>
+              {downloadMenuOpen && (
+                <>
+                  <div style={{ position: 'fixed', inset: 0, zIndex: 10 }} onClick={() => setDownloadMenuOpen(false)} aria-hidden />
+                  <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 4, background: '#fff', border: '1px solid rgba(15,23,42,0.12)', borderRadius: 10, boxShadow: '0 10px 24px rgba(15,23,42,0.1)', zIndex: 11, padding: 4, minWidth: 140 }}>
+                    <button type="button" className="btn btnGhost btnSm" style={{ width: '100%', justifyContent: 'flex-start', fontSize: 13 }} onClick={() => { handleExportPNG(); setDownloadMenuOpen(false); }}>Imagen (PNG)</button>
+                    <button type="button" className="btn btnGhost btnSm" style={{ width: '100%', justifyContent: 'flex-start', fontSize: 13 }} onClick={() => { handleExportPDF(); setDownloadMenuOpen(false); }}>PDF</button>
+                    <button type="button" className="btn btnGhost btnSm" style={{ width: '100%', justifyContent: 'flex-start', fontSize: 13 }} onClick={() => { handleExportHTML(); setDownloadMenuOpen(false); }}>HTML</button>
+                    <button type="button" className="btn btnGhost btnSm" style={{ width: '100%', justifyContent: 'flex-start', fontSize: 13 }} onClick={() => { handleExportWord(); setDownloadMenuOpen(false); }}>Word</button>
+                  </div>
+                </>
+              )}
+            </div>
             <button type="button" className={`btn btnGhost btnSm ${mobileOptionsOpen ? 'pill' : ''}`} onClick={() => setMobileOptionsOpen((o) => !o)} style={{ padding: '6px 10px', fontSize: 13 }}>{mobileOptionsOpen ? 'Menos' : 'Más'}</button>
-            <button type="button" className="btn btnGhost btnSm" onClick={() => router.push('/ui')} style={{ padding: '6px 10px', fontSize: 13, borderColor: 'rgba(239,68,68,0.4)', color: '#b91c1c' }}>Cerrar</button>
             {focusEntityId ? (
               <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                 <span className="pill" style={{ fontSize: 12 }}>Entidad: {sanitize(data?.entities.find((e) => e.id === focusEntityId)?.name || '—')}</span>
-                <button type="button" className="btn btnPrimary btnSm" onClick={() => { setFocusEntityId(null); setCollapsedIds(new Set()); flowApiRef.current?.fitView({ padding: 0.25 }); }}>Volver</button>
+                <button type="button" className="btn btnPrimary btnSm" onClick={() => { setFocusEntityId(null); setCollapsedIds(new Set()); flowApiRef.current?.fitView({ padding: 0.25 }); }} style={{ padding: '6px 10px', fontSize: 13 }}>Cerrar</button>
               </div>
             ) : null}
+            <button type="button" className="btn btnGhost btnSm" onClick={() => router.push('/ui')} style={{ padding: '6px 10px', fontSize: 13, marginLeft: 'auto' }}>Menú</button>
           </div>
 
           {/* Con "Más" abierto: Recalcular, Reset, etc. */}
@@ -1490,11 +1562,10 @@ function SystemArchitecturePageInner() {
               <button
                 type="button"
                 onClick={() => router.push('/ui')}
-                aria-label="Cerrar"
+                aria-label="Menú"
                 className="btn btnGhost btnSm"
-                style={{ borderColor: 'rgba(239,68,68,0.4)', color: '#b91c1c' }}
               >
-                Cerrar
+                Menú
               </button>
             </div>
           </details>
@@ -1503,132 +1574,34 @@ function SystemArchitecturePageInner() {
           {error ? <span className="pill pillError">{error}</span> : null}
         </div>
 
-        {/* Contenedor del canvas: marco azul. Layout flex estructural para iPhone/desktop sin cortes ni doble scroll. */}
+        {/* Cuadro azul (perímetro): segundo hijo de .system-arch-page; recorta el diagrama en este rectángulo. */}
         <div
           style={{
-            position: 'relative',
-            width: '100%',
-            minWidth: 0,
             flex: 1,
             minHeight: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            border: '6px solid #0f766e',
+            minWidth: 0,
+            position: 'relative',
+            border: '6px solid #2563eb',
             borderRadius: 12,
             boxSizing: 'border-box',
+            overflow: 'hidden',
           }}
         >
           <SafeBoundary>
             <div
-              role="status"
-              aria-label="Zona de trabajo del diagrama"
-              style={{
-                position: 'absolute',
-                top: 10,
-                left: 10,
-                zIndex: 20,
-                background: '#0f766e',
-                color: '#fff',
-                padding: '6px 12px',
-                borderRadius: 8,
-                fontSize: 12,
-                fontWeight: 700,
-                boxShadow: '0 2px 8px rgba(15,118,110,0.5)',
-              }}
-            >
-              Zona de trabajo
-            </div>
-            <div
               id="diagram-wrap"
               className="diagram-canvas"
               style={{
-                flex: 1,
-                minHeight: 0,
-                width: '100%',
-                position: 'relative',
-                display: 'flex',
-                flexDirection: 'column',
-                padding: isMobile ? 12 : 22,
-                borderRadius: 16,
-                border: '4px solid #0d9488',
-                boxShadow: 'inset 0 0 0 1px rgba(13,148,136,0.35), 0 18px 42px rgba(15,23,42,0.12)',
-                background: uiCanvasBg || '#fff',
-                overflow: 'auto',
-                boxSizing: 'border-box',
-              }}
-            >
-            {/* Retícula con letras (columnas) y números (filas) — detrás del diagrama, sin bloquear clics */}
-            <div
-              aria-hidden
-              style={{
                 position: 'absolute',
-                top: isMobile ? 12 : 22,
-                left: isMobile ? 12 : 22,
-                right: isMobile ? 12 : 22,
-                bottom: isMobile ? 12 : 22,
-                zIndex: 0,
-                pointerEvents: 'none',
-                display: 'grid',
-                gridTemplateColumns: '28px repeat(12, minmax(32px, 1fr))',
-                gridTemplateRows: '24px repeat(12, minmax(32px, 1fr))',
-                border: '1px solid rgba(15,118,110,0.2)',
-                borderRadius: 8,
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: uiCanvasBg || '#fff',
                 overflow: 'hidden',
               }}
             >
-              <div style={{ gridColumn: 1, gridRow: 1 }} />
-              {Array.from({ length: 12 }, (_, i) => (
-                <div
-                  key={`col-${i}`}
-                  style={{
-                    gridColumn: i + 2,
-                    gridRow: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: 'rgba(15,118,110,0.6)',
-                  }}
-                >
-                  {String.fromCharCode(65 + i)}
-                </div>
-              ))}
-              {Array.from({ length: 12 }, (_, i) => (
-                <div
-                  key={`row-${i}`}
-                  style={{
-                    gridColumn: 1,
-                    gridRow: i + 2,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: 'rgba(15,118,110,0.6)',
-                  }}
-                >
-                  {i + 1}
-                </div>
-              ))}
-              {Array.from({ length: 12 * 12 }, (_, i) => {
-                const col = (i % 12) + 2
-                const row = Math.floor(i / 12) + 2
-                return (
-                  <div
-                    key={`cell-${i}`}
-                    style={{
-                      gridColumn: col,
-                      gridRow: row,
-                      borderRight: '1px solid rgba(15,118,110,0.15)',
-                      borderBottom: '1px solid rgba(15,118,110,0.15)',
-                    }}
-                  />
-                )
-              })}
-            </div>
-            <div style={{ position: 'relative', zIndex: 1, flex: 1, minHeight: 0, width: '100%' }}>
+              <div style={{ width: '100%', height: '100%', position: 'relative' }}>
             <DiagramInner
               key={diagramKey}
               initialNodes={initialNodes}
@@ -1653,9 +1626,10 @@ function SystemArchitecturePageInner() {
               zoomSlider={zoomSlider}
               zoomControlEnabled={zoomControlEnabled}
               applyZoomSlider={applyZoomSlider}
+              onViewportZoom={(z) => setZoomSlider((prev) => (Math.abs(prev - z) > 0.02 ? z : prev))}
               focusEntityId={focusEntityId}
             />
-            </div>
+              </div>
             </div>
           </SafeBoundary>
         </div>

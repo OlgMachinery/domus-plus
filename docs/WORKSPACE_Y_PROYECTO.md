@@ -14,7 +14,7 @@ En la raíz del repo deberías ver, entre otras:
 
 | Carpeta | Descripción |
 |---------|-------------|
-| **domus-beta-dbe/** | Frontend principal (Next.js). Es el que debe desplegarse en **domus-fam.com** (Root Directory en Vercel = `domus-beta-dbe`). Incluye el diagrama de arquitectura en `/ui/system-architecture`. |
+| **domus-beta-dbe/** | Frontend principal (Next.js). Es el que se despliega en **domus-fam.com** (VPS). Incluye el diagrama en `/ui/system-architecture`. Deploy: `domus-beta-dbe/deploy/deploy-vps.sh`. |
 | **frontend/** | Otro frontend Next.js (por ejemplo para otro dominio o entorno). |
 | **mobile/** | App móvil con Expo. |
 | **supabase/** | Configuración, migraciones y esquema de Supabase. |
@@ -37,3 +37,5 @@ La página **Arquitectura del sistema** (`/ui/system-architecture`) existe en tr
 
 - **Fuente canónica:** `domus-beta-dbe/src/app/ui/system-architecture/page.tsx`
 - Después de cambiar ese archivo, ejecuta desde la raíz: **`npm run sync:diagram`** para copiar el contenido a `app/` y `frontend/`.
+
+Para unificación y flujo de deploy (una fuente de verdad, VPS), ver **`docs/UNIFICACION_Y_DEPLOY.md`**.

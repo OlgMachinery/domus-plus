@@ -1,0 +1,480 @@
+/**
+ * FullCalendar DOMUS — presentación profesional.
+ * Sin scroll vertical: mes completo al alto disponible (estilo Google Calendar / Cal.com).
+ */
+
+/* Cuando la vista activa es el calendario: ancho y alto completos (sin leyenda "Calendario de pagos") */
+.sapContent.viewCalendario .pageHead {
+  display: none;
+}
+
+.sapContent:has(#calendar-print-area) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  max-width: none;
+  width: 100%;
+  padding: 0;
+}
+
+.sapContent.viewCalendario #calendar-print-area {
+  margin-top: 0;
+}
+
+/* Contenedor del calendario: ancho completo y alto disponible */
+#calendar-print-area.card {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: none;
+}
+
+#calendar-print-area .cardBody {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Móvil: calendario usa ~80% del espacio, estilo iPhone (compacto, legible) */
+@media (max-width: 768px) {
+  .sapContent.viewCalendario {
+    padding-left: 10%;
+    padding-right: 10%;
+    padding-top: 12px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 0));
+    min-height: 0;
+  }
+  .sapContent.viewCalendario #calendar-print-area {
+    width: 100%;
+    max-width: none;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    border: 1px solid var(--border);
+  }
+  .sapContent.viewCalendario #calendar-print-area .cardHeader {
+    padding: 12px 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+    border-bottom: 1px solid var(--border);
+    background: var(--card);
+  }
+  .sapContent.viewCalendario #calendar-print-area .cardTitle {
+    font-size: 20px;
+    font-weight: 700;
+    width: 100%;
+    order: -1;
+    margin-bottom: 4px;
+  }
+  .sapContent.viewCalendario #calendar-print-area .cardHeader .sectionRow {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+  .sapContent.viewCalendario #calendar-print-area .cardBody {
+    min-height: 80vh;
+    padding: 12px 16px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 0));
+  }
+  .sapContent.viewCalendario #calendar-print-area .cardBody .domus-fullcalendar-wrap {
+    min-height: 70vh;
+  }
+  /* Resumen (pills) en una sola fila compacta */
+  .sapContent.viewCalendario #calendar-print-area .cardBody .no-print {
+    margin-bottom: 12px !important;
+    gap: 8px !important;
+  }
+  .sapContent.viewCalendario #calendar-print-area .cardBody .pill {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+}
+
+.domus-fullcalendar-wrap {
+  --fc-border-color: var(--border);
+  --fc-button-bg-color: var(--primary);
+  --fc-button-border-color: var(--primary);
+  --fc-button-hover-bg-color: var(--primary);
+  --fc-button-hover-border-color: var(--primary);
+  --fc-button-active-bg-color: var(--primary);
+  --fc-today-bg-color: rgba(0, 122, 255, 0.05);
+  --fc-page-bg-color: #fff;
+  --fc-neutral-bg-color: var(--bg);
+  --fc-list-event-hover-bg-color: rgba(0, 0, 0, 0.03);
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: none;
+}
+
+.domus-fullcalendar-wrap .fc {
+  font-family: inherit;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.domus-fullcalendar-wrap .fc .fc-view-harness {
+  flex: 1;
+  min-height: 0;
+}
+
+.domus-fullcalendar-wrap .fc .fc-scrollgrid {
+  flex: 1;
+  min-height: 0;
+}
+
+.domus-fullcalendar-wrap .fc-toolbar-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+/* Rediseño botones en móvil: compactos, táctiles, sin cambiar función */
+@media (max-width: 920px) {
+  .domus-fullcalendar-wrap .fc-toolbar {
+    flex-wrap: wrap;
+    gap: 10px;
+    row-gap: 12px;
+  }
+  .domus-fullcalendar-wrap .fc-toolbar-chunk {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+  .domus-fullcalendar-wrap .fc .fc-button {
+    min-height: 40px;
+    padding: 8px 14px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: 10px;
+    border: 1px solid var(--border, #e2e8f0);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+  .domus-fullcalendar-wrap .fc .fc-button-primary:not(:disabled):hover {
+    box-shadow: 0 2px 4px rgba(0, 122, 255, 0.2);
+  }
+  .domus-fullcalendar-wrap .fc .fc-button-primary:not(:disabled).fc-button-active {
+    background: var(--primary);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+  .domus-fullcalendar-wrap .fc-toolbar-chunk:nth-child(2) {
+    order: -1;
+    flex-basis: 100%;
+    justify-content: center;
+  }
+  .domus-fullcalendar-wrap .fc-toolbar-title {
+    font-size: 1.125rem;
+    text-align: center;
+    margin: 0;
+  }
+  .domus-fullcalendar-wrap .fc-toolbar-chunk:first-of-type {
+    order: 0;
+  }
+  .domus-fullcalendar-wrap .fc-toolbar-chunk:last-of-type {
+    margin-left: auto;
+  }
+}
+
+.domus-fullcalendar-wrap .fc-col-header-cell-cushion {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.domus-fullcalendar-wrap .fc-daygrid-day-number {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Eventos compactos: altura reducida */
+.domus-fullcalendar-wrap .fc-event-domus,
+.domus-fullcalendar-wrap .fc-event-domus .fc-event-main {
+  font-size: 11px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  min-height: auto;
+  line-height: 1.3;
+}
+
+.domus-fullcalendar-wrap .fc-event-title-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Iconos profesionales (monocromáticos, pequeños, alineados a la izquierda) */
+.domus-fullcalendar-wrap .fc-event-icon {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 4px;
+  flex-shrink: 0;
+  background-color: currentColor;
+  opacity: 0.9;
+  vertical-align: middle;
+}
+
+.domus-fullcalendar-wrap .fc-event-main {
+  display: flex;
+  align-items: center;
+}
+
+/* payment — icono tarjeta/moneda (rectángulo redondeado) */
+.domus-fullcalendar-wrap .fc-event-icon-payment {
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Crect x='1' y='4' width='22' height='16' rx='2' ry='2'/%3E%3Cline x1='1' y1='10' x2='23' y2='10'/%3E%3C/svg%3E") center/contain no-repeat;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Crect x='1' y='4' width='22' height='16' rx='2' ry='2'/%3E%3Cline x1='1' y1='10' x2='23' y2='10'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+/* payment_expected — icono reloj/esperado */
+.domus-fullcalendar-wrap .fc-event-icon-payment_expected {
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpolyline points='12 6 12 12 16 14'/%3E%3C/svg%3E") center/contain no-repeat;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpolyline points='12 6 12 12 16 14'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+/* cutoff — icono calendario */
+.domus-fullcalendar-wrap .fc-event-icon-cutoff {
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'/%3E%3Cline x1='16' y1='2' x2='16' y2='6'/%3E%3Cline x1='8' y1='2' x2='8' y2='6'/%3E%3Cline x1='3' y1='10' x2='21' y2='10'/%3E%3C/svg%3E") center/contain no-repeat;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'/%3E%3Cline x1='16' y1='2' x2='16' y2='6'/%3E%3Cline x1='8' y1='2' x2='8' y2='6'/%3E%3Cline x1='3' y1='10' x2='21' y2='10'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+/* utility_reminder — icono documento */
+.domus-fullcalendar-wrap .fc-event-icon-utility_reminder {
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/%3E%3Cpolyline points='14 2 14 8 20 8'/%3E%3Cline x1='16' y1='13' x2='8' y2='13'/%3E%3Cline x1='16' y1='17' x2='8' y2='17'/%3E%3Cline x1='10' y1='9' x2='8' y2='9'/%3E%3C/svg%3E") center/contain no-repeat;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/%3E%3Cpolyline points='14 2 14 8 20 8'/%3E%3Cline x1='16' y1='13' x2='8' y2='13'/%3E%3Cline x1='16' y1='17' x2='8' y2='17'/%3E%3Cline x1='10' y1='9' x2='8' y2='9'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+/* money_request / money_delivered — icono flecha/solicitud */
+.domus-fullcalendar-wrap .fc-event-icon-money_request,
+.domus-fullcalendar-wrap .fc-event-icon-money_delivered {
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cline x1='12' y1='19' x2='12' y2='5'/%3E%3Cpolyline points='5 12 12 5 19 12'/%3E%3C/svg%3E") center/contain no-repeat;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cline x1='12' y1='19' x2='12' y2='5'/%3E%3Cpolyline points='5 12 12 5 19 12'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+/* budget_suggestion — icono gráfica/sugerencia */
+.domus-fullcalendar-wrap .fc-event-icon-budget_suggestion {
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cline x1='18' y1='20' x2='18' y2='10'/%3E%3Cline x1='12' y1='20' x2='12' y2='4'/%3E%3Cline x1='6' y1='20' x2='6' y2='14'/%3E%3C/svg%3E") center/contain no-repeat;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cline x1='18' y1='20' x2='18' y2='10'/%3E%3Cline x1='12' y1='20' x2='12' y2='4'/%3E%3Cline x1='6' y1='20' x2='6' y2='14'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+.domus-fullcalendar-wrap .fc-event-icon-default {
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E") center/contain no-repeat;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+/* birthday — pastel/corazón */
+.domus-fullcalendar-wrap .fc-event-icon-birthday {
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z'/%3E%3C/svg%3E") center/contain no-repeat;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+/* appointment — calendario con reloj */
+.domus-fullcalendar-wrap .fc-event-icon-appointment {
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'/%3E%3Cline x1='16' y1='2' x2='16' y2='6'/%3E%3Cline x1='8' y1='2' x2='8' y2='6'/%3E%3Cline x1='3' y1='10' x2='21' y2='10'/%3E%3C/svg%3E") center/contain no-repeat;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'/%3E%3Cline x1='16' y1='2' x2='16' y2='6'/%3E%3Cline x1='8' y1='2' x2='8' y2='6'/%3E%3Cline x1='3' y1='10' x2='21' y2='10'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+/* reminder — campana */
+.domus-fullcalendar-wrap .fc-event-icon-reminder {
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9'/%3E%3Cpath d='M13.73 21a2 2 0 0 1-3.46 0'/%3E%3C/svg%3E") center/contain no-repeat;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9'/%3E%3Cpath d='M13.73 21a2 2 0 0 1-3.46 0'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+/* vacation — sol/nube */
+.domus-fullcalendar-wrap .fc-event-icon-vacation {
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='5'/%3E%3Cline x1='12' y1='1' x2='12' y2='3'/%3E%3Cline x1='12' y1='21' x2='12' y2='23'/%3E%3Cline x1='4.22' y1='4.22' x2='5.64' y2='5.64'/%3E%3Cline x1='18.36' y1='18.36' x2='19.78' y2='19.78'/%3E%3Cline x1='1' y1='12' x2='3' y2='12'/%3E%3Cline x1='21' y1='12' x2='23' y2='12'/%3E%3Cline x1='4.22' y1='19.78' x2='5.64' y2='18.36'/%3E%3Cline x1='18.36' y1='5.64' x2='19.78' y2='4.22'/%3E%3C/svg%3E") center/contain no-repeat;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='5'/%3E%3Cline x1='12' y1='1' x2='12' y2='3'/%3E%3Cline x1='12' y1='21' x2='12' y2='23'/%3E%3Cline x1='4.22' y1='4.22' x2='5.64' y2='5.64'/%3E%3Cline x1='18.36' y1='18.36' x2='19.78' y2='19.78'/%3E%3Cline x1='1' y1='12' x2='3' y2='12'/%3E%3Cline x1='21' y1='12' x2='23' y2='12'/%3E%3Cline x1='4.22' y1='19.78' x2='5.64' y2='18.36'/%3E%3Cline x1='18.36' y1='5.64' x2='19.78' y2='4.22'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+/* custom — punto/círculo */
+.domus-fullcalendar-wrap .fc-event-icon-custom {
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E") center/contain no-repeat;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
+/* Colores bien diferenciados por tipo (mayor especificidad para que FullCalendar no los pise) */
+.domus-fullcalendar-wrap .fc-event.fc-event-payment,
+.domus-fullcalendar-wrap .fc-event-payment .fc-event-main,
+.domus-fullcalendar-wrap .fc-event-payment .fc-event-main-frame {
+  background: #ffebee !important;
+  border-color: #ef9a9a !important;
+  color: #b71c1c !important;
+}
+
+.domus-fullcalendar-wrap .fc-event.fc-event-expected,
+.domus-fullcalendar-wrap .fc-event-expected .fc-event-main,
+.domus-fullcalendar-wrap .fc-event-expected .fc-event-main-frame {
+  background: #fff3e0 !important;
+  border-color: #ffcc80 !important;
+  color: #e65100 !important;
+}
+
+.domus-fullcalendar-wrap .fc-event.fc-event-cutoff,
+.domus-fullcalendar-wrap .fc-event-cutoff .fc-event-main,
+.domus-fullcalendar-wrap .fc-event-cutoff .fc-event-main-frame {
+  background: #e3f2fd !important;
+  border-color: #90caf9 !important;
+  color: #0d47a1 !important;
+}
+
+.domus-fullcalendar-wrap .fc-event.fc-event-utility,
+.domus-fullcalendar-wrap .fc-event-utility .fc-event-main,
+.domus-fullcalendar-wrap .fc-event-utility .fc-event-main-frame {
+  background: #e8f5e9 !important;
+  border-color: #81c784 !important;
+  color: #1b5e20 !important;
+}
+
+.domus-fullcalendar-wrap .fc-event.fc-event-money,
+.domus-fullcalendar-wrap .fc-event-money .fc-event-main,
+.domus-fullcalendar-wrap .fc-event-money .fc-event-main-frame {
+  background: #f3e5f5 !important;
+  border-color: #ce93d8 !important;
+  color: #4a148c !important;
+}
+
+.domus-fullcalendar-wrap .fc-event.fc-event-budget,
+.domus-fullcalendar-wrap .fc-event-budget .fc-event-main,
+.domus-fullcalendar-wrap .fc-event-budget .fc-event-main-frame {
+  background: #eceff1 !important;
+  border-color: #b0bec5 !important;
+  color: #37474f !important;
+}
+
+.domus-fullcalendar-wrap .fc-event.fc-event-default,
+.domus-fullcalendar-wrap .fc-event-default .fc-event-main,
+.domus-fullcalendar-wrap .fc-event-default .fc-event-main-frame {
+  background: #eceff1 !important;
+  border-color: #cfd8dc !important;
+  color: #455a64 !important;
+}
+
+/* Eventos no financieros (familia) */
+.domus-fullcalendar-wrap .fc-event.fc-event-birthday,
+.domus-fullcalendar-wrap .fc-event-birthday .fc-event-main,
+.domus-fullcalendar-wrap .fc-event-birthday .fc-event-main-frame {
+  background: #fce4ec !important;
+  border-color: #f8bbd9 !important;
+  color: #880e4f !important;
+}
+
+.domus-fullcalendar-wrap .fc-event.fc-event-appointment,
+.domus-fullcalendar-wrap .fc-event-appointment .fc-event-main,
+.domus-fullcalendar-wrap .fc-event-appointment .fc-event-main-frame {
+  background: #e0f7fa !important;
+  border-color: #b2ebf2 !important;
+  color: #006064 !important;
+}
+
+.domus-fullcalendar-wrap .fc-event.fc-event-reminder,
+.domus-fullcalendar-wrap .fc-event-reminder .fc-event-main,
+.domus-fullcalendar-wrap .fc-event-reminder .fc-event-main-frame {
+  background: #fff8e1 !important;
+  border-color: #ffecb3 !important;
+  color: #ff6f00 !important;
+}
+
+.domus-fullcalendar-wrap .fc-event.fc-event-vacation,
+.domus-fullcalendar-wrap .fc-event-vacation .fc-event-main,
+.domus-fullcalendar-wrap .fc-event-vacation .fc-event-main-frame {
+  background: #e8eaf6 !important;
+  border-color: #c5cae9 !important;
+  color: #283593 !important;
+}
+
+.domus-fullcalendar-wrap .fc-event.fc-event-custom,
+.domus-fullcalendar-wrap .fc-event-custom .fc-event-main,
+.domus-fullcalendar-wrap .fc-event-custom .fc-event-main-frame {
+  background: #efebe9 !important;
+  border-color: #d7ccc8 !important;
+  color: #4e342e !important;
+}
+
+/* Iconos más visibles: mismo color que el texto del evento */
+.domus-fullcalendar-wrap .fc-event-icon {
+  opacity: 1;
+}
+
+/* Enlace "+X más" (estilo estándar FullCalendar) */
+.domus-fullcalendar-wrap .fc-more-link {
+  font-size: 11px;
+  padding: 2px 4px;
+}
+
+/* Móvil: calendario legible — vista Lista por defecto; si eligen Mes, celdas y texto más grandes */
+@media (max-width: 768px) {
+  .domus-fullcalendar-wrap .fc-toolbar-chunk {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+  }
+  .domus-fullcalendar-wrap .fc .fc-button {
+    min-width: 76px;
+    min-height: 44px;
+    flex: 1 1 auto;
+    font-size: 14px;
+  }
+  /* Vista Lista: filas más altas y texto legible */
+  .domus-fullcalendar-wrap .fc-list-event {
+    min-height: 52px;
+  }
+  .domus-fullcalendar-wrap .fc-list-event-title {
+    font-size: 15px;
+    padding: 10px 12px;
+  }
+  .domus-fullcalendar-wrap .fc-list-event-time {
+    font-size: 14px;
+    padding: 10px 8px;
+  }
+  .domus-fullcalendar-wrap .fc-list-day-cushion {
+    padding: 10px 12px;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  /* Si en móvil eligen vista Mes: celdas más altas y eventos legibles */
+  .domus-fullcalendar-wrap .fc-daygrid-day-frame {
+    min-height: 88px;
+  }
+  .domus-fullcalendar-wrap .fc-daygrid-day-number {
+    font-size: 0.9375rem;
+    padding: 4px 6px;
+  }
+  .domus-fullcalendar-wrap .fc-event-domus,
+  .domus-fullcalendar-wrap .fc-event-domus .fc-event-main {
+    font-size: 11px;
+    padding: 4px 6px;
+    line-height: 1.35;
+  }
+  .domus-fullcalendar-wrap .fc-event-title-text {
+    white-space: normal;
+    line-height: 1.3;
+  }
+  .domus-fullcalendar-wrap .fc-more-link {
+    font-size: 12px;
+    padding: 4px 6px;
+    margin-top: 2px;
+    font-weight: 600;
+  }
+}
+
+/* Impresión: ocultar toolbar y mostrar solo la grilla del mes */
+@media print {
+  .domus-fullcalendar-wrap .fc-header-toolbar,
+  .domus-fullcalendar-wrap .fc-toolbar {
+    display: none !important;
+  }
+  .domus-fullcalendar-wrap .fc-view-harness {
+    height: auto !important;
+  }
+}

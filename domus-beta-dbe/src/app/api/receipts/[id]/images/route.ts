@@ -29,6 +29,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const signed = await Promise.all(
       imgs.map(async (img) => {
+        if (img.fileUrl === 'whatsapp://no-storage') {
+          return { id: img.id, sortOrder: img.sortOrder, url: '', placeholder: true }
+        }
         const key = extractKeyFromSpacesUrl(img.fileUrl)
         const url = key ? await getSignedDownloadUrl({ key, expiresInSeconds: 60 * 10 }) : img.fileUrl
         return { id: img.id, sortOrder: img.sortOrder, url }

@@ -1,0 +1,27 @@
+================================================================================
+ORDEN DE IMPLEMENTACIÓN F1 — Checklist (verificar en ~10 min)
+================================================================================
+
+[ ] 1. Proyecto domus-beta-dbe existe; npm install sin errores.
+
+[ ] 2. Prisma instalado; schema F1 copiado a prisma/schema.prisma; y prisma.config.ts creado en la raíz para usar DATABASE_URL.
+
+[ ] 3. .env con DATABASE_URL (ej. "file:./prisma/dev.db"). .env.example con DATABASE_URL, JWT_SECRET y variables DO Spaces (placeholders).
+
+[ ] 4. prisma generate ejecutado sin errores.
+
+[ ] 5. prisma db push ejecutado; archivo de DB (ej. dev.db) existe en la ruta configurada.
+
+[ ] 6. Tablas creadas: users, families, family_members, budget_entities, budget_categories, entity_budget_allocations, transactions, receipts. (Comprobar con prisma studio o sqlite3 .tables.)
+
+[ ] 7. Endpoint GET /api/health responde 200 y, si aplica, indica conexión a DB.
+
+[ ] 8. npm run build termina sin errores.
+
+[ ] 9. SQLite: WAL y busy_timeout documentados o aplicados (en conexión o en docs para F2).
+
+[ ] 10. DO Spaces: variables en .env.example; helper/cliente S3 (skeleton) listo; sin implementar upload todavía.
+
+Definition of Done F1: todo lo anterior marcado; ningún módulo de negocio (auth, familias, etc.) implementado; solo base y esqueleto listos para F2.
+
+================================================================================

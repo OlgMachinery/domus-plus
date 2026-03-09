@@ -30,12 +30,14 @@ export type ReceiptExtractionAvgAggregateOutputType = {
   total: runtime.Decimal | null
   tax: runtime.Decimal | null
   tip: runtime.Decimal | null
+  consumptionQuantity: runtime.Decimal | null
 }
 
 export type ReceiptExtractionSumAggregateOutputType = {
   total: runtime.Decimal | null
   tax: runtime.Decimal | null
   tip: runtime.Decimal | null
+  consumptionQuantity: runtime.Decimal | null
 }
 
 export type ReceiptExtractionMinAggregateOutputType = {
@@ -54,6 +56,11 @@ export type ReceiptExtractionMinAggregateOutputType = {
   rawText: string | null
   rawJson: string | null
   metaJson: string | null
+  receiptType: string | null
+  consumptionQuantity: runtime.Decimal | null
+  consumptionUnit: string | null
+  consumptionPeriodStart: Date | null
+  consumptionPeriodEnd: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -74,6 +81,11 @@ export type ReceiptExtractionMaxAggregateOutputType = {
   rawText: string | null
   rawJson: string | null
   metaJson: string | null
+  receiptType: string | null
+  consumptionQuantity: runtime.Decimal | null
+  consumptionUnit: string | null
+  consumptionPeriodStart: Date | null
+  consumptionPeriodEnd: Date | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -94,6 +106,11 @@ export type ReceiptExtractionCountAggregateOutputType = {
   rawText: number
   rawJson: number
   metaJson: number
+  receiptType: number
+  consumptionQuantity: number
+  consumptionUnit: number
+  consumptionPeriodStart: number
+  consumptionPeriodEnd: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -104,12 +121,14 @@ export type ReceiptExtractionAvgAggregateInputType = {
   total?: true
   tax?: true
   tip?: true
+  consumptionQuantity?: true
 }
 
 export type ReceiptExtractionSumAggregateInputType = {
   total?: true
   tax?: true
   tip?: true
+  consumptionQuantity?: true
 }
 
 export type ReceiptExtractionMinAggregateInputType = {
@@ -128,6 +147,11 @@ export type ReceiptExtractionMinAggregateInputType = {
   rawText?: true
   rawJson?: true
   metaJson?: true
+  receiptType?: true
+  consumptionQuantity?: true
+  consumptionUnit?: true
+  consumptionPeriodStart?: true
+  consumptionPeriodEnd?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -148,6 +172,11 @@ export type ReceiptExtractionMaxAggregateInputType = {
   rawText?: true
   rawJson?: true
   metaJson?: true
+  receiptType?: true
+  consumptionQuantity?: true
+  consumptionUnit?: true
+  consumptionPeriodStart?: true
+  consumptionPeriodEnd?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -168,6 +197,11 @@ export type ReceiptExtractionCountAggregateInputType = {
   rawText?: true
   rawJson?: true
   metaJson?: true
+  receiptType?: true
+  consumptionQuantity?: true
+  consumptionUnit?: true
+  consumptionPeriodStart?: true
+  consumptionPeriodEnd?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -275,6 +309,11 @@ export type ReceiptExtractionGroupByOutputType = {
   rawText: string | null
   rawJson: string | null
   metaJson: string | null
+  receiptType: string | null
+  consumptionQuantity: runtime.Decimal | null
+  consumptionUnit: string | null
+  consumptionPeriodStart: Date | null
+  consumptionPeriodEnd: Date | null
   createdAt: Date
   updatedAt: Date
   _count: ReceiptExtractionCountAggregateOutputType | null
@@ -318,6 +357,11 @@ export type ReceiptExtractionWhereInput = {
   rawText?: Prisma.StringNullableFilter<"ReceiptExtraction"> | string | null
   rawJson?: Prisma.StringNullableFilter<"ReceiptExtraction"> | string | null
   metaJson?: Prisma.StringNullableFilter<"ReceiptExtraction"> | string | null
+  receiptType?: Prisma.StringNullableFilter<"ReceiptExtraction"> | string | null
+  consumptionQuantity?: Prisma.DecimalNullableFilter<"ReceiptExtraction"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: Prisma.StringNullableFilter<"ReceiptExtraction"> | string | null
+  consumptionPeriodStart?: Prisma.DateTimeNullableFilter<"ReceiptExtraction"> | Date | string | null
+  consumptionPeriodEnd?: Prisma.DateTimeNullableFilter<"ReceiptExtraction"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ReceiptExtraction"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ReceiptExtraction"> | Date | string
   receipt?: Prisma.XOR<Prisma.ReceiptScalarRelationFilter, Prisma.ReceiptWhereInput>
@@ -343,6 +387,11 @@ export type ReceiptExtractionOrderByWithRelationInput = {
   rawText?: Prisma.SortOrderInput | Prisma.SortOrder
   rawJson?: Prisma.SortOrderInput | Prisma.SortOrder
   metaJson?: Prisma.SortOrderInput | Prisma.SortOrder
+  receiptType?: Prisma.SortOrderInput | Prisma.SortOrder
+  consumptionQuantity?: Prisma.SortOrderInput | Prisma.SortOrder
+  consumptionUnit?: Prisma.SortOrderInput | Prisma.SortOrder
+  consumptionPeriodStart?: Prisma.SortOrderInput | Prisma.SortOrder
+  consumptionPeriodEnd?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   receipt?: Prisma.ReceiptOrderByWithRelationInput
@@ -371,6 +420,11 @@ export type ReceiptExtractionWhereUniqueInput = Prisma.AtLeast<{
   rawText?: Prisma.StringNullableFilter<"ReceiptExtraction"> | string | null
   rawJson?: Prisma.StringNullableFilter<"ReceiptExtraction"> | string | null
   metaJson?: Prisma.StringNullableFilter<"ReceiptExtraction"> | string | null
+  receiptType?: Prisma.StringNullableFilter<"ReceiptExtraction"> | string | null
+  consumptionQuantity?: Prisma.DecimalNullableFilter<"ReceiptExtraction"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: Prisma.StringNullableFilter<"ReceiptExtraction"> | string | null
+  consumptionPeriodStart?: Prisma.DateTimeNullableFilter<"ReceiptExtraction"> | Date | string | null
+  consumptionPeriodEnd?: Prisma.DateTimeNullableFilter<"ReceiptExtraction"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ReceiptExtraction"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ReceiptExtraction"> | Date | string
   receipt?: Prisma.XOR<Prisma.ReceiptScalarRelationFilter, Prisma.ReceiptWhereInput>
@@ -396,6 +450,11 @@ export type ReceiptExtractionOrderByWithAggregationInput = {
   rawText?: Prisma.SortOrderInput | Prisma.SortOrder
   rawJson?: Prisma.SortOrderInput | Prisma.SortOrder
   metaJson?: Prisma.SortOrderInput | Prisma.SortOrder
+  receiptType?: Prisma.SortOrderInput | Prisma.SortOrder
+  consumptionQuantity?: Prisma.SortOrderInput | Prisma.SortOrder
+  consumptionUnit?: Prisma.SortOrderInput | Prisma.SortOrder
+  consumptionPeriodStart?: Prisma.SortOrderInput | Prisma.SortOrder
+  consumptionPeriodEnd?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.ReceiptExtractionCountOrderByAggregateInput
@@ -424,6 +483,11 @@ export type ReceiptExtractionScalarWhereWithAggregatesInput = {
   rawText?: Prisma.StringNullableWithAggregatesFilter<"ReceiptExtraction"> | string | null
   rawJson?: Prisma.StringNullableWithAggregatesFilter<"ReceiptExtraction"> | string | null
   metaJson?: Prisma.StringNullableWithAggregatesFilter<"ReceiptExtraction"> | string | null
+  receiptType?: Prisma.StringNullableWithAggregatesFilter<"ReceiptExtraction"> | string | null
+  consumptionQuantity?: Prisma.DecimalNullableWithAggregatesFilter<"ReceiptExtraction"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: Prisma.StringNullableWithAggregatesFilter<"ReceiptExtraction"> | string | null
+  consumptionPeriodStart?: Prisma.DateTimeNullableWithAggregatesFilter<"ReceiptExtraction"> | Date | string | null
+  consumptionPeriodEnd?: Prisma.DateTimeNullableWithAggregatesFilter<"ReceiptExtraction"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"ReceiptExtraction"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"ReceiptExtraction"> | Date | string
 }
@@ -440,6 +504,11 @@ export type ReceiptExtractionCreateInput = {
   rawText?: string | null
   rawJson?: string | null
   metaJson?: string | null
+  receiptType?: string | null
+  consumptionQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: string | null
+  consumptionPeriodStart?: Date | string | null
+  consumptionPeriodEnd?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   receipt: Prisma.ReceiptCreateNestedOneWithoutExtractionInput
@@ -465,6 +534,11 @@ export type ReceiptExtractionUncheckedCreateInput = {
   rawText?: string | null
   rawJson?: string | null
   metaJson?: string | null
+  receiptType?: string | null
+  consumptionQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: string | null
+  consumptionPeriodStart?: Date | string | null
+  consumptionPeriodEnd?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   items?: Prisma.ReceiptExtractionItemUncheckedCreateNestedManyWithoutExtractionInput
@@ -482,6 +556,11 @@ export type ReceiptExtractionUpdateInput = {
   rawText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rawJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metaJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receiptType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionQuantity?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  consumptionPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   receipt?: Prisma.ReceiptUpdateOneRequiredWithoutExtractionNestedInput
@@ -507,6 +586,11 @@ export type ReceiptExtractionUncheckedUpdateInput = {
   rawText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rawJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metaJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receiptType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionQuantity?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  consumptionPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   items?: Prisma.ReceiptExtractionItemUncheckedUpdateManyWithoutExtractionNestedInput
@@ -528,6 +612,11 @@ export type ReceiptExtractionCreateManyInput = {
   rawText?: string | null
   rawJson?: string | null
   metaJson?: string | null
+  receiptType?: string | null
+  consumptionQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: string | null
+  consumptionPeriodStart?: Date | string | null
+  consumptionPeriodEnd?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -544,6 +633,11 @@ export type ReceiptExtractionUpdateManyMutationInput = {
   rawText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rawJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metaJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receiptType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionQuantity?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  consumptionPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -564,6 +658,11 @@ export type ReceiptExtractionUncheckedUpdateManyInput = {
   rawText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rawJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metaJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receiptType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionQuantity?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  consumptionPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -599,6 +698,11 @@ export type ReceiptExtractionCountOrderByAggregateInput = {
   rawText?: Prisma.SortOrder
   rawJson?: Prisma.SortOrder
   metaJson?: Prisma.SortOrder
+  receiptType?: Prisma.SortOrder
+  consumptionQuantity?: Prisma.SortOrder
+  consumptionUnit?: Prisma.SortOrder
+  consumptionPeriodStart?: Prisma.SortOrder
+  consumptionPeriodEnd?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -607,6 +711,7 @@ export type ReceiptExtractionAvgOrderByAggregateInput = {
   total?: Prisma.SortOrder
   tax?: Prisma.SortOrder
   tip?: Prisma.SortOrder
+  consumptionQuantity?: Prisma.SortOrder
 }
 
 export type ReceiptExtractionMaxOrderByAggregateInput = {
@@ -625,6 +730,11 @@ export type ReceiptExtractionMaxOrderByAggregateInput = {
   rawText?: Prisma.SortOrder
   rawJson?: Prisma.SortOrder
   metaJson?: Prisma.SortOrder
+  receiptType?: Prisma.SortOrder
+  consumptionQuantity?: Prisma.SortOrder
+  consumptionUnit?: Prisma.SortOrder
+  consumptionPeriodStart?: Prisma.SortOrder
+  consumptionPeriodEnd?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -645,6 +755,11 @@ export type ReceiptExtractionMinOrderByAggregateInput = {
   rawText?: Prisma.SortOrder
   rawJson?: Prisma.SortOrder
   metaJson?: Prisma.SortOrder
+  receiptType?: Prisma.SortOrder
+  consumptionQuantity?: Prisma.SortOrder
+  consumptionUnit?: Prisma.SortOrder
+  consumptionPeriodStart?: Prisma.SortOrder
+  consumptionPeriodEnd?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -653,6 +768,7 @@ export type ReceiptExtractionSumOrderByAggregateInput = {
   total?: Prisma.SortOrder
   tax?: Prisma.SortOrder
   tip?: Prisma.SortOrder
+  consumptionQuantity?: Prisma.SortOrder
 }
 
 export type ReceiptExtractionScalarRelationFilter = {
@@ -818,10 +934,6 @@ export type ReceiptExtractionUncheckedUpdateOneWithoutReceiptNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.ReceiptExtractionUpdateToOneWithWhereWithoutReceiptInput, Prisma.ReceiptExtractionUpdateWithoutReceiptInput>, Prisma.ReceiptExtractionUncheckedUpdateWithoutReceiptInput>
 }
 
-export type NullableDateTimeFieldUpdateOperationsInput = {
-  set?: Date | string | null
-}
-
 export type NullableDecimalFieldUpdateOperationsInput = {
   set?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
   increment?: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -856,6 +968,11 @@ export type ReceiptExtractionCreateWithoutUserInput = {
   rawText?: string | null
   rawJson?: string | null
   metaJson?: string | null
+  receiptType?: string | null
+  consumptionQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: string | null
+  consumptionPeriodStart?: Date | string | null
+  consumptionPeriodEnd?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   receipt: Prisma.ReceiptCreateNestedOneWithoutExtractionInput
@@ -879,6 +996,11 @@ export type ReceiptExtractionUncheckedCreateWithoutUserInput = {
   rawText?: string | null
   rawJson?: string | null
   metaJson?: string | null
+  receiptType?: string | null
+  consumptionQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: string | null
+  consumptionPeriodStart?: Date | string | null
+  consumptionPeriodEnd?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   items?: Prisma.ReceiptExtractionItemUncheckedCreateNestedManyWithoutExtractionInput
@@ -905,6 +1027,11 @@ export type ReceiptExtractionCreateWithoutConfirmedByInput = {
   rawText?: string | null
   rawJson?: string | null
   metaJson?: string | null
+  receiptType?: string | null
+  consumptionQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: string | null
+  consumptionPeriodStart?: Date | string | null
+  consumptionPeriodEnd?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   receipt: Prisma.ReceiptCreateNestedOneWithoutExtractionInput
@@ -928,6 +1055,11 @@ export type ReceiptExtractionUncheckedCreateWithoutConfirmedByInput = {
   rawText?: string | null
   rawJson?: string | null
   metaJson?: string | null
+  receiptType?: string | null
+  consumptionQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: string | null
+  consumptionPeriodStart?: Date | string | null
+  consumptionPeriodEnd?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   items?: Prisma.ReceiptExtractionItemUncheckedCreateNestedManyWithoutExtractionInput
@@ -977,6 +1109,11 @@ export type ReceiptExtractionScalarWhereInput = {
   rawText?: Prisma.StringNullableFilter<"ReceiptExtraction"> | string | null
   rawJson?: Prisma.StringNullableFilter<"ReceiptExtraction"> | string | null
   metaJson?: Prisma.StringNullableFilter<"ReceiptExtraction"> | string | null
+  receiptType?: Prisma.StringNullableFilter<"ReceiptExtraction"> | string | null
+  consumptionQuantity?: Prisma.DecimalNullableFilter<"ReceiptExtraction"> | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: Prisma.StringNullableFilter<"ReceiptExtraction"> | string | null
+  consumptionPeriodStart?: Prisma.DateTimeNullableFilter<"ReceiptExtraction"> | Date | string | null
+  consumptionPeriodEnd?: Prisma.DateTimeNullableFilter<"ReceiptExtraction"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"ReceiptExtraction"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"ReceiptExtraction"> | Date | string
 }
@@ -1009,6 +1146,11 @@ export type ReceiptExtractionCreateWithoutFamilyInput = {
   rawText?: string | null
   rawJson?: string | null
   metaJson?: string | null
+  receiptType?: string | null
+  consumptionQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: string | null
+  consumptionPeriodStart?: Date | string | null
+  consumptionPeriodEnd?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   receipt: Prisma.ReceiptCreateNestedOneWithoutExtractionInput
@@ -1032,6 +1174,11 @@ export type ReceiptExtractionUncheckedCreateWithoutFamilyInput = {
   rawText?: string | null
   rawJson?: string | null
   metaJson?: string | null
+  receiptType?: string | null
+  consumptionQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: string | null
+  consumptionPeriodStart?: Date | string | null
+  consumptionPeriodEnd?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   items?: Prisma.ReceiptExtractionItemUncheckedCreateNestedManyWithoutExtractionInput
@@ -1074,6 +1221,11 @@ export type ReceiptExtractionCreateWithoutReceiptInput = {
   rawText?: string | null
   rawJson?: string | null
   metaJson?: string | null
+  receiptType?: string | null
+  consumptionQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: string | null
+  consumptionPeriodStart?: Date | string | null
+  consumptionPeriodEnd?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   family: Prisma.FamilyCreateNestedOneWithoutReceiptExtractionsInput
@@ -1097,6 +1249,11 @@ export type ReceiptExtractionUncheckedCreateWithoutReceiptInput = {
   rawText?: string | null
   rawJson?: string | null
   metaJson?: string | null
+  receiptType?: string | null
+  consumptionQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: string | null
+  consumptionPeriodStart?: Date | string | null
+  consumptionPeriodEnd?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   items?: Prisma.ReceiptExtractionItemUncheckedCreateNestedManyWithoutExtractionInput
@@ -1130,6 +1287,11 @@ export type ReceiptExtractionUpdateWithoutReceiptInput = {
   rawText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rawJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metaJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receiptType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionQuantity?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  consumptionPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   family?: Prisma.FamilyUpdateOneRequiredWithoutReceiptExtractionsNestedInput
@@ -1153,6 +1315,11 @@ export type ReceiptExtractionUncheckedUpdateWithoutReceiptInput = {
   rawText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rawJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metaJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receiptType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionQuantity?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  consumptionPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   items?: Prisma.ReceiptExtractionItemUncheckedUpdateManyWithoutExtractionNestedInput
@@ -1170,6 +1337,11 @@ export type ReceiptExtractionCreateWithoutItemsInput = {
   rawText?: string | null
   rawJson?: string | null
   metaJson?: string | null
+  receiptType?: string | null
+  consumptionQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: string | null
+  consumptionPeriodStart?: Date | string | null
+  consumptionPeriodEnd?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   receipt: Prisma.ReceiptCreateNestedOneWithoutExtractionInput
@@ -1194,6 +1366,11 @@ export type ReceiptExtractionUncheckedCreateWithoutItemsInput = {
   rawText?: string | null
   rawJson?: string | null
   metaJson?: string | null
+  receiptType?: string | null
+  consumptionQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: string | null
+  consumptionPeriodStart?: Date | string | null
+  consumptionPeriodEnd?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1226,6 +1403,11 @@ export type ReceiptExtractionUpdateWithoutItemsInput = {
   rawText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rawJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metaJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receiptType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionQuantity?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  consumptionPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   receipt?: Prisma.ReceiptUpdateOneRequiredWithoutExtractionNestedInput
@@ -1250,6 +1432,11 @@ export type ReceiptExtractionUncheckedUpdateWithoutItemsInput = {
   rawText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rawJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metaJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receiptType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionQuantity?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  consumptionPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1269,6 +1456,11 @@ export type ReceiptExtractionCreateManyUserInput = {
   rawText?: string | null
   rawJson?: string | null
   metaJson?: string | null
+  receiptType?: string | null
+  consumptionQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: string | null
+  consumptionPeriodStart?: Date | string | null
+  consumptionPeriodEnd?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1288,6 +1480,11 @@ export type ReceiptExtractionCreateManyConfirmedByInput = {
   rawText?: string | null
   rawJson?: string | null
   metaJson?: string | null
+  receiptType?: string | null
+  consumptionQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: string | null
+  consumptionPeriodStart?: Date | string | null
+  consumptionPeriodEnd?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1304,6 +1501,11 @@ export type ReceiptExtractionUpdateWithoutUserInput = {
   rawText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rawJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metaJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receiptType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionQuantity?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  consumptionPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   receipt?: Prisma.ReceiptUpdateOneRequiredWithoutExtractionNestedInput
@@ -1327,6 +1529,11 @@ export type ReceiptExtractionUncheckedUpdateWithoutUserInput = {
   rawText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rawJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metaJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receiptType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionQuantity?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  consumptionPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   items?: Prisma.ReceiptExtractionItemUncheckedUpdateManyWithoutExtractionNestedInput
@@ -1347,6 +1554,11 @@ export type ReceiptExtractionUncheckedUpdateManyWithoutUserInput = {
   rawText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rawJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metaJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receiptType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionQuantity?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  consumptionPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1363,6 +1575,11 @@ export type ReceiptExtractionUpdateWithoutConfirmedByInput = {
   rawText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rawJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metaJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receiptType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionQuantity?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  consumptionPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   receipt?: Prisma.ReceiptUpdateOneRequiredWithoutExtractionNestedInput
@@ -1386,6 +1603,11 @@ export type ReceiptExtractionUncheckedUpdateWithoutConfirmedByInput = {
   rawText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rawJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metaJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receiptType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionQuantity?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  consumptionPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   items?: Prisma.ReceiptExtractionItemUncheckedUpdateManyWithoutExtractionNestedInput
@@ -1406,6 +1628,11 @@ export type ReceiptExtractionUncheckedUpdateManyWithoutConfirmedByInput = {
   rawText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rawJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metaJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receiptType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionQuantity?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  consumptionPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1425,6 +1652,11 @@ export type ReceiptExtractionCreateManyFamilyInput = {
   rawText?: string | null
   rawJson?: string | null
   metaJson?: string | null
+  receiptType?: string | null
+  consumptionQuantity?: runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: string | null
+  consumptionPeriodStart?: Date | string | null
+  consumptionPeriodEnd?: Date | string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -1441,6 +1673,11 @@ export type ReceiptExtractionUpdateWithoutFamilyInput = {
   rawText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rawJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metaJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receiptType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionQuantity?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  consumptionPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   receipt?: Prisma.ReceiptUpdateOneRequiredWithoutExtractionNestedInput
@@ -1464,6 +1701,11 @@ export type ReceiptExtractionUncheckedUpdateWithoutFamilyInput = {
   rawText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rawJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metaJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receiptType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionQuantity?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  consumptionPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   items?: Prisma.ReceiptExtractionItemUncheckedUpdateManyWithoutExtractionNestedInput
@@ -1484,6 +1726,11 @@ export type ReceiptExtractionUncheckedUpdateManyWithoutFamilyInput = {
   rawText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   rawJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   metaJson?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  receiptType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionQuantity?: Prisma.NullableDecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string | null
+  consumptionUnit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  consumptionPeriodStart?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  consumptionPeriodEnd?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -1535,6 +1782,11 @@ export type ReceiptExtractionSelect<ExtArgs extends runtime.Types.Extensions.Int
   rawText?: boolean
   rawJson?: boolean
   metaJson?: boolean
+  receiptType?: boolean
+  consumptionQuantity?: boolean
+  consumptionUnit?: boolean
+  consumptionPeriodStart?: boolean
+  consumptionPeriodEnd?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   receipt?: boolean | Prisma.ReceiptDefaultArgs<ExtArgs>
@@ -1561,6 +1813,11 @@ export type ReceiptExtractionSelectCreateManyAndReturn<ExtArgs extends runtime.T
   rawText?: boolean
   rawJson?: boolean
   metaJson?: boolean
+  receiptType?: boolean
+  consumptionQuantity?: boolean
+  consumptionUnit?: boolean
+  consumptionPeriodStart?: boolean
+  consumptionPeriodEnd?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   receipt?: boolean | Prisma.ReceiptDefaultArgs<ExtArgs>
@@ -1585,6 +1842,11 @@ export type ReceiptExtractionSelectUpdateManyAndReturn<ExtArgs extends runtime.T
   rawText?: boolean
   rawJson?: boolean
   metaJson?: boolean
+  receiptType?: boolean
+  consumptionQuantity?: boolean
+  consumptionUnit?: boolean
+  consumptionPeriodStart?: boolean
+  consumptionPeriodEnd?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   receipt?: boolean | Prisma.ReceiptDefaultArgs<ExtArgs>
@@ -1609,11 +1871,16 @@ export type ReceiptExtractionSelectScalar = {
   rawText?: boolean
   rawJson?: boolean
   metaJson?: boolean
+  receiptType?: boolean
+  consumptionQuantity?: boolean
+  consumptionUnit?: boolean
+  consumptionPeriodStart?: boolean
+  consumptionPeriodEnd?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ReceiptExtractionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "receiptId" | "familyId" | "userId" | "confirmedAt" | "confirmedByUserId" | "merchantName" | "receiptDate" | "total" | "currency" | "tax" | "tip" | "rawText" | "rawJson" | "metaJson" | "createdAt" | "updatedAt", ExtArgs["result"]["receiptExtraction"]>
+export type ReceiptExtractionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "receiptId" | "familyId" | "userId" | "confirmedAt" | "confirmedByUserId" | "merchantName" | "receiptDate" | "total" | "currency" | "tax" | "tip" | "rawText" | "rawJson" | "metaJson" | "receiptType" | "consumptionQuantity" | "consumptionUnit" | "consumptionPeriodStart" | "consumptionPeriodEnd" | "createdAt" | "updatedAt", ExtArgs["result"]["receiptExtraction"]>
 export type ReceiptExtractionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   receipt?: boolean | Prisma.ReceiptDefaultArgs<ExtArgs>
   family?: boolean | Prisma.FamilyDefaultArgs<ExtArgs>
@@ -1660,6 +1927,11 @@ export type $ReceiptExtractionPayload<ExtArgs extends runtime.Types.Extensions.I
     rawText: string | null
     rawJson: string | null
     metaJson: string | null
+    receiptType: string | null
+    consumptionQuantity: runtime.Decimal | null
+    consumptionUnit: string | null
+    consumptionPeriodStart: Date | null
+    consumptionPeriodEnd: Date | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["receiptExtraction"]>
@@ -2105,6 +2377,11 @@ export interface ReceiptExtractionFieldRefs {
   readonly rawText: Prisma.FieldRef<"ReceiptExtraction", 'String'>
   readonly rawJson: Prisma.FieldRef<"ReceiptExtraction", 'String'>
   readonly metaJson: Prisma.FieldRef<"ReceiptExtraction", 'String'>
+  readonly receiptType: Prisma.FieldRef<"ReceiptExtraction", 'String'>
+  readonly consumptionQuantity: Prisma.FieldRef<"ReceiptExtraction", 'Decimal'>
+  readonly consumptionUnit: Prisma.FieldRef<"ReceiptExtraction", 'String'>
+  readonly consumptionPeriodStart: Prisma.FieldRef<"ReceiptExtraction", 'DateTime'>
+  readonly consumptionPeriodEnd: Prisma.FieldRef<"ReceiptExtraction", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"ReceiptExtraction", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"ReceiptExtraction", 'DateTime'>
 }

@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 
 export const maxDuration = 25
 
 export async function POST(request: NextRequest) {
   try {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY
     if (!url || !key) {
       return NextResponse.json(
         { detail: 'Configuración de Supabase faltante. Revisa las variables de entorno en Vercel.' },
@@ -15,11 +16,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => ({}))
-    const { email, password, phone, name } = body || {}
+    const { email, password, phone, name, city, belongs_to_family } = body || {}
 
-    if (!email || !password || !phone || !name) {
+    if (!email || !password || !phone || !name || !(city != null && String(city).trim())) {
       return NextResponse.json(
-        { detail: 'Faltan campos requeridos' },
+        { detail: 'Faltan campos requeridos (email, contraseña, teléfono, nombre, ciudad)' },
         { status: 400 }
       )
     }
@@ -52,10 +53,11 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Crear usuario en Supabase Auth
+    // Crear usuario en Supabase Auth (solo anon key; por defecto el email NO queda confirmado)
     const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
+      email: email.trim(),
       password,
+      options: { emailRedirectTo: undefined },
     })
 
     if (authError) {
@@ -78,50 +80,72 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Intentar crear registro en tabla users
-    // Primero intentamos INSERT directo (más simple y confiable)
+    // Auto-confirmar email para que el usuario pueda hacer login sin pasar por el panel de Supabase
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (serviceRoleKey) {
+      const admin = createAdminClient(url, serviceRoleKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      })
+      await admin.auth.admin.updateUserById(authData.user.id, { email_confirm: true })
+    }
+
+    const userRow = {
+      id: authData.user.id,
+      email: email.trim(),
+      phone: phone.trim(),
+      name: name.trim(),
+      city: typeof city === 'string' ? city.trim() || null : null,
+      belongs_to_family: Boolean(belongs_to_family),
+      is_active: true,
+      is_family_admin: false,
+    }
+
+    // Crear registro en public.users: con anon key la sesión ya está establecida, RLS "insert own" permite el insert
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .insert({
-        id: authData.user.id,
-        email: email.trim(),
-        phone: phone.trim(),
-        name: name.trim(),
-        is_active: true,
-        is_family_admin: false,
-      })
+      .insert(userRow)
       .select()
       .single()
 
     if (userError) {
       console.error('Error al crear perfil de usuario:', userError)
       console.error('Usuario de auth creado pero perfil falló:', authData.user.id)
-      
-      // Mensaje más específico según el tipo de error
+
+      // Si tenemos service role, intentar insertar desde el servidor (bypasea RLS)
+      if (serviceRoleKey) {
+        const admin = createAdminClient(url, serviceRoleKey, {
+          auth: { autoRefreshToken: false, persistSession: false },
+        })
+        const { data: inserted, error: adminInsertError } = await admin
+          .from('users')
+          .insert(userRow)
+          .select()
+          .single()
+        if (!adminInsertError && inserted) {
+          res.headers.set('content-type', 'application/json')
+          return NextResponse.json(inserted, { status: 201 })
+        }
+      }
+
       let errorMessage = userError.message || 'Error desconocido'
       let errorDetail = ''
-      
       if (errorMessage.includes('row-level security') || errorMessage.includes('RLS') || errorMessage.includes('policy')) {
-        errorDetail = 'Error de permisos (RLS): Las políticas de seguridad están bloqueando el registro. Ejecuta el SQL de "supabase/verificar-y-fix-rls-registro.sql" en Supabase SQL Editor.'
+        errorDetail = 'Error de permisos (RLS). Añade SUPABASE_SERVICE_ROLE_KEY en el servidor para que el registro cree también la fila en public.users.'
       } else if (errorMessage.includes('duplicate') || errorMessage.includes('unique') || errorMessage.includes('already exists')) {
         errorDetail = 'El usuario ya existe en la base de datos.'
-      } else if (errorMessage.includes('Database error')) {
-        errorDetail = 'Error de base de datos. Verifica que las políticas RLS estén configuradas correctamente ejecutando "supabase/verificar-y-fix-rls-registro.sql" en Supabase.'
       } else {
         errorDetail = `Error técnico: ${errorMessage}`
       }
-      
       return NextResponse.json(
-        { 
+        {
           detail: `Error al crear perfil: ${errorDetail}. El usuario fue creado en auth.users pero no en public.users.`,
           error_code: userError.code,
-          error_message: userError.message
+          error_message: userError.message,
         },
         { status: 500 }
       )
     }
 
-    // Usuario creado exitosamente
     return NextResponse.json(userData, { status: 201 })
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Error desconocido'

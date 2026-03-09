@@ -1,0 +1,48 @@
+================================================================================
+PROMPT F1 — Pegar en Cursor para ejecutar Migración F1 (DBE limpio)
+================================================================================
+
+Copia todo lo que está debajo de la línea y pégalo en Cursor como instrucción.
+--------------------------------------------------------------------------------
+
+
+Proyecto: DOMUS+ Beta DBE — Migración F1 (levantar backend limpio).
+
+Contexto: Proyecto NUEVO domus-beta-dbe, sin Supabase. SQLite + Prisma + JWT más adelante. F1 solo prepara el esqueleto y la base de datos.
+
+Tareas (en este orden):
+
+1) Crear proyecto nuevo llamado domus-beta-dbe (Next.js o el stack acordado en docs/DOMUS_BETA_DBE_DRAFT_VALIDADO.txt). Si ya existe la carpeta, usar esa y no sobrescribir lo que ya esté hecho.
+
+2) Instalar dependencias: Prisma + @prisma/client, dotenv (para leer .env), y adaptador SQLite (@prisma/adapter-better-sqlite3 + better-sqlite3). También instalar @aws-sdk/client-s3 para dejar listo DigitalOcean Spaces (solo config).
+
+3) Configurar Prisma con SQLite (sin sorpresas):
+   - Copiar el schema de docs/DOMUS_BETA_DBE_SCHEMA_F1.prisma a prisma/schema.prisma.
+   - Crear prisma.config.ts en la raíz del proyecto para que Prisma use DATABASE_URL desde .env.
+   - Ejecutar npx prisma generate y luego npx prisma db push para crear las tablas y el archivo ./prisma/dev.db.
+   - Aplicar ajustes SQLite (WAL y busy_timeout) al conectar (PRAGMA) en el helper de DB que usará /api/health.
+
+4) Crear .env.example con las variables necesarias para F1: DATABASE_URL, JWT_SECRET (placeholder), y las de DigitalOcean Spaces (DO_SPACES_KEY, DO_SPACES_SECRET, DO_SPACES_BUCKET, DO_SPACES_ENDPOINT, DO_SPACES_REGION) como placeholders. No dejar secretos reales.
+
+5) Crear ruta /api/health que responda 200 OK con un JSON mínimo, p. ej. { "status": "ok", "db": "connected" } si Prisma puede hacer un findFirst o raw simple para comprobar conexión. Si no hay DB aún, que responda solo { "status": "ok" }.
+
+6) Dejar npm run build ejecutándose sin errores. No añadir módulos de negocio todavía (auth, families, etc.); solo skeleton si hace falta (carpetas vacías o un comentario).
+
+7) Aplicar el schema.prisma (docs/DOMUS_BETA_DBE_SCHEMA_F1.prisma) y crear la DB:
+   - npx prisma generate
+   - npx prisma db push
+   Confirmar que se crea ./prisma/dev.db y que las tablas existen.
+
+Definition of Done F1:
+- Proyecto domus-beta-dbe existe y npm install funciona.
+- Prisma configurado con SQLite (WAL documentado o aplicado; busy_timeout si es posible).
+- .env.example existe con DATABASE_URL, JWT_SECRET y variables DO Spaces (placeholders).
+- GET /api/health responde 200 y, si aplica, indica conexión a DB.
+- npm run build pasa.
+- Tablas del schema F1 creadas (users, families, family_members, budget_entities, budget_categories, entity_budget_allocations, transactions, receipts).
+- No hay lógica de negocio ni módulos completos; solo base lista para F2.
+
+No generar código de auth, uploads ni módulos de familias/usuarios en F1. Solo esqueleto y DB operando.
+
+--------------------------------------------------------------------------------
+Fin del prompt F1.

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { jsonError, requireMembership } from '@/lib/auth/session'
 import { prisma } from '@/lib/db/prisma'
 import { hashPassword } from '@/lib/auth/password'
+import { sendWhatsAppMessage, getDomusLinkSuffix } from '@/lib/whatsapp'
 
 function normalizeEmail(value: unknown) {
   return typeof value === 'string' ? value.trim().toLowerCase() : ''
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest) {
       where: { familyId },
       select: {
         isFamilyAdmin: true,
-        user: { select: { id: true, email: true, name: true } },
+        user: { select: { id: true, email: true, name: true, phone: true, city: true, avatarUrl: true } },
       },
       orderBy: { createdAt: 'asc' },
     })
@@ -27,6 +28,9 @@ export async function GET(req: NextRequest) {
           id: m.user.id,
           email: m.user.email,
           name: m.user.name,
+          phone: m.user.phone,
+          city: m.user.city,
+          avatarUrl: m.user.avatarUrl ?? null,
           isFamilyAdmin: m.isFamilyAdmin,
         })),
       },
@@ -74,6 +78,22 @@ export async function POST(req: NextRequest) {
     } catch (e: any) {
       // Ya existe en la familia
       if (e?.code !== 'P2002') throw e
+    }
+
+    // Notificar al invitado por WhatsApp si tiene teléfono
+    const addedUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { phone: true, name: true, email: true },
+    })
+    const family = await prisma.family.findUnique({
+      where: { id: familyId },
+      select: { name: true },
+    })
+    const phoneToNotify = addedUser?.phone || phone
+    if (phoneToNotify && family?.name) {
+      const displayName = addedUser?.name || addedUser?.email || 'Alguien'
+      const msg = `Te agregaron a la familia *${family.name}* en DOMUS. Entra con tu correo y contraseña.${getDomusLinkSuffix()}`
+      await sendWhatsAppMessage(phoneToNotify, msg).catch(() => {})
     }
 
     return NextResponse.json({ ok: true }, { status: 201 })

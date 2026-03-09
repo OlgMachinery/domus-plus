@@ -1,0 +1,652 @@
+/**
+ * Layout — app shell: header, sidebar, content.
+ * Responsive breakpoints: 920px (sidebar collapse), 768px (mobile), 520px (narrow / buttons stack).
+ */
+
+/* Responsive content container — all pages inherit padding and max-width */
+.container {
+  width: 100%;
+  max-width: 1100px;
+  margin: var(--space-32) auto;
+  padding-left: var(--space-32);
+  padding-right: var(--space-32);
+  box-sizing: border-box;
+}
+
+.grid {
+  display: grid;
+  gap: var(--space-16);
+  min-width: 0;
+}
+
+.grid2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* SAP-Family app shell */
+.sapRoot {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.sapHeader {
+  min-height: 56px;
+  padding: env(safe-area-inset-top, 0) max(var(--space-16), env(safe-area-inset-right, 0)) 0 max(var(--space-16), env(safe-area-inset-left, 0));
+  padding-bottom: 0;
+  height: calc(56px + env(safe-area-inset-top, 0));
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+}
+
+.sapHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  min-width: 0;
+  order: -1; /* Menú siempre a la izquierda (incluso en móvil cuando el header hace wrap) */
+}
+
+.sapHeaderLeft .sapMenuBtn {
+  flex-shrink: 0;
+  min-width: 56px;
+}
+
+.sapBrand {
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: var(--letter-spacing-tight);
+  color: var(--primary);
+  line-height: var(--line-height-tight);
+}
+
+.sapHeaderRight {
+  display: flex;
+  gap: var(--space-8);
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.sapHeaderDateTimeCity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  font-size: 0.8125rem;
+  color: var(--muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.sapHeaderDateTimeCity .sapHeaderDate {
+  font-weight: 500;
+  color: var(--fg);
+}
+.sapHeaderDateTimeCity .sapHeaderTime {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--fg);
+}
+.sapHeaderDateTimeCity .sapHeaderCity {
+  font-weight: 500;
+}
+.sapHeaderDateTimeCity .sapHeaderDate::after,
+.sapHeaderDateTimeCity .sapHeaderTime::after {
+  content: ' · ';
+  margin-left: 0.25em;
+  font-weight: 400;
+  color: var(--muted);
+}
+.sapHeaderDateTimeCity .sapHeaderTime::after {
+  content: ' · ';
+}
+
+.sapHeaderRight .btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sapHeaderRight .sapHeaderSearchWrap {
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.sapViewAsBanner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-16);
+  background: var(--sap-bg);
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--font-body);
+  line-height: var(--line-height-body);
+}
+
+.sapMenuBtn {
+  display: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 56px;
+  overflow: visible;
+}
+
+.sapBody {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 168px 1fr;
+  min-height: 0;
+}
+
+.sapSidebar {
+  background: linear-gradient(to bottom, var(--card), var(--bg));
+  backdrop-filter: blur(12px);
+  border-right: 1px solid var(--border);
+  padding: var(--space-12) var(--space-12);
+  position: sticky;
+  top: 56px;
+  height: calc(100vh - 56px);
+  overflow: auto;
+}
+
+.sapNav {
+  display: grid;
+  gap: var(--space-8);
+  margin-top: var(--space-12);
+}
+
+.sapNavItem {
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--font-body);
+  color: var(--muted);
+  font-weight: 600;
+  transition: background 120ms ease, color 120ms ease, transform 80ms ease;
+}
+
+.sapNavItem:hover {
+  background: rgba(15, 23, 42, 0.06);
+  color: var(--text);
+  transform: translateX(2px);
+}
+
+.sapNavItem:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.sapNavItemActive {
+  background: rgba(15, 61, 145, 0.12);
+  color: var(--primary);
+  font-weight: 700;
+  border-left: 3px solid var(--primary);
+  padding-left: calc(var(--space-12) - 3px);
+}
+
+/* Main content area — responsive container for all page content */
+.sapContent {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 32px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.pageHead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-12);
+  flex-wrap: wrap;
+  margin-bottom: var(--layout-page-head-mb);
+}
+
+/* Consistent spacing between content blocks: title → description → blocks → actions */
+.sapContent > * + * {
+  margin-top: var(--layout-section-gap);
+}
+
+.pageTitle {
+  margin: 0;
+  font-size: var(--font-page-title);
+  font-weight: 700;
+  letter-spacing: var(--letter-spacing-tight);
+  line-height: var(--line-height-tight);
+  color: var(--text);
+}
+
+.pageSubtitle {
+  margin: var(--space-8) 0 0;
+  color: var(--muted);
+  font-size: var(--font-body);
+  line-height: var(--line-height-body);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-16);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-page-title);
+  font-weight: 700;
+  letter-spacing: var(--letter-spacing-tight);
+  line-height: var(--line-height-tight);
+  color: var(--text);
+}
+
+.subtitle {
+  margin: var(--space-8) 0 0;
+  color: var(--muted);
+  font-size: var(--font-body);
+  line-height: var(--line-height-body);
+}
+
+/* Layout responsive */
+@media (max-width: 920px) {
+  .sapBody {
+    grid-template-columns: 1fr;
+  }
+  .sapSidebar {
+    display: none;
+  }
+  .sapMenuBtn {
+    display: inline-flex;
+  }
+  .sapPillRole,
+  .sapPillSetup {
+    display: none;
+  }
+  .pillTrunc {
+    max-width: 180px;
+  }
+  .container {
+    margin: var(--space-24) auto;
+    padding-left: var(--space-24);
+    padding-right: var(--space-24);
+  }
+  .grid2 {
+    grid-template-columns: 1fr;
+  }
+  .sapHeaderSolicitudes {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .sapHeaderDateTimeCity {
+    display: none;
+  }
+  .sapPillProfile {
+    display: none;
+  }
+  .pillTrunc {
+    max-width: 140px;
+  }
+  .container {
+    padding-left: var(--space-16);
+    padding-right: var(--space-16);
+  }
+  /* Page header stacks so title and actions don't overlap */
+  .pageHead {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-12);
+  }
+}
+
+@media (max-width: 768px) {
+  .sapHeader {
+    padding-left: max(var(--space-12), env(safe-area-inset-left, 0));
+    padding-right: max(var(--space-12), env(safe-area-inset-right, 0));
+    flex-wrap: wrap;
+    gap: var(--space-8);
+    padding-bottom: var(--space-12);
+    min-height: auto;
+    height: auto;
+  }
+  .sapHeaderLeft {
+    flex: 0 0 auto;
+  }
+  .sapHeaderRight {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+    flex-wrap: wrap;
+    gap: var(--space-8);
+    justify-content: flex-end;
+  }
+  .sapHeaderRight .sapHeaderSearchWrap {
+    min-width: 120px;
+    flex: 1 1 120px;
+  }
+  .sapMenuBtn {
+    min-height: var(--touch-min);
+    padding: var(--space-8) var(--space-12);
+    border: 1px solid var(--border);
+    background: var(--card);
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    color: var(--text);
+  }
+  .sapContent {
+    padding: var(--space-16);
+    padding-bottom: max(var(--space-16), env(safe-area-inset-bottom, 0));
+    padding-left: max(var(--space-16), env(safe-area-inset-left, 0));
+    padding-right: max(var(--space-16), env(safe-area-inset-right, 0));
+  }
+  .pageHead {
+    margin-bottom: var(--space-16);
+  }
+  .sapContent > * + * {
+    margin-top: var(--space-16);
+  }
+}
+
+@media (max-width: 380px) {
+  .sapContent {
+    padding-left: max(var(--space-12), env(safe-area-inset-left, 0));
+    padding-right: max(var(--space-12), env(safe-area-inset-right, 0));
+  }
+}
+
+/* Mobile nav overlay/sheet */
+.mobileNavOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(2px);
+  z-index: 70;
+  display: flex;
+}
+
+.mobileNavSheet {
+  width: min(340px, 88vw);
+  height: 100%;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(12px);
+  border-right: 1px solid var(--border);
+  padding: max(var(--space-16), env(safe-area-inset-top, 0)) max(var(--space-12), env(safe-area-inset-right, 0)) max(var(--space-16), env(safe-area-inset-bottom, 0)) max(var(--space-12), env(safe-area-inset-left, 0));
+  box-shadow: var(--sap-shadow-md), 0 0 0 1px rgba(15, 23, 42, 0.04);
+  animation: domusSlideIn 160ms ease-out;
+}
+
+@keyframes domusSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobileNavSheet {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Menú móvil tipo iPhone (agrupado) */
+.mobileNavSheetIphone {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, sans-serif;
+}
+
+.mobileNavSheetHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: var(--space-12);
+  margin-bottom: var(--space-8);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.mobileNavSheetTitle {
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.mobileNavGroups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-20);
+}
+
+.mobileNavGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mobileNavGroupTitle {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0 var(--space-12);
+  margin-bottom: 4px;
+}
+
+.mobileNavGroupItems {
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.mobileNavItem {
+  display: block;
+  width: 100%;
+  padding: 14px var(--space-16);
+  text-align: left;
+  border: 0;
+  background: transparent;
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.mobileNavItem:last-child {
+  border-bottom: 0;
+}
+
+.mobileNavItem:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.mobileNavItemActive {
+  background: rgba(0, 122, 255, 0.1);
+  color: #007AFF;
+  font-weight: 600;
+}
+
+/* Elementos solo para impresión / ocultos al imprimir */
+.print-only {
+  display: none;
+}
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+}
+
+/* Imprimir solo el calendario: ocultar todo excepto #calendar-print-area */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #calendar-print-area,
+  #calendar-print-area * {
+    visibility: visible;
+  }
+  #calendar-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: none;
+    box-shadow: none;
+    border: none;
+    padding: 0;
+  }
+  #calendar-print-area .cardHeader {
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #ccc;
+  }
+  #calendar-print-area .cardBody {
+    padding: 0;
+  }
+}
+
+/* Vista calendario profesional — grid mensual (estilo Cal.com) */
+.calGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--bg);
+  min-width: 0;
+}
+.calGridHead {
+  display: contents;
+}
+.calGridHeadCell {
+  padding: 10px 6px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  background: rgba(0, 0, 0, 0.03);
+  border-bottom: 1px solid var(--border);
+}
+.calGridBody {
+  display: contents;
+}
+.calDayCell {
+  min-height: 100px;
+  padding: 6px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+}
+.calDayCell:nth-child(7n) {
+  border-right: none;
+}
+.calDayNum {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  flex-shrink: 0;
+  margin-bottom: 2px;
+}
+.calDayNum.otherMonth {
+  color: var(--muted);
+  opacity: 0.6;
+}
+.calDayEvents {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.calEventBlock {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+  width: 100%;
+  text-align: left;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 1.25;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  background: var(--bg);
+  border-left: 3px solid transparent;
+  transition: background 0.12s ease;
+}
+.calEventBlock:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+.calEventBlock:not(.calEventBlockClickable) {
+  cursor: default;
+}
+.calEventBlock .calEventTag {
+  font-weight: 600;
+  flex-shrink: 0;
+  font-size: 10px;
+}
+.calEventBlock .calEventTitle {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.calEventBlock .calEventAmount {
+  font-weight: 600;
+  flex-shrink: 0;
+}
+@media (max-width: 768px) {
+  .calDayCell {
+    min-height: 80px;
+    padding: 4px;
+  }
+  .calEventBlock {
+    font-size: 10px;
+    padding: 3px 4px;
+  }
+}
+@media print {
+  .calGrid {
+    break-inside: avoid;
+  }
+  .calDayCell {
+    min-height: 90px;
+    page-break-inside: avoid;
+  }
+}

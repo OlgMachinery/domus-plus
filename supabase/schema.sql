@@ -217,6 +217,12 @@ CREATE POLICY "Users can view family data" ON families
         id IN (SELECT family_id FROM users WHERE id = auth.uid())
     );
 
+-- Política: El administrador de la familia puede actualizar los datos de la familia
+CREATE POLICY "Family admin can update family" ON families
+    FOR UPDATE USING (
+        id IN (SELECT family_id FROM users WHERE id = auth.uid() AND is_family_admin = true)
+    );
+
 -- Política: Los usuarios pueden ver presupuestos de su familia
 CREATE POLICY "Users can view family budgets" ON family_budgets
     FOR SELECT USING (

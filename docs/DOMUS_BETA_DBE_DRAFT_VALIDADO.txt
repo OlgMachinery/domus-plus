@@ -1,0 +1,95 @@
+================================================================================
+DOMUS+ Beta DBE — DRAFT VALIDADO (con ajustes A–F)
+================================================================================
+
+OBJETIVO: Beta estable para ~10 familias, sin huecos de seguridad/datos.
+Stack: VPS Linux, Prisma, SQLite, JWT, DigitalOcean Spaces. Sin Supabase, RLS ni triggers.
+
+
+---- AJUSTE A: users SIN family_id --------------------------------------------
+NO se usa users.family_id.
+La relación usuario–familia vive en family_members.
+La "familia activa" se define por sesión (JWT) o selección en la app.
+Resultado: invitaciones, cambios de familia y futuro SaaS sin reestructurar.
+
+
+---- AJUSTE B: familyId en JWT validado contra membership ---------------------
+familyId viene del JWT, pero el backend NUNCA confía solo en el claim.
+Regla: en cada request (middleware) se verifica en family_members que ese userId pertenece a ese familyId.
+Siempre validar membership al inicio de la petición.
+
+
+---- AJUSTE C: Transacciones referencian Allocation ---------------------------
+transactions llevan allocation_id (FK a entity_budget_allocations).
+NO category_id directo.
+De allocation se deriva entidad y categoría.
+Evita duplicar lógica, sumatorias inconsistentes y errores de modelo.
+
+
+---- AJUSTE D: Receipts cuelgan de Transaction (obligatorio en Beta) ----------
+Receipt -> Transaction (FK obligatoria).
+Un receipt sin transaction no se permite en Beta (evita basura y soporte manual).
+"Recibo suelto" se puede añadir en fase SaaS si hace falta.
+
+
+---- AJUSTE E: plan_status / setup_complete sin lógica en DB ------------------
+Campos en families: plan_status, setup_complete.
+NO hay función SQL tipo can_set_setup_complete.
+Toda la validación (qué permite confirmar el plan) vive en backend (service).
+Principio: cero lógica en la base de datos.
+
+
+---- AJUSTE F: SQLite — WAL y busy_timeout -----------------------------------
+Para reducir bloqueos con "un escritor":
+- Habilitar WAL (Write-Ahead Logging).
+- Configurar busy_timeout.
+- Cuidar conexiones (Prisma ya ayuda).
+Obligatorio para Beta estable con SQLite.
+
+
+================================================================================
+MODELO DE DATOS (validado)
+================================================================================
+
+users
+  id (UUID), email, password_hash, name, phone, created_at, updated_at.
+  NO family_id. Relación con familias solo vía family_members.
+
+families
+  id (UUID), name, currency, cutoff_day, budget_start_date, setup_complete, plan_status, created_at, updated_at.
+  Validación de setup_complete/plan_status en backend, no en DB.
+
+family_members
+  id (UUID), family_id (FK), user_id (FK), is_family_admin, created_at, updated_at.
+  Aquí vive "este usuario pertenece a esta familia". Membership validado en middleware.
+
+budget_entities
+  id (UUID), family_id (FK), type (PERSON | GROUP), name, is_active, created_at, updated_at.
+
+budget_categories
+  id (UUID), family_id (FK), type, name, is_active, created_at, updated_at.
+
+entity_budget_allocations
+  id (UUID), family_id (FK), entity_id (FK), category_id (FK), monthly_limit, is_active, created_at, updated_at.
+
+transactions
+  id (UUID), family_id (FK), user_id (FK), allocation_id (FK a entity_budget_allocations), amount, date, description, created_at, updated_at.
+  NO category_id directo.
+
+receipts
+  id (UUID), transaction_id (FK obligatoria), user_id (FK), family_id (FK), file_url (Spaces), created_at, updated_at.
+  En Beta: todo receipt va ligado a una transaction.
+
+
+================================================================================
+FLUJO Y ESTRATEGIA (resumen validado)
+================================================================================
+
+Auth: JWT con userId (+ familyId como familia activa). Refresh opcional.
+Multi-tenant: familyId en JWT + validación de membership en family_members en cada request (middleware).
+Transacciones: siempre con allocation_id; entidad/categoría se derivan.
+Receipts: siempre con transaction_id.
+Lógica de negocio: solo en backend; DB sin triggers ni funciones de validación.
+SQLite: WAL + busy_timeout + backups del archivo.
+
+================================================================================

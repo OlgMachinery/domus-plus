@@ -1,0 +1,173 @@
+================================================================================
+DOMUS+ Beta DBE — Arquitectura (solo diseño)
+================================================================================
+
+1. OBJETIVO Y ALCANCE
+--------------------
+- Nombre: DOMUS+ Beta DBE
+- Entorno: VPS Linux, sin serverless
+- Público: hasta 10 familias, beta 3–6 meses
+- Stack: backend con Prisma, JWT, SQLite (candidato), archivos en DigitalOcean Spaces
+- Restricciones: sin Supabase, sin RLS, sin triggers; multi-tenant solo en backend
+
+
+2. ESTRUCTURA DE CARPETAS (propuesta mínima)
+--------------------------------------------
+
+domus-beta-dbe/
+├── prisma/
+│   └── schema.prisma          # Modelo de datos (solo diseño aquí)
+├── src/
+│   ├── app/                   # Rutas y handlers (según framework elegido)
+│   ├── lib/
+│   │   ├── auth/              # JWT, sesión, middleware
+│   │   ├── db/                # Cliente Prisma, helpers
+│   │   ├── storage/           # Cliente DigitalOcean Spaces
+│   │   └── tenant/            # Resolución y contexto de familia
+│   ├── modules/               # O bien "services" según convención
+│   │   ├── auth/
+│   │   ├── families/
+│   │   ├── users/
+│   │   ├── budgets/
+│   │   └── transactions/
+│   └── config/                # Env, constantes
+├── uploads/                   # Caché local opcional antes de subir a Spaces
+└── docs/                      # Este tipo de documento
+
+Frontend: puede vivir en frontend/ dentro del mismo repo o en repo aparte; la arquitectura aquí se centra en backend + DB.
+
+
+3. MÓDULOS PRINCIPALES
+----------------------
+
+Módulo          Responsabilidad breve
+------          ---------------------
+auth            Login, registro, refresh JWT, middleware "requiere usuario"
+tenant          De qué familia es la petición (familyId en JWT o header), inyección en contexto
+families        CRUD familia, configuración (nombre, moneda, corte, etc.)
+users           Perfil, permisos dentro de la familia (admin o no)
+budgets         Entidades, categorías, asignaciones, plan del periodo
+transactions    Gastos, movimientos, vinculación a presupuesto
+storage         Subida/URL de archivos (recibos, etc.) a DigitalOcean Spaces
+
+No hace falta más módulos para una beta de 10 familias; "reports" puede ser un subcaso de budgets/transactions al inicio.
+
+
+4. FLUJO DE AUTENTICACIÓN (alto nivel)
+--------------------------------------
+
+1. Registro: email + contraseña → se hashea contraseña, se crea usuario en DB y se asocia (o no) a una familia en el mismo flujo (invitación o "crear familia").
+
+2. Login: email + contraseña → se verifica hash → se emite JWT (access + opcional refresh).
+
+3. JWT: incluye al menos userId y familyId (o solo userId si la familia se elige después). Claims mínimos: identidad y familia actual.
+
+4. Peticiones: middleware lee JWT, valida firma y expiración, extrae userId y familyId, y los pone en contexto (ej. req.user, req.familyId) para que el resto del backend no toque tokens.
+
+5. Refresh (opcional): endpoint que acepta refresh token y devuelve un nuevo access JWT; sin Supabase, todo se valida contra tu DB y tus secretos.
+
+Sin RLS: cada ruta que toque datos debe filtrar explícitamente por familyId (y opcionalmente por rol) usando el contexto inyectado.
+
+
+5. ESTRATEGIA MULTI-TENANT (solo backend)
+----------------------------------------
+
+- Modelo: todas las tablas "por familia" tienen family_id (FK a families).
+
+- Origen de verdad: en cada petición, el familyId válido es el que viene del JWT (o de un header fiable que el backend rellena solo tras validar JWT). No se confía en familyId que venga solo del cuerpo o de la URL sin validar contra el token.
+
+- Uso: en cada consulta (Prisma) se añade where: { family_id: req.familyId } (o equivalente). Un usuario que pertenezca a varias familias tendría un JWT por "sesión activa" en una familia (o se cambia de familia con un nuevo login/endpoint que emite JWT con otro familyId).
+
+- Admin de familia: se guarda en users (ej. is_family_admin). Las rutas sensibles (editar familia, invitar, borrar) comprueban ese flag además del familyId.
+
+Con 10 familias, no hace falta sharding ni esquemas separados; un solo SQLite (o un solo MySQL) con family_id en las tablas es suficiente.
+
+
+6. MODELO DE DATOS (entidades de alto nivel)
+--------------------------------------------
+
+users
+  Id, email, password_hash, name, phone, timestamps.
+  family_id (FK), is_family_admin (boolean).
+  Un usuario pertenece a una familia (para la beta se puede simplificar a 1 familia por usuario).
+
+families
+  Id, name, currency, cutoff_day, budget_start_date, setup_complete, plan_status, timestamps.
+  Opcional: admin_id (FK a users).
+
+budget_entities
+  family_id, type (PERSON/GROUP), name, is_active.
+
+budget_categories
+  family_id, type, name, is_active.
+
+entity_budget_allocations
+  family_id, entity_id, category_id, monthly_limit, is_active, etc.
+
+transactions
+  user_id, family_id, amount, date, description, category_id, etc.
+
+receipts
+  user_id, family_id, file_url (en Spaces), optional link to transaction.
+
+custom_categories (si aplica)
+  family_id, name; misma idea que en el DOMUS actual pero sin RLS.
+
+Relaciones y campos exactos se bajan a Prisma en la fase de implementación; aquí solo importa el alcance y que todo lleve family_id donde corresponda.
+
+
+7. RIESGOS DE SQLITE EN ESTE CONTEXTO
+-------------------------------------
+
+- Concurrencia: SQLite permite un escritor a la vez. Con 10 familias y uso típico (pocas escrituras simultáneas), suele ser aceptable; si varias familias suben recibos o guardan al mismo tiempo, podrías ver bloqueos breves o timeouts.
+
+- Backups: el DB es un archivo. Hay que asegurar copias automáticas del archivo (cron + script) y probar restauración.
+
+- Crecimiento: para beta y pocos usuarios, el tamaño no es problema; si más adelante crece mucho el volumen de transacciones/archivos, migrar a MySQL será un paso claro.
+
+- Herramientas y operación: menos herramientas "en la nube" que MySQL; tú gestionas el archivo y los backups en el VPS.
+
+- Prisma: Prisma con SQLite está bien soportado; no es un riesgo adicional para la arquitectura.
+
+
+8. SQLITE VS MYSQL (para ~10 familias)
+--------------------------------------
+
+Criterio              SQLite                      MySQL
+--------              ------                      -----
+Operación             Un archivo, backups         Servicio, usuarios, permisos
+                      simples
+Concurrencia          Un escritor                 Múltiples escritores
+Escalado futuro       Migrar a MySQL si crece     Ya escalable
+Complejidad           Mínima                      Mayor (instalación, tuning)
+Hostinger VPS         No depende de MySQL         Ya lo tienes (cPanel)
+
+Para solo 10 familias en beta 3–6 meses, SQLite es suficiente y mantiene la arquitectura simple. Si prefieres no tocar el servidor y usar el MySQL que ya tienes en el VPS, MySQL también es válido; la arquitectura (Prisma, JWT, multi-tenant por family_id) es la misma.
+
+
+9. RECOMENDACIÓN PARA LA BETA
+-----------------------------
+
+Base de datos:
+  Opción A (recomendada para mínima complejidad): SQLite con Prisma, un solo archivo en el VPS, backups programados del archivo.
+
+  Opción B (si quieres reutilizar lo que ya tienes): MySQL en tu VPS; mismo diseño de tablas y mismo código de negocio, solo cambia el datasource en Prisma.
+
+Resto:
+  Auth: JWT (access + opcional refresh), sin Supabase.
+  Multi-tenant: solo backend, family_id en JWT y en todas las consultas.
+  Archivos: DigitalOcean Spaces; el backend genera URLs firmadas o públicas según convenga.
+  Estructura: la propuesta de carpetas y módulos de arriba, sin over-engineering.
+
+
+10. RESUMEN
+-----------
+
+- Una sola app backend en el VPS, Prisma, JWT, multi-tenant por family_id.
+- Estructura mínima de carpetas y 6–7 módulos (auth, tenant, families, users, budgets, transactions, storage).
+- Modelo de datos de alto nivel definido (users, families, presupuestos, transacciones, recibos) con family_id donde corresponda.
+- SQLite es adecuado para la beta; si prefieres usar tu MySQL actual, la arquitectura se mantiene; la decisión es operativa, no de diseño.
+
+Esto es solo el borrador de arquitectura; no incluye código, ni inicialización de proyecto ni archivos nuevos.
+
+================================================================================

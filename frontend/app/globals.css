@@ -412,18 +412,24 @@ select.sap-input option:hover {
   border-color: rgba(220, 38, 38, 0.26);
   color: #991b1b;
 }
-/* Ocultar siempre opciones avanzadas y panel zoom en vista diagrama (móvil y desktop) */
+/* Mostrar panel zoom y opciones avanzadas para que las herramientas del diagrama estén disponibles */
 .system-arch-page .system-arch-panel-zoom,
-.system-arch-page .system-arch-opciones-avanzadas,
-.system-arch-opciones-avanzadas,
 .system-arch-panel-zoom {
-  display: none !important;
-  visibility: hidden !important;
-  height: 0 !important;
-  overflow: hidden !important;
-  position: absolute !important;
-  left: -9999px !important;
-  pointer-events: none !important;
+  display: flex !important;
+  visibility: visible !important;
+  height: auto !important;
+  overflow: visible !important;
+  pointer-events: auto !important;
+}
+.system-arch-page .system-arch-opciones-avanzadas,
+.system-arch-opciones-avanzadas {
+  display: block !important;
+  visibility: visible !important;
+  height: auto !important;
+  overflow: visible !important;
+  position: relative !important;
+  left: auto !important;
+  pointer-events: auto !important;
 }
 
 /* Recuadro del diagrama: sin scroll; borde neutro (nunca rojo) */

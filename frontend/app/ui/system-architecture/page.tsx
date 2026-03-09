@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { toPng } from 'html-to-image'
 import SAPLayout from '@/components/SAPLayout'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -16,6 +16,8 @@ import ReactFlow, {
   type Node,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
+
+export const dynamic = 'force-dynamic'
 
 type Vista = 'jerarquia' | 'responsables' | 'presupuesto'
 type LayoutMode = 'vertical' | 'horizontal' | 'compacto' | 'expandido'
@@ -1024,8 +1026,22 @@ function SystemArchitecturePageInner() {
             flexShrink: 0,
           }}
         >
-          {/* Una sola barra compacta: máxima altura para el diagrama (sin barra grande ni Opciones avanzadas) */}
+          {/* Mensaje prueba de versión en verde: si lo ves, estás en el build correcto (sin línea roja) */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+            <span
+              role="status"
+              style={{
+                background: '#15803d',
+                color: '#fff',
+                padding: '4px 10px',
+                borderRadius: 8,
+                fontSize: 12,
+                fontWeight: 700,
+                flexShrink: 0,
+              }}
+            >
+              ✓ Versión correcta (prueba)
+            </span>
             <div className="tabRow" role="tablist" aria-label="Vista del diagrama" style={{ gap: 6, display: 'flex', flexWrap: 'wrap' }}>
               {(['jerarquia', 'responsables', 'presupuesto'] as Vista[]).map((v) => (
                 <button key={v} className={`tabBtn ${vista === v ? 'tabBtnActive' : ''}`} onClick={() => setVista(v)} type="button" role="tab" aria-selected={vista === v} style={{ padding: '6px 10px', fontSize: 13 }}>
@@ -1288,23 +1304,128 @@ function SystemArchitecturePageInner() {
           {error ? <span className="pill pillError">{error}</span> : null}
         </div>
 
+        {/* Contenedor del canvas: marco azul bien visible = zona de trabajo del diagrama */}
         <div
-          id="diagram-wrap"
-          className="diagram-canvas"
           style={{
+            position: 'relative',
             width: '100%',
             flex: 1,
-            minHeight: isMobile ? 120 : 0,
+            minHeight: isMobile ? 260 : '82vh',
             minWidth: 0,
-            position: 'relative',
+            border: '6px solid #0f766e',
             borderRadius: 12,
-            border: 'none',
-            boxShadow: '0 4px 16px rgba(15,23,42,0.06)',
-            background: uiCanvasBg || '#fff',
-            overflow: 'hidden',
-            contain: 'layout',
+            boxSizing: 'border-box',
           }}
         >
+          <div
+            role="status"
+            aria-label="Zona de trabajo del diagrama"
+            style={{
+              position: 'absolute',
+              top: 10,
+              left: 10,
+              zIndex: 20,
+              background: '#0f766e',
+              color: '#fff',
+              padding: '6px 12px',
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 700,
+              boxShadow: '0 2px 8px rgba(15,118,110,0.5)',
+            }}
+          >
+            Zona de trabajo
+          </div>
+          <div
+            id="diagram-wrap"
+            className="diagram-canvas"
+            style={{
+              width: '100%',
+              height: '100%',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: isMobile ? 16 : 22,
+              borderRadius: 16,
+              border: '4px solid #0d9488',
+              boxShadow: 'inset 0 0 0 1px rgba(13,148,136,0.35), 0 18px 42px rgba(15,23,42,0.12)',
+              background: uiCanvasBg || '#fff',
+              overflow: 'hidden',
+              contain: 'layout',
+              boxSizing: 'border-box',
+            }}
+          >
+            {/* Retícula con letras (columnas) y números (filas) — detrás del diagrama, sin bloquear clics */}
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute',
+                top: isMobile ? 16 : 22,
+                left: isMobile ? 16 : 22,
+                right: isMobile ? 16 : 22,
+                bottom: isMobile ? 16 : 22,
+                zIndex: 0,
+                pointerEvents: 'none',
+                display: 'grid',
+                gridTemplateColumns: '28px repeat(12, minmax(32px, 1fr))',
+                gridTemplateRows: '24px repeat(12, minmax(32px, 1fr))',
+                border: '1px solid rgba(15,118,110,0.2)',
+                borderRadius: 8,
+                overflow: 'hidden',
+              }}
+            >
+              <div style={{ gridColumn: 1, gridRow: 1 }} />
+              {Array.from({ length: 12 }, (_, i) => (
+                <div
+                  key={`col-${i}`}
+                  style={{
+                    gridColumn: i + 2,
+                    gridRow: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: 'rgba(15,118,110,0.6)',
+                  }}
+                >
+                  {String.fromCharCode(65 + i)}
+                </div>
+              ))}
+              {Array.from({ length: 12 }, (_, i) => (
+                <div
+                  key={`row-${i}`}
+                  style={{
+                    gridColumn: 1,
+                    gridRow: i + 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: 'rgba(15,118,110,0.6)',
+                  }}
+                >
+                  {i + 1}
+                </div>
+              ))}
+              {Array.from({ length: 12 * 12 }, (_, i) => {
+                const col = (i % 12) + 2
+                const row = Math.floor(i / 12) + 2
+                return (
+                  <div
+                    key={`cell-${i}`}
+                    style={{
+                      gridColumn: col,
+                      gridRow: row,
+                      borderRight: '1px solid rgba(15,118,110,0.15)',
+                      borderBottom: '1px solid rgba(15,118,110,0.15)',
+                    }}
+                  />
+                )
+              })}
+            </div>
+            <div style={{ position: 'relative', zIndex: 1, flex: 1, minHeight: 0, width: '100%' }}>
           <ReactFlow
             style={{ width: '100%', height: '100%' }}
             nodes={nodes}
@@ -1346,7 +1467,7 @@ function SystemArchitecturePageInner() {
             <FlowApiInjector onReady={(api) => { flowApiRef.current = api; setFlowApiReady(!!api) }} />
             <Background gap={18} color="#e0e7f1" />
             {/* En móvil no mostramos panel flotante para no tapar el diagrama; Auto ajustar y Centrar están en la barra */}
-            <Panel position="top-right" className="system-arch-panel-zoom" style={{ display: 'none', gap: 8, flexDirection: 'column', background: '#fff', padding: 8, borderRadius: 10, border: '1px solid rgba(15,23,42,0.1)', boxShadow: '0 6px 18px rgba(15,23,42,0.08)' }}>
+            <Panel position="top-right" className="system-arch-panel-zoom" style={{ display: 'flex', gap: 8, flexDirection: 'column', background: '#fff', padding: 8, borderRadius: 10, border: '1px solid rgba(15,23,42,0.1)', boxShadow: '0 6px 18px rgba(15,23,42,0.08)' }}>
                 <label className="pill" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   Zoom
                   <input
@@ -1364,6 +1485,8 @@ function SystemArchitecturePageInner() {
                 <button type="button" className="btn btnGhost btnSm" onClick={() => { const first = nodes.find((n) => n.id === focusEntityId) || nodes.find((n) => n.id === 'FAMILY_ROOT'); if (first) flowApiRef.current?.setCenter(first.position.x, first.position.y, { duration: 300, zoom: focusEntityId ? 2.2 : 1.8 }); }}>Centrar selección</button>
               </Panel>
           </ReactFlow>
+            </div>
+        </div>
         </div>
       </div>
     </SAPLayout>
@@ -1372,8 +1495,10 @@ function SystemArchitecturePageInner() {
 
 export default function SystemArchitecturePage() {
   return (
-    <ReactFlowProvider>
-      <SystemArchitecturePageInner />
-    </ReactFlowProvider>
+    <Suspense fallback={null}>
+      <ReactFlowProvider>
+        <SystemArchitecturePageInner />
+      </ReactFlowProvider>
+    </Suspense>
   )
 }

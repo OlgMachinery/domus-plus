@@ -28,8 +28,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { familyId, isFamilyAdmin } = await requireMembership(req)
-    if (!isFamilyAdmin) return jsonError('Solo el administrador puede subir fotos', 403)
+    const { familyId, userId, isFamilyAdmin } = await requireMembership(req)
 
     const { id } = await params
     const entity = await prisma.budgetEntity.findUnique({
@@ -38,6 +37,12 @@ export async function POST(
     })
     if (!entity) return jsonError('Entidad no encontrada', 404)
     if (entity.familyId !== familyId) return jsonError('No tienes acceso a esta entidad', 403)
+
+    const isOwner = await prisma.budgetEntityOwner.findUnique({
+      where: { entityId_userId: { entityId: id, userId } },
+      select: { userId: true },
+    })
+    if (!isFamilyAdmin && !isOwner) return jsonError('Solo el administrador o el responsable de la partida pueden subir su foto', 403)
 
     const form = await req.formData()
     const f = form.get('file')
@@ -96,8 +101,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { familyId, isFamilyAdmin } = await requireMembership(req)
-    if (!isFamilyAdmin) return jsonError('Solo el administrador puede eliminar fotos', 403)
+    const { familyId, userId, isFamilyAdmin } = await requireMembership(req)
 
     const { id } = await params
     const entity = await prisma.budgetEntity.findUnique({
@@ -106,6 +110,12 @@ export async function DELETE(
     })
     if (!entity) return jsonError('Entidad no encontrada', 404)
     if (entity.familyId !== familyId) return jsonError('No tienes acceso a esta entidad', 403)
+
+    const isOwner = await prisma.budgetEntityOwner.findUnique({
+      where: { entityId_userId: { entityId: id, userId } },
+      select: { userId: true },
+    })
+    if (!isFamilyAdmin && !isOwner) return jsonError('Solo el administrador o el responsable de la partida pueden quitar la foto', 403)
 
     await prisma.budgetEntity.update({ where: { id }, data: { imageUrl: null }, select: { id: true } })
     return NextResponse.json({ ok: true }, { status: 200 })

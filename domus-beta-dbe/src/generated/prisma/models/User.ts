@@ -30,6 +30,8 @@ export type UserMinAggregateOutputType = {
   passwordHash: string | null
   name: string | null
   phone: string | null
+  city: string | null
+  avatarUrl: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -40,6 +42,8 @@ export type UserMaxAggregateOutputType = {
   passwordHash: string | null
   name: string | null
   phone: string | null
+  city: string | null
+  avatarUrl: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -50,6 +54,8 @@ export type UserCountAggregateOutputType = {
   passwordHash: number
   name: number
   phone: number
+  city: number
+  avatarUrl: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -62,6 +68,8 @@ export type UserMinAggregateInputType = {
   passwordHash?: true
   name?: true
   phone?: true
+  city?: true
+  avatarUrl?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -72,6 +80,8 @@ export type UserMaxAggregateInputType = {
   passwordHash?: true
   name?: true
   phone?: true
+  city?: true
+  avatarUrl?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -82,6 +92,8 @@ export type UserCountAggregateInputType = {
   passwordHash?: true
   name?: true
   phone?: true
+  city?: true
+  avatarUrl?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -165,6 +177,8 @@ export type UserGroupByOutputType = {
   passwordHash: string
   name: string | null
   phone: string | null
+  city: string | null
+  avatarUrl: string | null
   createdAt: Date
   updatedAt: Date
   _count: UserCountAggregateOutputType | null
@@ -196,6 +210,8 @@ export type UserWhereInput = {
   passwordHash?: Prisma.StringFilter<"User"> | string
   name?: Prisma.StringNullableFilter<"User"> | string | null
   phone?: Prisma.StringNullableFilter<"User"> | string | null
+  city?: Prisma.StringNullableFilter<"User"> | string | null
+  avatarUrl?: Prisma.StringNullableFilter<"User"> | string | null
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
   memberships?: Prisma.FamilyMemberListRelationFilter
@@ -206,6 +222,10 @@ export type UserWhereInput = {
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionListRelationFilter
   deletionArchivesCreated?: Prisma.DeletionArchiveListRelationFilter
   deletionArchivesDeleted?: Prisma.DeletionArchiveListRelationFilter
+  moneyRequestsCreated?: Prisma.MoneyRequestListRelationFilter
+  moneyRequestsApproved?: Prisma.MoneyRequestListRelationFilter
+  moneyRequestsRejected?: Prisma.MoneyRequestListRelationFilter
+  passwordResetTokens?: Prisma.PasswordResetTokenListRelationFilter
 }
 
 export type UserOrderByWithRelationInput = {
@@ -214,6 +234,8 @@ export type UserOrderByWithRelationInput = {
   passwordHash?: Prisma.SortOrder
   name?: Prisma.SortOrderInput | Prisma.SortOrder
   phone?: Prisma.SortOrderInput | Prisma.SortOrder
+  city?: Prisma.SortOrderInput | Prisma.SortOrder
+  avatarUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   memberships?: Prisma.FamilyMemberOrderByRelationAggregateInput
@@ -224,6 +246,10 @@ export type UserOrderByWithRelationInput = {
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionOrderByRelationAggregateInput
   deletionArchivesCreated?: Prisma.DeletionArchiveOrderByRelationAggregateInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveOrderByRelationAggregateInput
+  moneyRequestsCreated?: Prisma.MoneyRequestOrderByRelationAggregateInput
+  moneyRequestsApproved?: Prisma.MoneyRequestOrderByRelationAggregateInput
+  moneyRequestsRejected?: Prisma.MoneyRequestOrderByRelationAggregateInput
+  passwordResetTokens?: Prisma.PasswordResetTokenOrderByRelationAggregateInput
 }
 
 export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -235,6 +261,8 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   passwordHash?: Prisma.StringFilter<"User"> | string
   name?: Prisma.StringNullableFilter<"User"> | string | null
   phone?: Prisma.StringNullableFilter<"User"> | string | null
+  city?: Prisma.StringNullableFilter<"User"> | string | null
+  avatarUrl?: Prisma.StringNullableFilter<"User"> | string | null
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"User"> | Date | string
   memberships?: Prisma.FamilyMemberListRelationFilter
@@ -245,6 +273,10 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionListRelationFilter
   deletionArchivesCreated?: Prisma.DeletionArchiveListRelationFilter
   deletionArchivesDeleted?: Prisma.DeletionArchiveListRelationFilter
+  moneyRequestsCreated?: Prisma.MoneyRequestListRelationFilter
+  moneyRequestsApproved?: Prisma.MoneyRequestListRelationFilter
+  moneyRequestsRejected?: Prisma.MoneyRequestListRelationFilter
+  passwordResetTokens?: Prisma.PasswordResetTokenListRelationFilter
 }, "id" | "email">
 
 export type UserOrderByWithAggregationInput = {
@@ -253,6 +285,8 @@ export type UserOrderByWithAggregationInput = {
   passwordHash?: Prisma.SortOrder
   name?: Prisma.SortOrderInput | Prisma.SortOrder
   phone?: Prisma.SortOrderInput | Prisma.SortOrder
+  city?: Prisma.SortOrderInput | Prisma.SortOrder
+  avatarUrl?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.UserCountOrderByAggregateInput
@@ -269,6 +303,8 @@ export type UserScalarWhereWithAggregatesInput = {
   passwordHash?: Prisma.StringWithAggregatesFilter<"User"> | string
   name?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   phone?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
+  city?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
+  avatarUrl?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
 }
@@ -279,6 +315,8 @@ export type UserCreateInput = {
   passwordHash: string
   name?: string | null
   phone?: string | null
+  city?: string | null
+  avatarUrl?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   memberships?: Prisma.FamilyMemberCreateNestedManyWithoutUserInput
@@ -289,6 +327,10 @@ export type UserCreateInput = {
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionCreateNestedManyWithoutConfirmedByInput
   deletionArchivesCreated?: Prisma.DeletionArchiveCreateNestedManyWithoutCreatedByInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveCreateNestedManyWithoutDeletedByInput
+  moneyRequestsCreated?: Prisma.MoneyRequestCreateNestedManyWithoutCreatedByInput
+  moneyRequestsApproved?: Prisma.MoneyRequestCreateNestedManyWithoutApprovedByInput
+  moneyRequestsRejected?: Prisma.MoneyRequestCreateNestedManyWithoutRejectedByInput
+  passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -297,6 +339,8 @@ export type UserUncheckedCreateInput = {
   passwordHash: string
   name?: string | null
   phone?: string | null
+  city?: string | null
+  avatarUrl?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   memberships?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutUserInput
@@ -307,6 +351,10 @@ export type UserUncheckedCreateInput = {
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutConfirmedByInput
   deletionArchivesCreated?: Prisma.DeletionArchiveUncheckedCreateNestedManyWithoutCreatedByInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveUncheckedCreateNestedManyWithoutDeletedByInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutCreatedByInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutApprovedByInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutRejectedByInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserUpdateInput = {
@@ -315,6 +363,8 @@ export type UserUpdateInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   memberships?: Prisma.FamilyMemberUpdateManyWithoutUserNestedInput
@@ -325,6 +375,10 @@ export type UserUpdateInput = {
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUpdateManyWithoutConfirmedByNestedInput
   deletionArchivesCreated?: Prisma.DeletionArchiveUpdateManyWithoutCreatedByNestedInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveUpdateManyWithoutDeletedByNestedInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUpdateManyWithoutCreatedByNestedInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUpdateManyWithoutApprovedByNestedInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUpdateManyWithoutRejectedByNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -333,6 +387,8 @@ export type UserUncheckedUpdateInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   memberships?: Prisma.FamilyMemberUncheckedUpdateManyWithoutUserNestedInput
@@ -343,6 +399,10 @@ export type UserUncheckedUpdateInput = {
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutConfirmedByNestedInput
   deletionArchivesCreated?: Prisma.DeletionArchiveUncheckedUpdateManyWithoutCreatedByNestedInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveUncheckedUpdateManyWithoutDeletedByNestedInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUncheckedUpdateManyWithoutCreatedByNestedInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUncheckedUpdateManyWithoutApprovedByNestedInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUncheckedUpdateManyWithoutRejectedByNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -351,6 +411,8 @@ export type UserCreateManyInput = {
   passwordHash: string
   name?: string | null
   phone?: string | null
+  city?: string | null
+  avatarUrl?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -361,6 +423,8 @@ export type UserUpdateManyMutationInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -371,6 +435,8 @@ export type UserUncheckedUpdateManyInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -381,6 +447,8 @@ export type UserCountOrderByAggregateInput = {
   passwordHash?: Prisma.SortOrder
   name?: Prisma.SortOrder
   phone?: Prisma.SortOrder
+  city?: Prisma.SortOrder
+  avatarUrl?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -391,6 +459,8 @@ export type UserMaxOrderByAggregateInput = {
   passwordHash?: Prisma.SortOrder
   name?: Prisma.SortOrder
   phone?: Prisma.SortOrder
+  city?: Prisma.SortOrder
+  avatarUrl?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -401,6 +471,8 @@ export type UserMinOrderByAggregateInput = {
   passwordHash?: Prisma.SortOrder
   name?: Prisma.SortOrder
   phone?: Prisma.SortOrder
+  city?: Prisma.SortOrder
+  avatarUrl?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -439,6 +511,20 @@ export type UserUpdateOneRequiredWithoutMembershipsNestedInput = {
   upsert?: Prisma.UserUpsertWithoutMembershipsInput
   connect?: Prisma.UserWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutMembershipsInput, Prisma.UserUpdateWithoutMembershipsInput>, Prisma.UserUncheckedUpdateWithoutMembershipsInput>
+}
+
+export type UserCreateNestedOneWithoutPasswordResetTokensInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutPasswordResetTokensInput, Prisma.UserUncheckedCreateWithoutPasswordResetTokensInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutPasswordResetTokensInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutPasswordResetTokensNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutPasswordResetTokensInput, Prisma.UserUncheckedCreateWithoutPasswordResetTokensInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutPasswordResetTokensInput
+  upsert?: Prisma.UserUpsertWithoutPasswordResetTokensInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutPasswordResetTokensInput, Prisma.UserUpdateWithoutPasswordResetTokensInput>, Prisma.UserUncheckedUpdateWithoutPasswordResetTokensInput>
 }
 
 export type UserCreateNestedOneWithoutEntityOwnershipsInput = {
@@ -513,6 +599,52 @@ export type UserUpdateOneWithoutReceiptExtractionsConfirmedNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutReceiptExtractionsConfirmedInput, Prisma.UserUpdateWithoutReceiptExtractionsConfirmedInput>, Prisma.UserUncheckedUpdateWithoutReceiptExtractionsConfirmedInput>
 }
 
+export type UserCreateNestedOneWithoutMoneyRequestsCreatedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutMoneyRequestsCreatedInput, Prisma.UserUncheckedCreateWithoutMoneyRequestsCreatedInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutMoneyRequestsCreatedInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserCreateNestedOneWithoutMoneyRequestsApprovedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutMoneyRequestsApprovedInput, Prisma.UserUncheckedCreateWithoutMoneyRequestsApprovedInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutMoneyRequestsApprovedInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserCreateNestedOneWithoutMoneyRequestsRejectedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutMoneyRequestsRejectedInput, Prisma.UserUncheckedCreateWithoutMoneyRequestsRejectedInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutMoneyRequestsRejectedInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutMoneyRequestsCreatedNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutMoneyRequestsCreatedInput, Prisma.UserUncheckedCreateWithoutMoneyRequestsCreatedInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutMoneyRequestsCreatedInput
+  upsert?: Prisma.UserUpsertWithoutMoneyRequestsCreatedInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutMoneyRequestsCreatedInput, Prisma.UserUpdateWithoutMoneyRequestsCreatedInput>, Prisma.UserUncheckedUpdateWithoutMoneyRequestsCreatedInput>
+}
+
+export type UserUpdateOneWithoutMoneyRequestsApprovedNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutMoneyRequestsApprovedInput, Prisma.UserUncheckedCreateWithoutMoneyRequestsApprovedInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutMoneyRequestsApprovedInput
+  upsert?: Prisma.UserUpsertWithoutMoneyRequestsApprovedInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutMoneyRequestsApprovedInput, Prisma.UserUpdateWithoutMoneyRequestsApprovedInput>, Prisma.UserUncheckedUpdateWithoutMoneyRequestsApprovedInput>
+}
+
+export type UserUpdateOneWithoutMoneyRequestsRejectedNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutMoneyRequestsRejectedInput, Prisma.UserUncheckedCreateWithoutMoneyRequestsRejectedInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutMoneyRequestsRejectedInput
+  upsert?: Prisma.UserUpsertWithoutMoneyRequestsRejectedInput
+  disconnect?: Prisma.UserWhereInput | boolean
+  delete?: Prisma.UserWhereInput | boolean
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutMoneyRequestsRejectedInput, Prisma.UserUpdateWithoutMoneyRequestsRejectedInput>, Prisma.UserUncheckedUpdateWithoutMoneyRequestsRejectedInput>
+}
+
 export type UserCreateNestedOneWithoutDeletionArchivesCreatedInput = {
   create?: Prisma.XOR<Prisma.UserCreateWithoutDeletionArchivesCreatedInput, Prisma.UserUncheckedCreateWithoutDeletionArchivesCreatedInput>
   connectOrCreate?: Prisma.UserCreateOrConnectWithoutDeletionArchivesCreatedInput
@@ -551,6 +683,8 @@ export type UserCreateWithoutMembershipsInput = {
   passwordHash: string
   name?: string | null
   phone?: string | null
+  city?: string | null
+  avatarUrl?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   entityOwnerships?: Prisma.BudgetEntityOwnerCreateNestedManyWithoutUserInput
@@ -560,6 +694,10 @@ export type UserCreateWithoutMembershipsInput = {
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionCreateNestedManyWithoutConfirmedByInput
   deletionArchivesCreated?: Prisma.DeletionArchiveCreateNestedManyWithoutCreatedByInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveCreateNestedManyWithoutDeletedByInput
+  moneyRequestsCreated?: Prisma.MoneyRequestCreateNestedManyWithoutCreatedByInput
+  moneyRequestsApproved?: Prisma.MoneyRequestCreateNestedManyWithoutApprovedByInput
+  moneyRequestsRejected?: Prisma.MoneyRequestCreateNestedManyWithoutRejectedByInput
+  passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutMembershipsInput = {
@@ -568,6 +706,8 @@ export type UserUncheckedCreateWithoutMembershipsInput = {
   passwordHash: string
   name?: string | null
   phone?: string | null
+  city?: string | null
+  avatarUrl?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   entityOwnerships?: Prisma.BudgetEntityOwnerUncheckedCreateNestedManyWithoutUserInput
@@ -577,6 +717,10 @@ export type UserUncheckedCreateWithoutMembershipsInput = {
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutConfirmedByInput
   deletionArchivesCreated?: Prisma.DeletionArchiveUncheckedCreateNestedManyWithoutCreatedByInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveUncheckedCreateNestedManyWithoutDeletedByInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutCreatedByInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutApprovedByInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutRejectedByInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutMembershipsInput = {
@@ -601,6 +745,8 @@ export type UserUpdateWithoutMembershipsInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   entityOwnerships?: Prisma.BudgetEntityOwnerUpdateManyWithoutUserNestedInput
@@ -610,6 +756,10 @@ export type UserUpdateWithoutMembershipsInput = {
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUpdateManyWithoutConfirmedByNestedInput
   deletionArchivesCreated?: Prisma.DeletionArchiveUpdateManyWithoutCreatedByNestedInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveUpdateManyWithoutDeletedByNestedInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUpdateManyWithoutCreatedByNestedInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUpdateManyWithoutApprovedByNestedInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUpdateManyWithoutRejectedByNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutMembershipsInput = {
@@ -618,6 +768,8 @@ export type UserUncheckedUpdateWithoutMembershipsInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   entityOwnerships?: Prisma.BudgetEntityOwnerUncheckedUpdateManyWithoutUserNestedInput
@@ -627,6 +779,118 @@ export type UserUncheckedUpdateWithoutMembershipsInput = {
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutConfirmedByNestedInput
   deletionArchivesCreated?: Prisma.DeletionArchiveUncheckedUpdateManyWithoutCreatedByNestedInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveUncheckedUpdateManyWithoutDeletedByNestedInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUncheckedUpdateManyWithoutCreatedByNestedInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUncheckedUpdateManyWithoutApprovedByNestedInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUncheckedUpdateManyWithoutRejectedByNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutPasswordResetTokensInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  name?: string | null
+  phone?: string | null
+  city?: string | null
+  avatarUrl?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  memberships?: Prisma.FamilyMemberCreateNestedManyWithoutUserInput
+  entityOwnerships?: Prisma.BudgetEntityOwnerCreateNestedManyWithoutUserInput
+  transactions?: Prisma.TransactionCreateNestedManyWithoutUserInput
+  receipts?: Prisma.ReceiptCreateNestedManyWithoutUserInput
+  receiptExtractions?: Prisma.ReceiptExtractionCreateNestedManyWithoutUserInput
+  receiptExtractionsConfirmed?: Prisma.ReceiptExtractionCreateNestedManyWithoutConfirmedByInput
+  deletionArchivesCreated?: Prisma.DeletionArchiveCreateNestedManyWithoutCreatedByInput
+  deletionArchivesDeleted?: Prisma.DeletionArchiveCreateNestedManyWithoutDeletedByInput
+  moneyRequestsCreated?: Prisma.MoneyRequestCreateNestedManyWithoutCreatedByInput
+  moneyRequestsApproved?: Prisma.MoneyRequestCreateNestedManyWithoutApprovedByInput
+  moneyRequestsRejected?: Prisma.MoneyRequestCreateNestedManyWithoutRejectedByInput
+}
+
+export type UserUncheckedCreateWithoutPasswordResetTokensInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  name?: string | null
+  phone?: string | null
+  city?: string | null
+  avatarUrl?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  memberships?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutUserInput
+  entityOwnerships?: Prisma.BudgetEntityOwnerUncheckedCreateNestedManyWithoutUserInput
+  transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutUserInput
+  receipts?: Prisma.ReceiptUncheckedCreateNestedManyWithoutUserInput
+  receiptExtractions?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutUserInput
+  receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutConfirmedByInput
+  deletionArchivesCreated?: Prisma.DeletionArchiveUncheckedCreateNestedManyWithoutCreatedByInput
+  deletionArchivesDeleted?: Prisma.DeletionArchiveUncheckedCreateNestedManyWithoutDeletedByInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutCreatedByInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutApprovedByInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutRejectedByInput
+}
+
+export type UserCreateOrConnectWithoutPasswordResetTokensInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutPasswordResetTokensInput, Prisma.UserUncheckedCreateWithoutPasswordResetTokensInput>
+}
+
+export type UserUpsertWithoutPasswordResetTokensInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutPasswordResetTokensInput, Prisma.UserUncheckedUpdateWithoutPasswordResetTokensInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutPasswordResetTokensInput, Prisma.UserUncheckedCreateWithoutPasswordResetTokensInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutPasswordResetTokensInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutPasswordResetTokensInput, Prisma.UserUncheckedUpdateWithoutPasswordResetTokensInput>
+}
+
+export type UserUpdateWithoutPasswordResetTokensInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  memberships?: Prisma.FamilyMemberUpdateManyWithoutUserNestedInput
+  entityOwnerships?: Prisma.BudgetEntityOwnerUpdateManyWithoutUserNestedInput
+  transactions?: Prisma.TransactionUpdateManyWithoutUserNestedInput
+  receipts?: Prisma.ReceiptUpdateManyWithoutUserNestedInput
+  receiptExtractions?: Prisma.ReceiptExtractionUpdateManyWithoutUserNestedInput
+  receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUpdateManyWithoutConfirmedByNestedInput
+  deletionArchivesCreated?: Prisma.DeletionArchiveUpdateManyWithoutCreatedByNestedInput
+  deletionArchivesDeleted?: Prisma.DeletionArchiveUpdateManyWithoutDeletedByNestedInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUpdateManyWithoutCreatedByNestedInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUpdateManyWithoutApprovedByNestedInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUpdateManyWithoutRejectedByNestedInput
+}
+
+export type UserUncheckedUpdateWithoutPasswordResetTokensInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  memberships?: Prisma.FamilyMemberUncheckedUpdateManyWithoutUserNestedInput
+  entityOwnerships?: Prisma.BudgetEntityOwnerUncheckedUpdateManyWithoutUserNestedInput
+  transactions?: Prisma.TransactionUncheckedUpdateManyWithoutUserNestedInput
+  receipts?: Prisma.ReceiptUncheckedUpdateManyWithoutUserNestedInput
+  receiptExtractions?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutUserNestedInput
+  receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutConfirmedByNestedInput
+  deletionArchivesCreated?: Prisma.DeletionArchiveUncheckedUpdateManyWithoutCreatedByNestedInput
+  deletionArchivesDeleted?: Prisma.DeletionArchiveUncheckedUpdateManyWithoutDeletedByNestedInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUncheckedUpdateManyWithoutCreatedByNestedInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUncheckedUpdateManyWithoutApprovedByNestedInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUncheckedUpdateManyWithoutRejectedByNestedInput
 }
 
 export type UserCreateWithoutEntityOwnershipsInput = {
@@ -635,6 +899,8 @@ export type UserCreateWithoutEntityOwnershipsInput = {
   passwordHash: string
   name?: string | null
   phone?: string | null
+  city?: string | null
+  avatarUrl?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   memberships?: Prisma.FamilyMemberCreateNestedManyWithoutUserInput
@@ -644,6 +910,10 @@ export type UserCreateWithoutEntityOwnershipsInput = {
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionCreateNestedManyWithoutConfirmedByInput
   deletionArchivesCreated?: Prisma.DeletionArchiveCreateNestedManyWithoutCreatedByInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveCreateNestedManyWithoutDeletedByInput
+  moneyRequestsCreated?: Prisma.MoneyRequestCreateNestedManyWithoutCreatedByInput
+  moneyRequestsApproved?: Prisma.MoneyRequestCreateNestedManyWithoutApprovedByInput
+  moneyRequestsRejected?: Prisma.MoneyRequestCreateNestedManyWithoutRejectedByInput
+  passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutEntityOwnershipsInput = {
@@ -652,6 +922,8 @@ export type UserUncheckedCreateWithoutEntityOwnershipsInput = {
   passwordHash: string
   name?: string | null
   phone?: string | null
+  city?: string | null
+  avatarUrl?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   memberships?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutUserInput
@@ -661,6 +933,10 @@ export type UserUncheckedCreateWithoutEntityOwnershipsInput = {
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutConfirmedByInput
   deletionArchivesCreated?: Prisma.DeletionArchiveUncheckedCreateNestedManyWithoutCreatedByInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveUncheckedCreateNestedManyWithoutDeletedByInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutCreatedByInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutApprovedByInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutRejectedByInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutEntityOwnershipsInput = {
@@ -685,6 +961,8 @@ export type UserUpdateWithoutEntityOwnershipsInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   memberships?: Prisma.FamilyMemberUpdateManyWithoutUserNestedInput
@@ -694,6 +972,10 @@ export type UserUpdateWithoutEntityOwnershipsInput = {
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUpdateManyWithoutConfirmedByNestedInput
   deletionArchivesCreated?: Prisma.DeletionArchiveUpdateManyWithoutCreatedByNestedInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveUpdateManyWithoutDeletedByNestedInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUpdateManyWithoutCreatedByNestedInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUpdateManyWithoutApprovedByNestedInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUpdateManyWithoutRejectedByNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutEntityOwnershipsInput = {
@@ -702,6 +984,8 @@ export type UserUncheckedUpdateWithoutEntityOwnershipsInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   memberships?: Prisma.FamilyMemberUncheckedUpdateManyWithoutUserNestedInput
@@ -711,6 +995,10 @@ export type UserUncheckedUpdateWithoutEntityOwnershipsInput = {
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutConfirmedByNestedInput
   deletionArchivesCreated?: Prisma.DeletionArchiveUncheckedUpdateManyWithoutCreatedByNestedInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveUncheckedUpdateManyWithoutDeletedByNestedInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUncheckedUpdateManyWithoutCreatedByNestedInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUncheckedUpdateManyWithoutApprovedByNestedInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUncheckedUpdateManyWithoutRejectedByNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutTransactionsInput = {
@@ -719,6 +1007,8 @@ export type UserCreateWithoutTransactionsInput = {
   passwordHash: string
   name?: string | null
   phone?: string | null
+  city?: string | null
+  avatarUrl?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   memberships?: Prisma.FamilyMemberCreateNestedManyWithoutUserInput
@@ -728,6 +1018,10 @@ export type UserCreateWithoutTransactionsInput = {
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionCreateNestedManyWithoutConfirmedByInput
   deletionArchivesCreated?: Prisma.DeletionArchiveCreateNestedManyWithoutCreatedByInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveCreateNestedManyWithoutDeletedByInput
+  moneyRequestsCreated?: Prisma.MoneyRequestCreateNestedManyWithoutCreatedByInput
+  moneyRequestsApproved?: Prisma.MoneyRequestCreateNestedManyWithoutApprovedByInput
+  moneyRequestsRejected?: Prisma.MoneyRequestCreateNestedManyWithoutRejectedByInput
+  passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutTransactionsInput = {
@@ -736,6 +1030,8 @@ export type UserUncheckedCreateWithoutTransactionsInput = {
   passwordHash: string
   name?: string | null
   phone?: string | null
+  city?: string | null
+  avatarUrl?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   memberships?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutUserInput
@@ -745,6 +1041,10 @@ export type UserUncheckedCreateWithoutTransactionsInput = {
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutConfirmedByInput
   deletionArchivesCreated?: Prisma.DeletionArchiveUncheckedCreateNestedManyWithoutCreatedByInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveUncheckedCreateNestedManyWithoutDeletedByInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutCreatedByInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutApprovedByInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutRejectedByInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutTransactionsInput = {
@@ -769,6 +1069,8 @@ export type UserUpdateWithoutTransactionsInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   memberships?: Prisma.FamilyMemberUpdateManyWithoutUserNestedInput
@@ -778,6 +1080,10 @@ export type UserUpdateWithoutTransactionsInput = {
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUpdateManyWithoutConfirmedByNestedInput
   deletionArchivesCreated?: Prisma.DeletionArchiveUpdateManyWithoutCreatedByNestedInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveUpdateManyWithoutDeletedByNestedInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUpdateManyWithoutCreatedByNestedInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUpdateManyWithoutApprovedByNestedInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUpdateManyWithoutRejectedByNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutTransactionsInput = {
@@ -786,6 +1092,8 @@ export type UserUncheckedUpdateWithoutTransactionsInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   memberships?: Prisma.FamilyMemberUncheckedUpdateManyWithoutUserNestedInput
@@ -795,6 +1103,10 @@ export type UserUncheckedUpdateWithoutTransactionsInput = {
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutConfirmedByNestedInput
   deletionArchivesCreated?: Prisma.DeletionArchiveUncheckedUpdateManyWithoutCreatedByNestedInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveUncheckedUpdateManyWithoutDeletedByNestedInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUncheckedUpdateManyWithoutCreatedByNestedInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUncheckedUpdateManyWithoutApprovedByNestedInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUncheckedUpdateManyWithoutRejectedByNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutReceiptsInput = {
@@ -803,6 +1115,8 @@ export type UserCreateWithoutReceiptsInput = {
   passwordHash: string
   name?: string | null
   phone?: string | null
+  city?: string | null
+  avatarUrl?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   memberships?: Prisma.FamilyMemberCreateNestedManyWithoutUserInput
@@ -812,6 +1126,10 @@ export type UserCreateWithoutReceiptsInput = {
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionCreateNestedManyWithoutConfirmedByInput
   deletionArchivesCreated?: Prisma.DeletionArchiveCreateNestedManyWithoutCreatedByInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveCreateNestedManyWithoutDeletedByInput
+  moneyRequestsCreated?: Prisma.MoneyRequestCreateNestedManyWithoutCreatedByInput
+  moneyRequestsApproved?: Prisma.MoneyRequestCreateNestedManyWithoutApprovedByInput
+  moneyRequestsRejected?: Prisma.MoneyRequestCreateNestedManyWithoutRejectedByInput
+  passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutReceiptsInput = {
@@ -820,6 +1138,8 @@ export type UserUncheckedCreateWithoutReceiptsInput = {
   passwordHash: string
   name?: string | null
   phone?: string | null
+  city?: string | null
+  avatarUrl?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   memberships?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutUserInput
@@ -829,6 +1149,10 @@ export type UserUncheckedCreateWithoutReceiptsInput = {
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutConfirmedByInput
   deletionArchivesCreated?: Prisma.DeletionArchiveUncheckedCreateNestedManyWithoutCreatedByInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveUncheckedCreateNestedManyWithoutDeletedByInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutCreatedByInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutApprovedByInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutRejectedByInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutReceiptsInput = {
@@ -853,6 +1177,8 @@ export type UserUpdateWithoutReceiptsInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   memberships?: Prisma.FamilyMemberUpdateManyWithoutUserNestedInput
@@ -862,6 +1188,10 @@ export type UserUpdateWithoutReceiptsInput = {
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUpdateManyWithoutConfirmedByNestedInput
   deletionArchivesCreated?: Prisma.DeletionArchiveUpdateManyWithoutCreatedByNestedInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveUpdateManyWithoutDeletedByNestedInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUpdateManyWithoutCreatedByNestedInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUpdateManyWithoutApprovedByNestedInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUpdateManyWithoutRejectedByNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutReceiptsInput = {
@@ -870,6 +1200,8 @@ export type UserUncheckedUpdateWithoutReceiptsInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   memberships?: Prisma.FamilyMemberUncheckedUpdateManyWithoutUserNestedInput
@@ -879,6 +1211,10 @@ export type UserUncheckedUpdateWithoutReceiptsInput = {
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutConfirmedByNestedInput
   deletionArchivesCreated?: Prisma.DeletionArchiveUncheckedUpdateManyWithoutCreatedByNestedInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveUncheckedUpdateManyWithoutDeletedByNestedInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUncheckedUpdateManyWithoutCreatedByNestedInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUncheckedUpdateManyWithoutApprovedByNestedInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUncheckedUpdateManyWithoutRejectedByNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutReceiptExtractionsInput = {
@@ -887,6 +1223,8 @@ export type UserCreateWithoutReceiptExtractionsInput = {
   passwordHash: string
   name?: string | null
   phone?: string | null
+  city?: string | null
+  avatarUrl?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   memberships?: Prisma.FamilyMemberCreateNestedManyWithoutUserInput
@@ -896,6 +1234,10 @@ export type UserCreateWithoutReceiptExtractionsInput = {
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionCreateNestedManyWithoutConfirmedByInput
   deletionArchivesCreated?: Prisma.DeletionArchiveCreateNestedManyWithoutCreatedByInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveCreateNestedManyWithoutDeletedByInput
+  moneyRequestsCreated?: Prisma.MoneyRequestCreateNestedManyWithoutCreatedByInput
+  moneyRequestsApproved?: Prisma.MoneyRequestCreateNestedManyWithoutApprovedByInput
+  moneyRequestsRejected?: Prisma.MoneyRequestCreateNestedManyWithoutRejectedByInput
+  passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutReceiptExtractionsInput = {
@@ -904,6 +1246,8 @@ export type UserUncheckedCreateWithoutReceiptExtractionsInput = {
   passwordHash: string
   name?: string | null
   phone?: string | null
+  city?: string | null
+  avatarUrl?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   memberships?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutUserInput
@@ -913,6 +1257,10 @@ export type UserUncheckedCreateWithoutReceiptExtractionsInput = {
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutConfirmedByInput
   deletionArchivesCreated?: Prisma.DeletionArchiveUncheckedCreateNestedManyWithoutCreatedByInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveUncheckedCreateNestedManyWithoutDeletedByInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutCreatedByInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutApprovedByInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutRejectedByInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutReceiptExtractionsInput = {
@@ -926,6 +1274,8 @@ export type UserCreateWithoutReceiptExtractionsConfirmedInput = {
   passwordHash: string
   name?: string | null
   phone?: string | null
+  city?: string | null
+  avatarUrl?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   memberships?: Prisma.FamilyMemberCreateNestedManyWithoutUserInput
@@ -935,6 +1285,10 @@ export type UserCreateWithoutReceiptExtractionsConfirmedInput = {
   receiptExtractions?: Prisma.ReceiptExtractionCreateNestedManyWithoutUserInput
   deletionArchivesCreated?: Prisma.DeletionArchiveCreateNestedManyWithoutCreatedByInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveCreateNestedManyWithoutDeletedByInput
+  moneyRequestsCreated?: Prisma.MoneyRequestCreateNestedManyWithoutCreatedByInput
+  moneyRequestsApproved?: Prisma.MoneyRequestCreateNestedManyWithoutApprovedByInput
+  moneyRequestsRejected?: Prisma.MoneyRequestCreateNestedManyWithoutRejectedByInput
+  passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutReceiptExtractionsConfirmedInput = {
@@ -943,6 +1297,8 @@ export type UserUncheckedCreateWithoutReceiptExtractionsConfirmedInput = {
   passwordHash: string
   name?: string | null
   phone?: string | null
+  city?: string | null
+  avatarUrl?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   memberships?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutUserInput
@@ -952,6 +1308,10 @@ export type UserUncheckedCreateWithoutReceiptExtractionsConfirmedInput = {
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutUserInput
   deletionArchivesCreated?: Prisma.DeletionArchiveUncheckedCreateNestedManyWithoutCreatedByInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveUncheckedCreateNestedManyWithoutDeletedByInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutCreatedByInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutApprovedByInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutRejectedByInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutReceiptExtractionsConfirmedInput = {
@@ -976,6 +1336,8 @@ export type UserUpdateWithoutReceiptExtractionsInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   memberships?: Prisma.FamilyMemberUpdateManyWithoutUserNestedInput
@@ -985,6 +1347,10 @@ export type UserUpdateWithoutReceiptExtractionsInput = {
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUpdateManyWithoutConfirmedByNestedInput
   deletionArchivesCreated?: Prisma.DeletionArchiveUpdateManyWithoutCreatedByNestedInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveUpdateManyWithoutDeletedByNestedInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUpdateManyWithoutCreatedByNestedInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUpdateManyWithoutApprovedByNestedInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUpdateManyWithoutRejectedByNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutReceiptExtractionsInput = {
@@ -993,6 +1359,8 @@ export type UserUncheckedUpdateWithoutReceiptExtractionsInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   memberships?: Prisma.FamilyMemberUncheckedUpdateManyWithoutUserNestedInput
@@ -1002,6 +1370,10 @@ export type UserUncheckedUpdateWithoutReceiptExtractionsInput = {
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutConfirmedByNestedInput
   deletionArchivesCreated?: Prisma.DeletionArchiveUncheckedUpdateManyWithoutCreatedByNestedInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveUncheckedUpdateManyWithoutDeletedByNestedInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUncheckedUpdateManyWithoutCreatedByNestedInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUncheckedUpdateManyWithoutApprovedByNestedInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUncheckedUpdateManyWithoutRejectedByNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserUpsertWithoutReceiptExtractionsConfirmedInput = {
@@ -1021,6 +1393,8 @@ export type UserUpdateWithoutReceiptExtractionsConfirmedInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   memberships?: Prisma.FamilyMemberUpdateManyWithoutUserNestedInput
@@ -1030,6 +1404,10 @@ export type UserUpdateWithoutReceiptExtractionsConfirmedInput = {
   receiptExtractions?: Prisma.ReceiptExtractionUpdateManyWithoutUserNestedInput
   deletionArchivesCreated?: Prisma.DeletionArchiveUpdateManyWithoutCreatedByNestedInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveUpdateManyWithoutDeletedByNestedInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUpdateManyWithoutCreatedByNestedInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUpdateManyWithoutApprovedByNestedInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUpdateManyWithoutRejectedByNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutReceiptExtractionsConfirmedInput = {
@@ -1038,6 +1416,8 @@ export type UserUncheckedUpdateWithoutReceiptExtractionsConfirmedInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   memberships?: Prisma.FamilyMemberUncheckedUpdateManyWithoutUserNestedInput
@@ -1047,6 +1427,334 @@ export type UserUncheckedUpdateWithoutReceiptExtractionsConfirmedInput = {
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutUserNestedInput
   deletionArchivesCreated?: Prisma.DeletionArchiveUncheckedUpdateManyWithoutCreatedByNestedInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveUncheckedUpdateManyWithoutDeletedByNestedInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUncheckedUpdateManyWithoutCreatedByNestedInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUncheckedUpdateManyWithoutApprovedByNestedInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUncheckedUpdateManyWithoutRejectedByNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutMoneyRequestsCreatedInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  name?: string | null
+  phone?: string | null
+  city?: string | null
+  avatarUrl?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  memberships?: Prisma.FamilyMemberCreateNestedManyWithoutUserInput
+  entityOwnerships?: Prisma.BudgetEntityOwnerCreateNestedManyWithoutUserInput
+  transactions?: Prisma.TransactionCreateNestedManyWithoutUserInput
+  receipts?: Prisma.ReceiptCreateNestedManyWithoutUserInput
+  receiptExtractions?: Prisma.ReceiptExtractionCreateNestedManyWithoutUserInput
+  receiptExtractionsConfirmed?: Prisma.ReceiptExtractionCreateNestedManyWithoutConfirmedByInput
+  deletionArchivesCreated?: Prisma.DeletionArchiveCreateNestedManyWithoutCreatedByInput
+  deletionArchivesDeleted?: Prisma.DeletionArchiveCreateNestedManyWithoutDeletedByInput
+  moneyRequestsApproved?: Prisma.MoneyRequestCreateNestedManyWithoutApprovedByInput
+  moneyRequestsRejected?: Prisma.MoneyRequestCreateNestedManyWithoutRejectedByInput
+  passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutMoneyRequestsCreatedInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  name?: string | null
+  phone?: string | null
+  city?: string | null
+  avatarUrl?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  memberships?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutUserInput
+  entityOwnerships?: Prisma.BudgetEntityOwnerUncheckedCreateNestedManyWithoutUserInput
+  transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutUserInput
+  receipts?: Prisma.ReceiptUncheckedCreateNestedManyWithoutUserInput
+  receiptExtractions?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutUserInput
+  receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutConfirmedByInput
+  deletionArchivesCreated?: Prisma.DeletionArchiveUncheckedCreateNestedManyWithoutCreatedByInput
+  deletionArchivesDeleted?: Prisma.DeletionArchiveUncheckedCreateNestedManyWithoutDeletedByInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutApprovedByInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutRejectedByInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutMoneyRequestsCreatedInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutMoneyRequestsCreatedInput, Prisma.UserUncheckedCreateWithoutMoneyRequestsCreatedInput>
+}
+
+export type UserCreateWithoutMoneyRequestsApprovedInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  name?: string | null
+  phone?: string | null
+  city?: string | null
+  avatarUrl?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  memberships?: Prisma.FamilyMemberCreateNestedManyWithoutUserInput
+  entityOwnerships?: Prisma.BudgetEntityOwnerCreateNestedManyWithoutUserInput
+  transactions?: Prisma.TransactionCreateNestedManyWithoutUserInput
+  receipts?: Prisma.ReceiptCreateNestedManyWithoutUserInput
+  receiptExtractions?: Prisma.ReceiptExtractionCreateNestedManyWithoutUserInput
+  receiptExtractionsConfirmed?: Prisma.ReceiptExtractionCreateNestedManyWithoutConfirmedByInput
+  deletionArchivesCreated?: Prisma.DeletionArchiveCreateNestedManyWithoutCreatedByInput
+  deletionArchivesDeleted?: Prisma.DeletionArchiveCreateNestedManyWithoutDeletedByInput
+  moneyRequestsCreated?: Prisma.MoneyRequestCreateNestedManyWithoutCreatedByInput
+  moneyRequestsRejected?: Prisma.MoneyRequestCreateNestedManyWithoutRejectedByInput
+  passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutMoneyRequestsApprovedInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  name?: string | null
+  phone?: string | null
+  city?: string | null
+  avatarUrl?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  memberships?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutUserInput
+  entityOwnerships?: Prisma.BudgetEntityOwnerUncheckedCreateNestedManyWithoutUserInput
+  transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutUserInput
+  receipts?: Prisma.ReceiptUncheckedCreateNestedManyWithoutUserInput
+  receiptExtractions?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutUserInput
+  receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutConfirmedByInput
+  deletionArchivesCreated?: Prisma.DeletionArchiveUncheckedCreateNestedManyWithoutCreatedByInput
+  deletionArchivesDeleted?: Prisma.DeletionArchiveUncheckedCreateNestedManyWithoutDeletedByInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutCreatedByInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutRejectedByInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutMoneyRequestsApprovedInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutMoneyRequestsApprovedInput, Prisma.UserUncheckedCreateWithoutMoneyRequestsApprovedInput>
+}
+
+export type UserCreateWithoutMoneyRequestsRejectedInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  name?: string | null
+  phone?: string | null
+  city?: string | null
+  avatarUrl?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  memberships?: Prisma.FamilyMemberCreateNestedManyWithoutUserInput
+  entityOwnerships?: Prisma.BudgetEntityOwnerCreateNestedManyWithoutUserInput
+  transactions?: Prisma.TransactionCreateNestedManyWithoutUserInput
+  receipts?: Prisma.ReceiptCreateNestedManyWithoutUserInput
+  receiptExtractions?: Prisma.ReceiptExtractionCreateNestedManyWithoutUserInput
+  receiptExtractionsConfirmed?: Prisma.ReceiptExtractionCreateNestedManyWithoutConfirmedByInput
+  deletionArchivesCreated?: Prisma.DeletionArchiveCreateNestedManyWithoutCreatedByInput
+  deletionArchivesDeleted?: Prisma.DeletionArchiveCreateNestedManyWithoutDeletedByInput
+  moneyRequestsCreated?: Prisma.MoneyRequestCreateNestedManyWithoutCreatedByInput
+  moneyRequestsApproved?: Prisma.MoneyRequestCreateNestedManyWithoutApprovedByInput
+  passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutMoneyRequestsRejectedInput = {
+  id?: string
+  email: string
+  passwordHash: string
+  name?: string | null
+  phone?: string | null
+  city?: string | null
+  avatarUrl?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  memberships?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutUserInput
+  entityOwnerships?: Prisma.BudgetEntityOwnerUncheckedCreateNestedManyWithoutUserInput
+  transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutUserInput
+  receipts?: Prisma.ReceiptUncheckedCreateNestedManyWithoutUserInput
+  receiptExtractions?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutUserInput
+  receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutConfirmedByInput
+  deletionArchivesCreated?: Prisma.DeletionArchiveUncheckedCreateNestedManyWithoutCreatedByInput
+  deletionArchivesDeleted?: Prisma.DeletionArchiveUncheckedCreateNestedManyWithoutDeletedByInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutCreatedByInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutApprovedByInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutMoneyRequestsRejectedInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutMoneyRequestsRejectedInput, Prisma.UserUncheckedCreateWithoutMoneyRequestsRejectedInput>
+}
+
+export type UserUpsertWithoutMoneyRequestsCreatedInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutMoneyRequestsCreatedInput, Prisma.UserUncheckedUpdateWithoutMoneyRequestsCreatedInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutMoneyRequestsCreatedInput, Prisma.UserUncheckedCreateWithoutMoneyRequestsCreatedInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutMoneyRequestsCreatedInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutMoneyRequestsCreatedInput, Prisma.UserUncheckedUpdateWithoutMoneyRequestsCreatedInput>
+}
+
+export type UserUpdateWithoutMoneyRequestsCreatedInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  memberships?: Prisma.FamilyMemberUpdateManyWithoutUserNestedInput
+  entityOwnerships?: Prisma.BudgetEntityOwnerUpdateManyWithoutUserNestedInput
+  transactions?: Prisma.TransactionUpdateManyWithoutUserNestedInput
+  receipts?: Prisma.ReceiptUpdateManyWithoutUserNestedInput
+  receiptExtractions?: Prisma.ReceiptExtractionUpdateManyWithoutUserNestedInput
+  receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUpdateManyWithoutConfirmedByNestedInput
+  deletionArchivesCreated?: Prisma.DeletionArchiveUpdateManyWithoutCreatedByNestedInput
+  deletionArchivesDeleted?: Prisma.DeletionArchiveUpdateManyWithoutDeletedByNestedInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUpdateManyWithoutApprovedByNestedInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUpdateManyWithoutRejectedByNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutMoneyRequestsCreatedInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  memberships?: Prisma.FamilyMemberUncheckedUpdateManyWithoutUserNestedInput
+  entityOwnerships?: Prisma.BudgetEntityOwnerUncheckedUpdateManyWithoutUserNestedInput
+  transactions?: Prisma.TransactionUncheckedUpdateManyWithoutUserNestedInput
+  receipts?: Prisma.ReceiptUncheckedUpdateManyWithoutUserNestedInput
+  receiptExtractions?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutUserNestedInput
+  receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutConfirmedByNestedInput
+  deletionArchivesCreated?: Prisma.DeletionArchiveUncheckedUpdateManyWithoutCreatedByNestedInput
+  deletionArchivesDeleted?: Prisma.DeletionArchiveUncheckedUpdateManyWithoutDeletedByNestedInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUncheckedUpdateManyWithoutApprovedByNestedInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUncheckedUpdateManyWithoutRejectedByNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserUpsertWithoutMoneyRequestsApprovedInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutMoneyRequestsApprovedInput, Prisma.UserUncheckedUpdateWithoutMoneyRequestsApprovedInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutMoneyRequestsApprovedInput, Prisma.UserUncheckedCreateWithoutMoneyRequestsApprovedInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutMoneyRequestsApprovedInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutMoneyRequestsApprovedInput, Prisma.UserUncheckedUpdateWithoutMoneyRequestsApprovedInput>
+}
+
+export type UserUpdateWithoutMoneyRequestsApprovedInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  memberships?: Prisma.FamilyMemberUpdateManyWithoutUserNestedInput
+  entityOwnerships?: Prisma.BudgetEntityOwnerUpdateManyWithoutUserNestedInput
+  transactions?: Prisma.TransactionUpdateManyWithoutUserNestedInput
+  receipts?: Prisma.ReceiptUpdateManyWithoutUserNestedInput
+  receiptExtractions?: Prisma.ReceiptExtractionUpdateManyWithoutUserNestedInput
+  receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUpdateManyWithoutConfirmedByNestedInput
+  deletionArchivesCreated?: Prisma.DeletionArchiveUpdateManyWithoutCreatedByNestedInput
+  deletionArchivesDeleted?: Prisma.DeletionArchiveUpdateManyWithoutDeletedByNestedInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUpdateManyWithoutCreatedByNestedInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUpdateManyWithoutRejectedByNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutMoneyRequestsApprovedInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  memberships?: Prisma.FamilyMemberUncheckedUpdateManyWithoutUserNestedInput
+  entityOwnerships?: Prisma.BudgetEntityOwnerUncheckedUpdateManyWithoutUserNestedInput
+  transactions?: Prisma.TransactionUncheckedUpdateManyWithoutUserNestedInput
+  receipts?: Prisma.ReceiptUncheckedUpdateManyWithoutUserNestedInput
+  receiptExtractions?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutUserNestedInput
+  receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutConfirmedByNestedInput
+  deletionArchivesCreated?: Prisma.DeletionArchiveUncheckedUpdateManyWithoutCreatedByNestedInput
+  deletionArchivesDeleted?: Prisma.DeletionArchiveUncheckedUpdateManyWithoutDeletedByNestedInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUncheckedUpdateManyWithoutCreatedByNestedInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUncheckedUpdateManyWithoutRejectedByNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserUpsertWithoutMoneyRequestsRejectedInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutMoneyRequestsRejectedInput, Prisma.UserUncheckedUpdateWithoutMoneyRequestsRejectedInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutMoneyRequestsRejectedInput, Prisma.UserUncheckedCreateWithoutMoneyRequestsRejectedInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutMoneyRequestsRejectedInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutMoneyRequestsRejectedInput, Prisma.UserUncheckedUpdateWithoutMoneyRequestsRejectedInput>
+}
+
+export type UserUpdateWithoutMoneyRequestsRejectedInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  memberships?: Prisma.FamilyMemberUpdateManyWithoutUserNestedInput
+  entityOwnerships?: Prisma.BudgetEntityOwnerUpdateManyWithoutUserNestedInput
+  transactions?: Prisma.TransactionUpdateManyWithoutUserNestedInput
+  receipts?: Prisma.ReceiptUpdateManyWithoutUserNestedInput
+  receiptExtractions?: Prisma.ReceiptExtractionUpdateManyWithoutUserNestedInput
+  receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUpdateManyWithoutConfirmedByNestedInput
+  deletionArchivesCreated?: Prisma.DeletionArchiveUpdateManyWithoutCreatedByNestedInput
+  deletionArchivesDeleted?: Prisma.DeletionArchiveUpdateManyWithoutDeletedByNestedInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUpdateManyWithoutCreatedByNestedInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUpdateManyWithoutApprovedByNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutMoneyRequestsRejectedInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  memberships?: Prisma.FamilyMemberUncheckedUpdateManyWithoutUserNestedInput
+  entityOwnerships?: Prisma.BudgetEntityOwnerUncheckedUpdateManyWithoutUserNestedInput
+  transactions?: Prisma.TransactionUncheckedUpdateManyWithoutUserNestedInput
+  receipts?: Prisma.ReceiptUncheckedUpdateManyWithoutUserNestedInput
+  receiptExtractions?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutUserNestedInput
+  receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutConfirmedByNestedInput
+  deletionArchivesCreated?: Prisma.DeletionArchiveUncheckedUpdateManyWithoutCreatedByNestedInput
+  deletionArchivesDeleted?: Prisma.DeletionArchiveUncheckedUpdateManyWithoutDeletedByNestedInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUncheckedUpdateManyWithoutCreatedByNestedInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUncheckedUpdateManyWithoutApprovedByNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateWithoutDeletionArchivesCreatedInput = {
@@ -1055,6 +1763,8 @@ export type UserCreateWithoutDeletionArchivesCreatedInput = {
   passwordHash: string
   name?: string | null
   phone?: string | null
+  city?: string | null
+  avatarUrl?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   memberships?: Prisma.FamilyMemberCreateNestedManyWithoutUserInput
@@ -1064,6 +1774,10 @@ export type UserCreateWithoutDeletionArchivesCreatedInput = {
   receiptExtractions?: Prisma.ReceiptExtractionCreateNestedManyWithoutUserInput
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionCreateNestedManyWithoutConfirmedByInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveCreateNestedManyWithoutDeletedByInput
+  moneyRequestsCreated?: Prisma.MoneyRequestCreateNestedManyWithoutCreatedByInput
+  moneyRequestsApproved?: Prisma.MoneyRequestCreateNestedManyWithoutApprovedByInput
+  moneyRequestsRejected?: Prisma.MoneyRequestCreateNestedManyWithoutRejectedByInput
+  passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutDeletionArchivesCreatedInput = {
@@ -1072,6 +1786,8 @@ export type UserUncheckedCreateWithoutDeletionArchivesCreatedInput = {
   passwordHash: string
   name?: string | null
   phone?: string | null
+  city?: string | null
+  avatarUrl?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   memberships?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutUserInput
@@ -1081,6 +1797,10 @@ export type UserUncheckedCreateWithoutDeletionArchivesCreatedInput = {
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutUserInput
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutConfirmedByInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveUncheckedCreateNestedManyWithoutDeletedByInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutCreatedByInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutApprovedByInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutRejectedByInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutDeletionArchivesCreatedInput = {
@@ -1094,6 +1814,8 @@ export type UserCreateWithoutDeletionArchivesDeletedInput = {
   passwordHash: string
   name?: string | null
   phone?: string | null
+  city?: string | null
+  avatarUrl?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   memberships?: Prisma.FamilyMemberCreateNestedManyWithoutUserInput
@@ -1103,6 +1825,10 @@ export type UserCreateWithoutDeletionArchivesDeletedInput = {
   receiptExtractions?: Prisma.ReceiptExtractionCreateNestedManyWithoutUserInput
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionCreateNestedManyWithoutConfirmedByInput
   deletionArchivesCreated?: Prisma.DeletionArchiveCreateNestedManyWithoutCreatedByInput
+  moneyRequestsCreated?: Prisma.MoneyRequestCreateNestedManyWithoutCreatedByInput
+  moneyRequestsApproved?: Prisma.MoneyRequestCreateNestedManyWithoutApprovedByInput
+  moneyRequestsRejected?: Prisma.MoneyRequestCreateNestedManyWithoutRejectedByInput
+  passwordResetTokens?: Prisma.PasswordResetTokenCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutDeletionArchivesDeletedInput = {
@@ -1111,6 +1837,8 @@ export type UserUncheckedCreateWithoutDeletionArchivesDeletedInput = {
   passwordHash: string
   name?: string | null
   phone?: string | null
+  city?: string | null
+  avatarUrl?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   memberships?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutUserInput
@@ -1120,6 +1848,10 @@ export type UserUncheckedCreateWithoutDeletionArchivesDeletedInput = {
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutUserInput
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutConfirmedByInput
   deletionArchivesCreated?: Prisma.DeletionArchiveUncheckedCreateNestedManyWithoutCreatedByInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutCreatedByInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutApprovedByInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutRejectedByInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutDeletionArchivesDeletedInput = {
@@ -1144,6 +1876,8 @@ export type UserUpdateWithoutDeletionArchivesCreatedInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   memberships?: Prisma.FamilyMemberUpdateManyWithoutUserNestedInput
@@ -1153,6 +1887,10 @@ export type UserUpdateWithoutDeletionArchivesCreatedInput = {
   receiptExtractions?: Prisma.ReceiptExtractionUpdateManyWithoutUserNestedInput
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUpdateManyWithoutConfirmedByNestedInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveUpdateManyWithoutDeletedByNestedInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUpdateManyWithoutCreatedByNestedInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUpdateManyWithoutApprovedByNestedInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUpdateManyWithoutRejectedByNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutDeletionArchivesCreatedInput = {
@@ -1161,6 +1899,8 @@ export type UserUncheckedUpdateWithoutDeletionArchivesCreatedInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   memberships?: Prisma.FamilyMemberUncheckedUpdateManyWithoutUserNestedInput
@@ -1170,6 +1910,10 @@ export type UserUncheckedUpdateWithoutDeletionArchivesCreatedInput = {
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutUserNestedInput
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutConfirmedByNestedInput
   deletionArchivesDeleted?: Prisma.DeletionArchiveUncheckedUpdateManyWithoutDeletedByNestedInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUncheckedUpdateManyWithoutCreatedByNestedInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUncheckedUpdateManyWithoutApprovedByNestedInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUncheckedUpdateManyWithoutRejectedByNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserUpsertWithoutDeletionArchivesDeletedInput = {
@@ -1189,6 +1933,8 @@ export type UserUpdateWithoutDeletionArchivesDeletedInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   memberships?: Prisma.FamilyMemberUpdateManyWithoutUserNestedInput
@@ -1198,6 +1944,10 @@ export type UserUpdateWithoutDeletionArchivesDeletedInput = {
   receiptExtractions?: Prisma.ReceiptExtractionUpdateManyWithoutUserNestedInput
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUpdateManyWithoutConfirmedByNestedInput
   deletionArchivesCreated?: Prisma.DeletionArchiveUpdateManyWithoutCreatedByNestedInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUpdateManyWithoutCreatedByNestedInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUpdateManyWithoutApprovedByNestedInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUpdateManyWithoutRejectedByNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutDeletionArchivesDeletedInput = {
@@ -1206,6 +1956,8 @@ export type UserUncheckedUpdateWithoutDeletionArchivesDeletedInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  city?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  avatarUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   memberships?: Prisma.FamilyMemberUncheckedUpdateManyWithoutUserNestedInput
@@ -1215,6 +1967,10 @@ export type UserUncheckedUpdateWithoutDeletionArchivesDeletedInput = {
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutUserNestedInput
   receiptExtractionsConfirmed?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutConfirmedByNestedInput
   deletionArchivesCreated?: Prisma.DeletionArchiveUncheckedUpdateManyWithoutCreatedByNestedInput
+  moneyRequestsCreated?: Prisma.MoneyRequestUncheckedUpdateManyWithoutCreatedByNestedInput
+  moneyRequestsApproved?: Prisma.MoneyRequestUncheckedUpdateManyWithoutApprovedByNestedInput
+  moneyRequestsRejected?: Prisma.MoneyRequestUncheckedUpdateManyWithoutRejectedByNestedInput
+  passwordResetTokens?: Prisma.PasswordResetTokenUncheckedUpdateManyWithoutUserNestedInput
 }
 
 
@@ -1231,6 +1987,10 @@ export type UserCountOutputType = {
   receiptExtractionsConfirmed: number
   deletionArchivesCreated: number
   deletionArchivesDeleted: number
+  moneyRequestsCreated: number
+  moneyRequestsApproved: number
+  moneyRequestsRejected: number
+  passwordResetTokens: number
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1242,6 +2002,10 @@ export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.I
   receiptExtractionsConfirmed?: boolean | UserCountOutputTypeCountReceiptExtractionsConfirmedArgs
   deletionArchivesCreated?: boolean | UserCountOutputTypeCountDeletionArchivesCreatedArgs
   deletionArchivesDeleted?: boolean | UserCountOutputTypeCountDeletionArchivesDeletedArgs
+  moneyRequestsCreated?: boolean | UserCountOutputTypeCountMoneyRequestsCreatedArgs
+  moneyRequestsApproved?: boolean | UserCountOutputTypeCountMoneyRequestsApprovedArgs
+  moneyRequestsRejected?: boolean | UserCountOutputTypeCountMoneyRequestsRejectedArgs
+  passwordResetTokens?: boolean | UserCountOutputTypeCountPasswordResetTokensArgs
 }
 
 /**
@@ -1310,6 +2074,34 @@ export type UserCountOutputTypeCountDeletionArchivesDeletedArgs<ExtArgs extends 
   where?: Prisma.DeletionArchiveWhereInput
 }
 
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountMoneyRequestsCreatedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.MoneyRequestWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountMoneyRequestsApprovedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.MoneyRequestWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountMoneyRequestsRejectedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.MoneyRequestWhereInput
+}
+
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountPasswordResetTokensArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.PasswordResetTokenWhereInput
+}
+
 
 export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1317,6 +2109,8 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   passwordHash?: boolean
   name?: boolean
   phone?: boolean
+  city?: boolean
+  avatarUrl?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   memberships?: boolean | Prisma.User$membershipsArgs<ExtArgs>
@@ -1327,6 +2121,10 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   receiptExtractionsConfirmed?: boolean | Prisma.User$receiptExtractionsConfirmedArgs<ExtArgs>
   deletionArchivesCreated?: boolean | Prisma.User$deletionArchivesCreatedArgs<ExtArgs>
   deletionArchivesDeleted?: boolean | Prisma.User$deletionArchivesDeletedArgs<ExtArgs>
+  moneyRequestsCreated?: boolean | Prisma.User$moneyRequestsCreatedArgs<ExtArgs>
+  moneyRequestsApproved?: boolean | Prisma.User$moneyRequestsApprovedArgs<ExtArgs>
+  moneyRequestsRejected?: boolean | Prisma.User$moneyRequestsRejectedArgs<ExtArgs>
+  passwordResetTokens?: boolean | Prisma.User$passwordResetTokensArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -1336,6 +2134,8 @@ export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   passwordHash?: boolean
   name?: boolean
   phone?: boolean
+  city?: boolean
+  avatarUrl?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["user"]>
@@ -1346,6 +2146,8 @@ export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   passwordHash?: boolean
   name?: boolean
   phone?: boolean
+  city?: boolean
+  avatarUrl?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["user"]>
@@ -1356,11 +2158,13 @@ export type UserSelectScalar = {
   passwordHash?: boolean
   name?: boolean
   phone?: boolean
+  city?: boolean
+  avatarUrl?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "passwordHash" | "name" | "phone" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
+export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "passwordHash" | "name" | "phone" | "city" | "avatarUrl" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   memberships?: boolean | Prisma.User$membershipsArgs<ExtArgs>
   entityOwnerships?: boolean | Prisma.User$entityOwnershipsArgs<ExtArgs>
@@ -1370,6 +2174,10 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   receiptExtractionsConfirmed?: boolean | Prisma.User$receiptExtractionsConfirmedArgs<ExtArgs>
   deletionArchivesCreated?: boolean | Prisma.User$deletionArchivesCreatedArgs<ExtArgs>
   deletionArchivesDeleted?: boolean | Prisma.User$deletionArchivesDeletedArgs<ExtArgs>
+  moneyRequestsCreated?: boolean | Prisma.User$moneyRequestsCreatedArgs<ExtArgs>
+  moneyRequestsApproved?: boolean | Prisma.User$moneyRequestsApprovedArgs<ExtArgs>
+  moneyRequestsRejected?: boolean | Prisma.User$moneyRequestsRejectedArgs<ExtArgs>
+  passwordResetTokens?: boolean | Prisma.User$passwordResetTokensArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -1386,6 +2194,10 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     receiptExtractionsConfirmed: Prisma.$ReceiptExtractionPayload<ExtArgs>[]
     deletionArchivesCreated: Prisma.$DeletionArchivePayload<ExtArgs>[]
     deletionArchivesDeleted: Prisma.$DeletionArchivePayload<ExtArgs>[]
+    moneyRequestsCreated: Prisma.$MoneyRequestPayload<ExtArgs>[]
+    moneyRequestsApproved: Prisma.$MoneyRequestPayload<ExtArgs>[]
+    moneyRequestsRejected: Prisma.$MoneyRequestPayload<ExtArgs>[]
+    passwordResetTokens: Prisma.$PasswordResetTokenPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1393,6 +2205,8 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     passwordHash: string
     name: string | null
     phone: string | null
+    city: string | null
+    avatarUrl: string | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["user"]>
@@ -1797,6 +2611,10 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   receiptExtractionsConfirmed<T extends Prisma.User$receiptExtractionsConfirmedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$receiptExtractionsConfirmedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ReceiptExtractionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   deletionArchivesCreated<T extends Prisma.User$deletionArchivesCreatedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$deletionArchivesCreatedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DeletionArchivePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   deletionArchivesDeleted<T extends Prisma.User$deletionArchivesDeletedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$deletionArchivesDeletedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$DeletionArchivePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  moneyRequestsCreated<T extends Prisma.User$moneyRequestsCreatedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$moneyRequestsCreatedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MoneyRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  moneyRequestsApproved<T extends Prisma.User$moneyRequestsApprovedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$moneyRequestsApprovedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MoneyRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  moneyRequestsRejected<T extends Prisma.User$moneyRequestsRejectedArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$moneyRequestsRejectedArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MoneyRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  passwordResetTokens<T extends Prisma.User$passwordResetTokensArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$passwordResetTokensArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PasswordResetTokenPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1831,6 +2649,8 @@ export interface UserFieldRefs {
   readonly passwordHash: Prisma.FieldRef<"User", 'String'>
   readonly name: Prisma.FieldRef<"User", 'String'>
   readonly phone: Prisma.FieldRef<"User", 'String'>
+  readonly city: Prisma.FieldRef<"User", 'String'>
+  readonly avatarUrl: Prisma.FieldRef<"User", 'String'>
   readonly createdAt: Prisma.FieldRef<"User", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"User", 'DateTime'>
 }
@@ -2408,6 +3228,102 @@ export type User$deletionArchivesDeletedArgs<ExtArgs extends runtime.Types.Exten
   take?: number
   skip?: number
   distinct?: Prisma.DeletionArchiveScalarFieldEnum | Prisma.DeletionArchiveScalarFieldEnum[]
+}
+
+/**
+ * User.moneyRequestsCreated
+ */
+export type User$moneyRequestsCreatedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the MoneyRequest
+   */
+  select?: Prisma.MoneyRequestSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the MoneyRequest
+   */
+  omit?: Prisma.MoneyRequestOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.MoneyRequestInclude<ExtArgs> | null
+  where?: Prisma.MoneyRequestWhereInput
+  orderBy?: Prisma.MoneyRequestOrderByWithRelationInput | Prisma.MoneyRequestOrderByWithRelationInput[]
+  cursor?: Prisma.MoneyRequestWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.MoneyRequestScalarFieldEnum | Prisma.MoneyRequestScalarFieldEnum[]
+}
+
+/**
+ * User.moneyRequestsApproved
+ */
+export type User$moneyRequestsApprovedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the MoneyRequest
+   */
+  select?: Prisma.MoneyRequestSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the MoneyRequest
+   */
+  omit?: Prisma.MoneyRequestOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.MoneyRequestInclude<ExtArgs> | null
+  where?: Prisma.MoneyRequestWhereInput
+  orderBy?: Prisma.MoneyRequestOrderByWithRelationInput | Prisma.MoneyRequestOrderByWithRelationInput[]
+  cursor?: Prisma.MoneyRequestWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.MoneyRequestScalarFieldEnum | Prisma.MoneyRequestScalarFieldEnum[]
+}
+
+/**
+ * User.moneyRequestsRejected
+ */
+export type User$moneyRequestsRejectedArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the MoneyRequest
+   */
+  select?: Prisma.MoneyRequestSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the MoneyRequest
+   */
+  omit?: Prisma.MoneyRequestOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.MoneyRequestInclude<ExtArgs> | null
+  where?: Prisma.MoneyRequestWhereInput
+  orderBy?: Prisma.MoneyRequestOrderByWithRelationInput | Prisma.MoneyRequestOrderByWithRelationInput[]
+  cursor?: Prisma.MoneyRequestWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.MoneyRequestScalarFieldEnum | Prisma.MoneyRequestScalarFieldEnum[]
+}
+
+/**
+ * User.passwordResetTokens
+ */
+export type User$passwordResetTokensArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the PasswordResetToken
+   */
+  select?: Prisma.PasswordResetTokenSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the PasswordResetToken
+   */
+  omit?: Prisma.PasswordResetTokenOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PasswordResetTokenInclude<ExtArgs> | null
+  where?: Prisma.PasswordResetTokenWhereInput
+  orderBy?: Prisma.PasswordResetTokenOrderByWithRelationInput | Prisma.PasswordResetTokenOrderByWithRelationInput[]
+  cursor?: Prisma.PasswordResetTokenWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.PasswordResetTokenScalarFieldEnum | Prisma.PasswordResetTokenScalarFieldEnum[]
 }
 
 /**

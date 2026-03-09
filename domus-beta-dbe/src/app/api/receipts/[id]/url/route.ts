@@ -18,6 +18,10 @@ export async function GET(
     if (!receipt) return jsonError('Recibo no encontrado', 404)
     if (receipt.familyId !== familyId) return jsonError('No tienes acceso a este recibo', 403)
 
+    if (receipt.fileUrl === 'whatsapp://no-storage') {
+      return NextResponse.json({ ok: true, url: null, placeholder: true }, { status: 200 })
+    }
+
     const key = extractKeyFromSpacesUrl(receipt.fileUrl)
     if (!key) return jsonError('No se pudo generar el link del recibo', 500)
 

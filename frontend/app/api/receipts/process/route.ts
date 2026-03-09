@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
 
@@ -202,8 +203,34 @@ export async function POST(request: NextRequest) {
 
     console.log(`📁 [FILES] ${files.length} archivo(s) recibido(s)`)
     
-    // Determinar usuario asignado
-    const assignedUserId = targetUserId || authUser.id
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    const admin = serviceKey ? createAdminClient() : null
+
+    // Determinar usuario asignado (por seguridad)
+    let assignedUserId = authUser.id
+    if (targetUserId && targetUserId !== authUser.id) {
+      if (!admin) {
+        return NextResponse.json(
+          { detail: 'No se puede asignar a otro usuario: falta SUPABASE_SERVICE_ROLE_KEY en el servidor.' },
+          { status: 400 }
+        )
+      }
+      if (!userData?.is_family_admin) {
+        return NextResponse.json({ detail: 'Solo un admin de familia puede asignar recibos a otros usuarios.' }, { status: 403 })
+      }
+      const { data: targetRow, error: targetErr } = await admin.from('users').select('id, family_id').eq('id', targetUserId).single()
+      if (targetErr || !targetRow?.id) {
+        return NextResponse.json({ detail: 'Usuario destino no encontrado.' }, { status: 404 })
+      }
+      if (!userData?.family_id || targetRow.family_id !== userData.family_id) {
+        return NextResponse.json({ detail: 'El usuario destino no pertenece a tu familia.' }, { status: 403 })
+      }
+      assignedUserId = targetUserId
+    }
+
+    if (!userData?.family_id) {
+      return NextResponse.json({ detail: 'No tienes familia asignada. Completa el setup primero.' }, { status: 409 })
+    }
 
     // ============================================
     // PASO 4: PROCESAR IMÁGENES CON OPENAI
@@ -238,6 +265,12 @@ export async function POST(request: NextRequest) {
     let firstCurrency: string | null = null
     let firstMerchant: string | null = null
     let firstAmountRaw: string | null = null
+    let firstCategory: string | null = null
+    let firstSubcategory: string | null = null
+    let firstConcept: string | null = null
+    let firstReference: string | null = null
+    let firstOperationId: string | null = null
+    let firstTrackingKey: string | null = null
     const partsStatus: any[] = []
 
     for (let i = 0; i < files.length; i++) {
@@ -284,6 +317,12 @@ export async function POST(request: NextRequest) {
         if (!firstCurrency && receiptRaw.currency) firstCurrency = receiptRaw.currency
         if (!firstMerchant && receiptRaw.merchant_or_beneficiary) firstMerchant = receiptRaw.merchant_or_beneficiary
         if (!firstAmountRaw && receiptRaw.amount_raw) firstAmountRaw = receiptRaw.amount_raw
+        if (!firstCategory && receiptRaw.category) firstCategory = receiptRaw.category
+        if (!firstSubcategory && receiptRaw.subcategory) firstSubcategory = receiptRaw.subcategory
+        if (!firstConcept && receiptRaw.concept) firstConcept = receiptRaw.concept
+        if (!firstReference && receiptRaw.reference) firstReference = receiptRaw.reference
+        if (!firstOperationId && receiptRaw.operation_id) firstOperationId = receiptRaw.operation_id
+        if (!firstTrackingKey && receiptRaw.tracking_key) firstTrackingKey = receiptRaw.tracking_key
 
         // Agregar items
         const items = receiptRaw.items || []
@@ -328,13 +367,21 @@ export async function POST(request: NextRequest) {
     console.log(`   Monto sumado de items: ${sumItems}`)
     console.log(`   Monto elegido: ${chosenAmount}`)
 
+    const inferred = inferReceiptCategory({
+      merchant: firstMerchant,
+      items: combinedItems,
+      aiCategory: firstCategory,
+      aiSubcategory: firstSubcategory,
+    })
+
     // Crear recibo en Supabase
     console.log('💾 [DB] Insertando recibo en base de datos...')
     console.log(`   User ID: ${assignedUserId}`)
     console.log(`   Monto: ${chosenAmount} ${firstCurrency || 'MXN'}`)
     console.log(`   Items: ${combinedItems.length}`)
     
-    const { data: receiptData, error: receiptError } = await supabase
+    const db = admin || supabase
+    const { data: receiptData, error: receiptError } = await db
       .from('receipts')
       .insert({
         user_id: assignedUserId,
@@ -343,6 +390,12 @@ export async function POST(request: NextRequest) {
         amount: chosenAmount,
         currency: firstCurrency || 'MXN',
         merchant_or_beneficiary: firstMerchant,
+        category: inferred.category || firstCategory,
+        subcategory: inferred.subcategory || firstSubcategory,
+        concept: firstConcept,
+        reference: firstReference,
+        operation_id: firstOperationId,
+        tracking_key: firstTrackingKey,
         status: 'pending',
         notes: JSON.stringify({ 
           raw_receipts: receiptRaws,
@@ -408,7 +461,7 @@ export async function POST(request: NextRequest) {
         notes: `line_number: ${idx + 1}`,
       }))
 
-      const { error: itemsError } = await supabase
+      const { error: itemsError } = await db
         .from('receipt_items')
         .insert(receiptItems)
 
@@ -427,8 +480,148 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // ============================================
+    // PASO 6: CREAR TRANSACCIÓN (GASTO) AUTOMÁTICAMENTE
+    // ============================================
+    let createdTransaction: any = null
+    let suggestedBudget: any = null
+    try {
+      if (admin) {
+        const receiptYear = (() => {
+          try {
+            const y = firstDate ? Number(String(firstDate).slice(0, 4)) : NaN
+            return Number.isFinite(y) ? y : new Date().getFullYear()
+          } catch {
+            return new Date().getFullYear()
+          }
+        })()
+
+        const { data: budgets, error: budgetsError } = await admin
+          .from('family_budgets')
+          .select('id, category, subcategory, year, budget_type, target_user_id')
+          .eq('family_id', userData.family_id)
+          .eq('year', receiptYear)
+          .limit(500)
+
+        if (!budgetsError && Array.isArray(budgets) && budgets.length) {
+          suggestedBudget = pickBestBudget({
+            budgets,
+            assignedUserId,
+            category: inferred.category || firstCategory,
+            subcategory: inferred.subcategory || firstSubcategory,
+          })
+        }
+
+        const txDateIso = buildTxIso(firstDate, firstTime)
+        const txConcept = firstMerchant ? String(firstMerchant) : `Recibo #${receiptData?.id || ''}`.trim() || 'Gasto con comprobante'
+
+        const { data: txData, error: txError } = await admin
+          .from('transactions')
+          .insert({
+            user_id: assignedUserId,
+            family_budget_id: suggestedBudget?.id ?? null,
+            date: txDateIso,
+            amount: chosenAmount,
+            transaction_type: 'expense',
+            currency: firstCurrency || 'MXN',
+            merchant_or_beneficiary: firstMerchant,
+            category: inferred.category || firstCategory,
+            subcategory: inferred.subcategory || firstSubcategory,
+            concept: txConcept,
+            reference: firstReference,
+            operation_id: firstOperationId,
+            tracking_key: firstTrackingKey,
+            status: 'processed',
+            notes: `Creado automáticamente desde recibo #${receiptData?.id || ''}`.trim(),
+          })
+          .select()
+          .single()
+
+        if (txError) throw txError
+        createdTransaction = txData
+
+        // Vincular recibo → transacción y marcar como asignado
+        await admin
+          .from('receipts')
+          .update({ assigned_transaction_id: createdTransaction.id, status: 'assigned' })
+          .eq('id', receiptData.id)
+
+        // Actualizar presupuesto de usuario (si existe)
+        if (suggestedBudget?.id) {
+          const { data: ub } = await admin
+            .from('user_budgets')
+            .select('id, spent_amount')
+            .eq('user_id', assignedUserId)
+            .eq('family_budget_id', suggestedBudget.id)
+            .single()
+
+          if (ub?.id) {
+            await admin
+              .from('user_budgets')
+              .update({ spent_amount: (ub.spent_amount || 0) + chosenAmount })
+              .eq('id', ub.id)
+          }
+        }
+
+        // Log (best-effort)
+        await admin.from('activity_logs').insert({
+          user_id: assignedUserId,
+          action_type: 'transaction_created_from_receipt',
+          entity_type: 'transaction',
+          entity_id: createdTransaction?.id ?? null,
+          description: `Transaction created from receipt: expense $${chosenAmount} - ${inferred.category || firstCategory || 'N/A'}`,
+          details: {
+            receipt_id: receiptData?.id,
+            transaction_id: createdTransaction?.id,
+            family_budget_id: suggestedBudget?.id ?? null,
+            category: inferred.category || firstCategory,
+            subcategory: inferred.subcategory || firstSubcategory,
+          },
+        })
+      } else {
+        // Fallback (sin service role): solo intentamos crear para el usuario autenticado
+        // (no permite asignar a otros usuarios ni elegir presupuesto automáticamente)
+        if (assignedUserId === authUser.id) {
+          const txDateIso = buildTxIso(firstDate, firstTime)
+          const txConcept = firstMerchant ? String(firstMerchant) : `Recibo #${receiptData?.id || ''}`.trim() || 'Gasto con comprobante'
+
+          const { data: txData, error: txError } = await supabase
+            .from('transactions')
+            .insert({
+              user_id: assignedUserId,
+              family_budget_id: null,
+              date: txDateIso,
+              amount: chosenAmount,
+              transaction_type: 'expense',
+              currency: firstCurrency || 'MXN',
+              merchant_or_beneficiary: firstMerchant,
+              category: inferred.category || firstCategory,
+              subcategory: inferred.subcategory || firstSubcategory,
+              concept: txConcept,
+              reference: firstReference,
+              operation_id: firstOperationId,
+              tracking_key: firstTrackingKey,
+              status: 'processed',
+              notes: `Creado automáticamente desde recibo #${receiptData?.id || ''}`.trim(),
+            })
+            .select()
+            .single()
+
+          if (!txError && txData?.id) {
+            createdTransaction = txData
+            await supabase
+              .from('receipts')
+              .update({ assigned_transaction_id: createdTransaction.id, status: 'assigned' })
+              .eq('id', receiptData.id)
+          }
+        }
+      }
+    } catch (err: any) {
+      console.warn('⚠️ [TX] No se pudo crear transacción automáticamente:', err?.message || err)
+    }
+
     // Cargar recibo completo con items
-    const { data: fullReceipt, error: loadError } = await supabase
+    const { data: fullReceipt, error: loadError } = await db
       .from('receipts')
       .select(`
         *,
@@ -452,6 +645,8 @@ export async function POST(request: NextRequest) {
       message: 'Recibo procesado y guardado exitosamente',
       receipt: fullReceipt || receiptData,
       receipt_id: receiptData.id,
+      transaction: createdTransaction,
+      suggested_budget: suggestedBudget,
       parts_status: partsStatus,
       processing_time_ms: processingTime,
       items_count: combinedItems.length,
@@ -489,4 +684,94 @@ function parseFloatSafe(value: any): number {
   } catch {
     return 0.0
   }
+}
+
+function normText(value: any) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+}
+
+function inferReceiptCategory(args: {
+  merchant: string | null
+  items: any[]
+  aiCategory: string | null
+  aiSubcategory: string | null
+}) {
+  const merchant = normText(args.merchant)
+  const itemsText = normText((Array.isArray(args.items) ? args.items : []).map((x: any) => x?.raw_line || '').join(' '))
+  const text = `${merchant} ${itemsText}`.toUpperCase()
+
+  // 1) Heurísticas por comercio
+  if (/(HEB|H-E-B|WALMART|SORIANA|COSTCO|CHEDRAUI|SUPERAMA|SAMS|SMART|CITY\\s*CLUB|AURRERA)/.test(text)) {
+    return { category: 'Mercado', subcategory: 'Mercado General' }
+  }
+  if (/(PEMEX|SHELL|\\bBP\\b|GASOLIN|OXXO\\s*GAS|MOBIL)/.test(text)) {
+    return { category: 'Transporte', subcategory: 'Gasolina' }
+  }
+  if (/(CFE)/.test(text)) {
+    return { category: 'Servicios Basicos', subcategory: 'Electricidad CFE' }
+  }
+  if (/(TELCEL|AT\\&T|ATT|MOVISTAR)/.test(text)) {
+    return { category: 'Servicios Basicos', subcategory: 'Telcel' }
+  }
+  if (/(TOTALPLAY|MEGACABLE|IZZI|INTERNET)/.test(text)) {
+    return { category: 'Servicios Basicos', subcategory: 'Internet' }
+  }
+  if (/(FARMACIA|BENAVIDES|GUADALAJARA|AHORRO)/.test(text)) {
+    return { category: 'Salud', subcategory: 'Medicamentos' }
+  }
+  if (/(RESTAUR|PIZZA|BURGER|SUSHI|TAQUER|CAFE|STARBUCKS)/.test(text)) {
+    return { category: 'Vida Social', subcategory: 'Salidas Personales' }
+  }
+
+  // 2) Fallback por categoría IA (mapeo)
+  const ai = normText(args.aiCategory)
+  if (ai === 'transporte') return { category: 'Transporte', subcategory: args.aiSubcategory || null }
+  if (ai === 'salud') return { category: 'Salud', subcategory: args.aiSubcategory || null }
+  if (ai === 'educacion') return { category: 'Educacion', subcategory: args.aiSubcategory || null }
+  if (ai === 'servicios') return { category: 'Servicios Basicos', subcategory: args.aiSubcategory || null }
+  if (ai === 'hogar') return { category: 'Vivienda', subcategory: args.aiSubcategory || null }
+  if (ai === 'alimentacion') return { category: 'Mercado', subcategory: 'Mercado General' }
+
+  return { category: null as string | null, subcategory: null as string | null }
+}
+
+function buildTxIso(dateOnly: string | null, time24: string | null) {
+  try {
+    const d = dateOnly && /^\d{4}-\d{2}-\d{2}$/.test(dateOnly) ? dateOnly : new Date().toISOString().slice(0, 10)
+    const t = time24 && /^\d{2}:\d{2}$/.test(time24) ? time24 : '12:00'
+    return new Date(`${d}T${t}:00.000Z`).toISOString()
+  } catch {
+    return new Date().toISOString()
+  }
+}
+
+function pickBestBudget(args: {
+  budgets: Array<{ id: number; category: string | null; subcategory: string | null; budget_type: string; target_user_id: string | null }>
+  assignedUserId: string
+  category: string | null
+  subcategory: string | null
+}) {
+  const cat = normText(args.category)
+  const sub = normText(args.subcategory)
+
+  const scored = args.budgets
+    .map((b) => {
+      const bCat = normText(b.category)
+      const bSub = normText(b.subcategory)
+      let score = 0
+      if (cat && bCat === cat) score += 50
+      if (sub && bSub === sub) score += 40
+      if (cat && bCat.includes(cat)) score += 8
+      if (sub && bSub.includes(sub)) score += 6
+      if (b.budget_type === 'individual' && b.target_user_id === args.assignedUserId) score += 10
+      if (b.budget_type === 'shared') score += 3
+      return { b, score }
+    })
+    .sort((a, b) => b.score - a.score)
+
+  return scored[0]?.b || null
 }

@@ -25,7 +25,27 @@ function readTokenFromRequest(req: NextRequest): string | null {
 export async function requireAuth(req: NextRequest): Promise<AuthContext> {
   const token = readTokenFromRequest(req)
   if (!token) throw new Error('No autenticado')
-  return verifyToken(token)
+  const { userId: realUserId, familyId } = await verifyToken(token)
+
+  const viewAsUserId = req.headers.get('x-view-as-user')?.trim() || null
+  if (!viewAsUserId || viewAsUserId === realUserId || !familyId) {
+    return { userId: realUserId, familyId }
+  }
+
+  await ensureSqlitePragmas()
+  const realMembership = await prisma.familyMember.findUnique({
+    where: { familyId_userId: { familyId, userId: realUserId } },
+    select: { isFamilyAdmin: true },
+  })
+  if (!realMembership?.isFamilyAdmin) return { userId: realUserId, familyId }
+
+  const targetMembership = await prisma.familyMember.findUnique({
+    where: { familyId_userId: { familyId, userId: viewAsUserId } },
+    select: { userId: true },
+  })
+  if (!targetMembership) return { userId: realUserId, familyId }
+
+  return { userId: viewAsUserId, familyId }
 }
 
 export async function requireMembership(req: NextRequest): Promise<MembershipContext> {
