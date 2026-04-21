@@ -4723,6 +4723,15 @@ function UiPageContent() {
                   <button className={`mobileNavItem ${view === 'configuracion' ? 'mobileNavItemActive' : ''}`} onClick={() => go('configuracion')}>
                     Ajustes de familia
                   </button>
+                  <button
+                    className="mobileNavItem"
+                    onClick={() => {
+                      setMobileNavOpen(false)
+                      router.push('/setup/hogar')
+                    }}
+                  >
+                    Configurar hogar (pasos)
+                  </button>
                   <button className={`mobileNavItem ${view === 'cosas' ? 'mobileNavItemActive' : ''}`} onClick={() => go('cosas')}>
                     Mis cosas
                   </button>
@@ -11158,16 +11167,30 @@ function UiPageContent() {
                     </div>
                   </div>
                   <div className="cardBody" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                    <div className="configActionRow">
+                    <div className="configActionRow" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 12 }}>
                       <button
                         type="button"
                         className="btn btnPrimary"
-                        onClick={() => router.push('/onboarding')}
-                        style={{ minHeight: 48, paddingLeft: 20, paddingRight: 20 }}
+                        onClick={() => router.push('/setup/hogar')}
+                        style={{ minHeight: 48, paddingLeft: 20, paddingRight: 20, fontWeight: 700 }}
                       >
-                        Abrir asistente de configuración
+                        Configurar el hogar — paso a paso (sin montos)
                       </button>
-                      <span className="muted" style={{ fontSize: 13 }}>Wizard: integrantes, mascotas, vehículos, casa, electrodomésticos (fotos/videos), fondos y categorías.</span>
+                      <span className="muted" style={{ fontSize: 13 }}>
+                        Un solo recorrido: integrantes → destinos bajo Familia (personas, supermercado, eventos…) → tus cosas → servicios.
+                        Luego asignas montos en Presupuesto.
+                      </span>
+                      <button
+                        type="button"
+                        className="btn btnGhost"
+                        onClick={() => router.push('/onboarding')}
+                        style={{ minHeight: 44, paddingLeft: 18, paddingRight: 18 }}
+                      >
+                        Asistente multimedia (fotos/videos, alta guiada larga)
+                      </button>
+                      <span className="muted" style={{ fontSize: 12 }}>
+                        Alternativa con más pasos y carga de medios.
+                      </span>
                     </div>
                     </div>
                 </section>
