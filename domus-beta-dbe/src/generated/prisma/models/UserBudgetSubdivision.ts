@@ -38,7 +38,7 @@ export type UserBudgetSubdivisionMinAggregateOutputType = {
   id: string | null
   userId: string | null
   familyId: string | null
-  allocationId: string | null
+  budgetAccountId: string | null
   name: string | null
   sortOrder: number | null
   createdAt: Date | null
@@ -48,7 +48,7 @@ export type UserBudgetSubdivisionMaxAggregateOutputType = {
   id: string | null
   userId: string | null
   familyId: string | null
-  allocationId: string | null
+  budgetAccountId: string | null
   name: string | null
   sortOrder: number | null
   createdAt: Date | null
@@ -58,7 +58,7 @@ export type UserBudgetSubdivisionCountAggregateOutputType = {
   id: number
   userId: number
   familyId: number
-  allocationId: number
+  budgetAccountId: number
   name: number
   sortOrder: number
   createdAt: number
@@ -78,7 +78,7 @@ export type UserBudgetSubdivisionMinAggregateInputType = {
   id?: true
   userId?: true
   familyId?: true
-  allocationId?: true
+  budgetAccountId?: true
   name?: true
   sortOrder?: true
   createdAt?: true
@@ -88,7 +88,7 @@ export type UserBudgetSubdivisionMaxAggregateInputType = {
   id?: true
   userId?: true
   familyId?: true
-  allocationId?: true
+  budgetAccountId?: true
   name?: true
   sortOrder?: true
   createdAt?: true
@@ -98,7 +98,7 @@ export type UserBudgetSubdivisionCountAggregateInputType = {
   id?: true
   userId?: true
   familyId?: true
-  allocationId?: true
+  budgetAccountId?: true
   name?: true
   sortOrder?: true
   createdAt?: true
@@ -195,7 +195,7 @@ export type UserBudgetSubdivisionGroupByOutputType = {
   id: string
   userId: string
   familyId: string
-  allocationId: string
+  budgetAccountId: string
   name: string
   sortOrder: number
   createdAt: Date
@@ -228,44 +228,47 @@ export type UserBudgetSubdivisionWhereInput = {
   id?: Prisma.StringFilter<"UserBudgetSubdivision"> | string
   userId?: Prisma.StringFilter<"UserBudgetSubdivision"> | string
   familyId?: Prisma.StringFilter<"UserBudgetSubdivision"> | string
-  allocationId?: Prisma.StringFilter<"UserBudgetSubdivision"> | string
+  budgetAccountId?: Prisma.StringFilter<"UserBudgetSubdivision"> | string
   name?: Prisma.StringFilter<"UserBudgetSubdivision"> | string
   sortOrder?: Prisma.IntFilter<"UserBudgetSubdivision"> | number
   createdAt?: Prisma.DateTimeFilter<"UserBudgetSubdivision"> | Date | string
   family?: Prisma.XOR<Prisma.FamilyScalarRelationFilter, Prisma.FamilyWhereInput>
+  budgetAccount?: Prisma.XOR<Prisma.BudgetAccountScalarRelationFilter, Prisma.BudgetAccountWhereInput>
 }
 
 export type UserBudgetSubdivisionOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   familyId?: Prisma.SortOrder
-  allocationId?: Prisma.SortOrder
+  budgetAccountId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   family?: Prisma.FamilyOrderByWithRelationInput
+  budgetAccount?: Prisma.BudgetAccountOrderByWithRelationInput
 }
 
 export type UserBudgetSubdivisionWhereUniqueInput = Prisma.AtLeast<{
   id?: string
-  userId_familyId_allocationId_name?: Prisma.UserBudgetSubdivisionUserIdFamilyIdAllocationIdNameCompoundUniqueInput
+  userId_familyId_budgetAccountId_name?: Prisma.UserBudgetSubdivisionUserIdFamilyIdBudgetAccountIdNameCompoundUniqueInput
   AND?: Prisma.UserBudgetSubdivisionWhereInput | Prisma.UserBudgetSubdivisionWhereInput[]
   OR?: Prisma.UserBudgetSubdivisionWhereInput[]
   NOT?: Prisma.UserBudgetSubdivisionWhereInput | Prisma.UserBudgetSubdivisionWhereInput[]
   userId?: Prisma.StringFilter<"UserBudgetSubdivision"> | string
   familyId?: Prisma.StringFilter<"UserBudgetSubdivision"> | string
-  allocationId?: Prisma.StringFilter<"UserBudgetSubdivision"> | string
+  budgetAccountId?: Prisma.StringFilter<"UserBudgetSubdivision"> | string
   name?: Prisma.StringFilter<"UserBudgetSubdivision"> | string
   sortOrder?: Prisma.IntFilter<"UserBudgetSubdivision"> | number
   createdAt?: Prisma.DateTimeFilter<"UserBudgetSubdivision"> | Date | string
   family?: Prisma.XOR<Prisma.FamilyScalarRelationFilter, Prisma.FamilyWhereInput>
-}, "id" | "userId_familyId_allocationId_name">
+  budgetAccount?: Prisma.XOR<Prisma.BudgetAccountScalarRelationFilter, Prisma.BudgetAccountWhereInput>
+}, "id" | "userId_familyId_budgetAccountId_name">
 
 export type UserBudgetSubdivisionOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   familyId?: Prisma.SortOrder
-  allocationId?: Prisma.SortOrder
+  budgetAccountId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -283,7 +286,7 @@ export type UserBudgetSubdivisionScalarWhereWithAggregatesInput = {
   id?: Prisma.StringWithAggregatesFilter<"UserBudgetSubdivision"> | string
   userId?: Prisma.StringWithAggregatesFilter<"UserBudgetSubdivision"> | string
   familyId?: Prisma.StringWithAggregatesFilter<"UserBudgetSubdivision"> | string
-  allocationId?: Prisma.StringWithAggregatesFilter<"UserBudgetSubdivision"> | string
+  budgetAccountId?: Prisma.StringWithAggregatesFilter<"UserBudgetSubdivision"> | string
   name?: Prisma.StringWithAggregatesFilter<"UserBudgetSubdivision"> | string
   sortOrder?: Prisma.IntWithAggregatesFilter<"UserBudgetSubdivision"> | number
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"UserBudgetSubdivision"> | Date | string
@@ -292,18 +295,18 @@ export type UserBudgetSubdivisionScalarWhereWithAggregatesInput = {
 export type UserBudgetSubdivisionCreateInput = {
   id?: string
   userId: string
-  allocationId: string
   name: string
   sortOrder?: number
   createdAt?: Date | string
   family: Prisma.FamilyCreateNestedOneWithoutUserBudgetSubdivisionsInput
+  budgetAccount: Prisma.BudgetAccountCreateNestedOneWithoutSubdivisionsInput
 }
 
 export type UserBudgetSubdivisionUncheckedCreateInput = {
   id?: string
   userId: string
   familyId: string
-  allocationId: string
+  budgetAccountId: string
   name: string
   sortOrder?: number
   createdAt?: Date | string
@@ -312,18 +315,18 @@ export type UserBudgetSubdivisionUncheckedCreateInput = {
 export type UserBudgetSubdivisionUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
-  allocationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   family?: Prisma.FamilyUpdateOneRequiredWithoutUserBudgetSubdivisionsNestedInput
+  budgetAccount?: Prisma.BudgetAccountUpdateOneRequiredWithoutSubdivisionsNestedInput
 }
 
 export type UserBudgetSubdivisionUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   familyId?: Prisma.StringFieldUpdateOperationsInput | string
-  allocationId?: Prisma.StringFieldUpdateOperationsInput | string
+  budgetAccountId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -333,7 +336,7 @@ export type UserBudgetSubdivisionCreateManyInput = {
   id?: string
   userId: string
   familyId: string
-  allocationId: string
+  budgetAccountId: string
   name: string
   sortOrder?: number
   createdAt?: Date | string
@@ -342,7 +345,6 @@ export type UserBudgetSubdivisionCreateManyInput = {
 export type UserBudgetSubdivisionUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
-  allocationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -352,7 +354,7 @@ export type UserBudgetSubdivisionUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
   familyId?: Prisma.StringFieldUpdateOperationsInput | string
-  allocationId?: Prisma.StringFieldUpdateOperationsInput | string
+  budgetAccountId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -368,10 +370,10 @@ export type UserBudgetSubdivisionOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
-export type UserBudgetSubdivisionUserIdFamilyIdAllocationIdNameCompoundUniqueInput = {
+export type UserBudgetSubdivisionUserIdFamilyIdBudgetAccountIdNameCompoundUniqueInput = {
   userId: string
   familyId: string
-  allocationId: string
+  budgetAccountId: string
   name: string
 }
 
@@ -379,7 +381,7 @@ export type UserBudgetSubdivisionCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   familyId?: Prisma.SortOrder
-  allocationId?: Prisma.SortOrder
+  budgetAccountId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -393,7 +395,7 @@ export type UserBudgetSubdivisionMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   familyId?: Prisma.SortOrder
-  allocationId?: Prisma.SortOrder
+  budgetAccountId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -403,7 +405,7 @@ export type UserBudgetSubdivisionMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   userId?: Prisma.SortOrder
   familyId?: Prisma.SortOrder
-  allocationId?: Prisma.SortOrder
+  budgetAccountId?: Prisma.SortOrder
   name?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -455,19 +457,61 @@ export type UserBudgetSubdivisionUncheckedUpdateManyWithoutFamilyNestedInput = {
   deleteMany?: Prisma.UserBudgetSubdivisionScalarWhereInput | Prisma.UserBudgetSubdivisionScalarWhereInput[]
 }
 
+export type UserBudgetSubdivisionCreateNestedManyWithoutBudgetAccountInput = {
+  create?: Prisma.XOR<Prisma.UserBudgetSubdivisionCreateWithoutBudgetAccountInput, Prisma.UserBudgetSubdivisionUncheckedCreateWithoutBudgetAccountInput> | Prisma.UserBudgetSubdivisionCreateWithoutBudgetAccountInput[] | Prisma.UserBudgetSubdivisionUncheckedCreateWithoutBudgetAccountInput[]
+  connectOrCreate?: Prisma.UserBudgetSubdivisionCreateOrConnectWithoutBudgetAccountInput | Prisma.UserBudgetSubdivisionCreateOrConnectWithoutBudgetAccountInput[]
+  createMany?: Prisma.UserBudgetSubdivisionCreateManyBudgetAccountInputEnvelope
+  connect?: Prisma.UserBudgetSubdivisionWhereUniqueInput | Prisma.UserBudgetSubdivisionWhereUniqueInput[]
+}
+
+export type UserBudgetSubdivisionUncheckedCreateNestedManyWithoutBudgetAccountInput = {
+  create?: Prisma.XOR<Prisma.UserBudgetSubdivisionCreateWithoutBudgetAccountInput, Prisma.UserBudgetSubdivisionUncheckedCreateWithoutBudgetAccountInput> | Prisma.UserBudgetSubdivisionCreateWithoutBudgetAccountInput[] | Prisma.UserBudgetSubdivisionUncheckedCreateWithoutBudgetAccountInput[]
+  connectOrCreate?: Prisma.UserBudgetSubdivisionCreateOrConnectWithoutBudgetAccountInput | Prisma.UserBudgetSubdivisionCreateOrConnectWithoutBudgetAccountInput[]
+  createMany?: Prisma.UserBudgetSubdivisionCreateManyBudgetAccountInputEnvelope
+  connect?: Prisma.UserBudgetSubdivisionWhereUniqueInput | Prisma.UserBudgetSubdivisionWhereUniqueInput[]
+}
+
+export type UserBudgetSubdivisionUpdateManyWithoutBudgetAccountNestedInput = {
+  create?: Prisma.XOR<Prisma.UserBudgetSubdivisionCreateWithoutBudgetAccountInput, Prisma.UserBudgetSubdivisionUncheckedCreateWithoutBudgetAccountInput> | Prisma.UserBudgetSubdivisionCreateWithoutBudgetAccountInput[] | Prisma.UserBudgetSubdivisionUncheckedCreateWithoutBudgetAccountInput[]
+  connectOrCreate?: Prisma.UserBudgetSubdivisionCreateOrConnectWithoutBudgetAccountInput | Prisma.UserBudgetSubdivisionCreateOrConnectWithoutBudgetAccountInput[]
+  upsert?: Prisma.UserBudgetSubdivisionUpsertWithWhereUniqueWithoutBudgetAccountInput | Prisma.UserBudgetSubdivisionUpsertWithWhereUniqueWithoutBudgetAccountInput[]
+  createMany?: Prisma.UserBudgetSubdivisionCreateManyBudgetAccountInputEnvelope
+  set?: Prisma.UserBudgetSubdivisionWhereUniqueInput | Prisma.UserBudgetSubdivisionWhereUniqueInput[]
+  disconnect?: Prisma.UserBudgetSubdivisionWhereUniqueInput | Prisma.UserBudgetSubdivisionWhereUniqueInput[]
+  delete?: Prisma.UserBudgetSubdivisionWhereUniqueInput | Prisma.UserBudgetSubdivisionWhereUniqueInput[]
+  connect?: Prisma.UserBudgetSubdivisionWhereUniqueInput | Prisma.UserBudgetSubdivisionWhereUniqueInput[]
+  update?: Prisma.UserBudgetSubdivisionUpdateWithWhereUniqueWithoutBudgetAccountInput | Prisma.UserBudgetSubdivisionUpdateWithWhereUniqueWithoutBudgetAccountInput[]
+  updateMany?: Prisma.UserBudgetSubdivisionUpdateManyWithWhereWithoutBudgetAccountInput | Prisma.UserBudgetSubdivisionUpdateManyWithWhereWithoutBudgetAccountInput[]
+  deleteMany?: Prisma.UserBudgetSubdivisionScalarWhereInput | Prisma.UserBudgetSubdivisionScalarWhereInput[]
+}
+
+export type UserBudgetSubdivisionUncheckedUpdateManyWithoutBudgetAccountNestedInput = {
+  create?: Prisma.XOR<Prisma.UserBudgetSubdivisionCreateWithoutBudgetAccountInput, Prisma.UserBudgetSubdivisionUncheckedCreateWithoutBudgetAccountInput> | Prisma.UserBudgetSubdivisionCreateWithoutBudgetAccountInput[] | Prisma.UserBudgetSubdivisionUncheckedCreateWithoutBudgetAccountInput[]
+  connectOrCreate?: Prisma.UserBudgetSubdivisionCreateOrConnectWithoutBudgetAccountInput | Prisma.UserBudgetSubdivisionCreateOrConnectWithoutBudgetAccountInput[]
+  upsert?: Prisma.UserBudgetSubdivisionUpsertWithWhereUniqueWithoutBudgetAccountInput | Prisma.UserBudgetSubdivisionUpsertWithWhereUniqueWithoutBudgetAccountInput[]
+  createMany?: Prisma.UserBudgetSubdivisionCreateManyBudgetAccountInputEnvelope
+  set?: Prisma.UserBudgetSubdivisionWhereUniqueInput | Prisma.UserBudgetSubdivisionWhereUniqueInput[]
+  disconnect?: Prisma.UserBudgetSubdivisionWhereUniqueInput | Prisma.UserBudgetSubdivisionWhereUniqueInput[]
+  delete?: Prisma.UserBudgetSubdivisionWhereUniqueInput | Prisma.UserBudgetSubdivisionWhereUniqueInput[]
+  connect?: Prisma.UserBudgetSubdivisionWhereUniqueInput | Prisma.UserBudgetSubdivisionWhereUniqueInput[]
+  update?: Prisma.UserBudgetSubdivisionUpdateWithWhereUniqueWithoutBudgetAccountInput | Prisma.UserBudgetSubdivisionUpdateWithWhereUniqueWithoutBudgetAccountInput[]
+  updateMany?: Prisma.UserBudgetSubdivisionUpdateManyWithWhereWithoutBudgetAccountInput | Prisma.UserBudgetSubdivisionUpdateManyWithWhereWithoutBudgetAccountInput[]
+  deleteMany?: Prisma.UserBudgetSubdivisionScalarWhereInput | Prisma.UserBudgetSubdivisionScalarWhereInput[]
+}
+
 export type UserBudgetSubdivisionCreateWithoutFamilyInput = {
   id?: string
   userId: string
-  allocationId: string
   name: string
   sortOrder?: number
   createdAt?: Date | string
+  budgetAccount: Prisma.BudgetAccountCreateNestedOneWithoutSubdivisionsInput
 }
 
 export type UserBudgetSubdivisionUncheckedCreateWithoutFamilyInput = {
   id?: string
   userId: string
-  allocationId: string
+  budgetAccountId: string
   name: string
   sortOrder?: number
   createdAt?: Date | string
@@ -505,16 +549,59 @@ export type UserBudgetSubdivisionScalarWhereInput = {
   id?: Prisma.StringFilter<"UserBudgetSubdivision"> | string
   userId?: Prisma.StringFilter<"UserBudgetSubdivision"> | string
   familyId?: Prisma.StringFilter<"UserBudgetSubdivision"> | string
-  allocationId?: Prisma.StringFilter<"UserBudgetSubdivision"> | string
+  budgetAccountId?: Prisma.StringFilter<"UserBudgetSubdivision"> | string
   name?: Prisma.StringFilter<"UserBudgetSubdivision"> | string
   sortOrder?: Prisma.IntFilter<"UserBudgetSubdivision"> | number
   createdAt?: Prisma.DateTimeFilter<"UserBudgetSubdivision"> | Date | string
 }
 
+export type UserBudgetSubdivisionCreateWithoutBudgetAccountInput = {
+  id?: string
+  userId: string
+  name: string
+  sortOrder?: number
+  createdAt?: Date | string
+  family: Prisma.FamilyCreateNestedOneWithoutUserBudgetSubdivisionsInput
+}
+
+export type UserBudgetSubdivisionUncheckedCreateWithoutBudgetAccountInput = {
+  id?: string
+  userId: string
+  familyId: string
+  name: string
+  sortOrder?: number
+  createdAt?: Date | string
+}
+
+export type UserBudgetSubdivisionCreateOrConnectWithoutBudgetAccountInput = {
+  where: Prisma.UserBudgetSubdivisionWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserBudgetSubdivisionCreateWithoutBudgetAccountInput, Prisma.UserBudgetSubdivisionUncheckedCreateWithoutBudgetAccountInput>
+}
+
+export type UserBudgetSubdivisionCreateManyBudgetAccountInputEnvelope = {
+  data: Prisma.UserBudgetSubdivisionCreateManyBudgetAccountInput | Prisma.UserBudgetSubdivisionCreateManyBudgetAccountInput[]
+}
+
+export type UserBudgetSubdivisionUpsertWithWhereUniqueWithoutBudgetAccountInput = {
+  where: Prisma.UserBudgetSubdivisionWhereUniqueInput
+  update: Prisma.XOR<Prisma.UserBudgetSubdivisionUpdateWithoutBudgetAccountInput, Prisma.UserBudgetSubdivisionUncheckedUpdateWithoutBudgetAccountInput>
+  create: Prisma.XOR<Prisma.UserBudgetSubdivisionCreateWithoutBudgetAccountInput, Prisma.UserBudgetSubdivisionUncheckedCreateWithoutBudgetAccountInput>
+}
+
+export type UserBudgetSubdivisionUpdateWithWhereUniqueWithoutBudgetAccountInput = {
+  where: Prisma.UserBudgetSubdivisionWhereUniqueInput
+  data: Prisma.XOR<Prisma.UserBudgetSubdivisionUpdateWithoutBudgetAccountInput, Prisma.UserBudgetSubdivisionUncheckedUpdateWithoutBudgetAccountInput>
+}
+
+export type UserBudgetSubdivisionUpdateManyWithWhereWithoutBudgetAccountInput = {
+  where: Prisma.UserBudgetSubdivisionScalarWhereInput
+  data: Prisma.XOR<Prisma.UserBudgetSubdivisionUpdateManyMutationInput, Prisma.UserBudgetSubdivisionUncheckedUpdateManyWithoutBudgetAccountInput>
+}
+
 export type UserBudgetSubdivisionCreateManyFamilyInput = {
   id?: string
   userId: string
-  allocationId: string
+  budgetAccountId: string
   name: string
   sortOrder?: number
   createdAt?: Date | string
@@ -523,16 +610,16 @@ export type UserBudgetSubdivisionCreateManyFamilyInput = {
 export type UserBudgetSubdivisionUpdateWithoutFamilyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
-  allocationId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  budgetAccount?: Prisma.BudgetAccountUpdateOneRequiredWithoutSubdivisionsNestedInput
 }
 
 export type UserBudgetSubdivisionUncheckedUpdateWithoutFamilyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
-  allocationId?: Prisma.StringFieldUpdateOperationsInput | string
+  budgetAccountId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -541,7 +628,43 @@ export type UserBudgetSubdivisionUncheckedUpdateWithoutFamilyInput = {
 export type UserBudgetSubdivisionUncheckedUpdateManyWithoutFamilyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   userId?: Prisma.StringFieldUpdateOperationsInput | string
-  allocationId?: Prisma.StringFieldUpdateOperationsInput | string
+  budgetAccountId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type UserBudgetSubdivisionCreateManyBudgetAccountInput = {
+  id?: string
+  userId: string
+  familyId: string
+  name: string
+  sortOrder?: number
+  createdAt?: Date | string
+}
+
+export type UserBudgetSubdivisionUpdateWithoutBudgetAccountInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  family?: Prisma.FamilyUpdateOneRequiredWithoutUserBudgetSubdivisionsNestedInput
+}
+
+export type UserBudgetSubdivisionUncheckedUpdateWithoutBudgetAccountInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  familyId?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type UserBudgetSubdivisionUncheckedUpdateManyWithoutBudgetAccountInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.StringFieldUpdateOperationsInput | string
+  familyId?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -553,66 +676,73 @@ export type UserBudgetSubdivisionSelect<ExtArgs extends runtime.Types.Extensions
   id?: boolean
   userId?: boolean
   familyId?: boolean
-  allocationId?: boolean
+  budgetAccountId?: boolean
   name?: boolean
   sortOrder?: boolean
   createdAt?: boolean
   family?: boolean | Prisma.FamilyDefaultArgs<ExtArgs>
+  budgetAccount?: boolean | Prisma.BudgetAccountDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["userBudgetSubdivision"]>
 
 export type UserBudgetSubdivisionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   userId?: boolean
   familyId?: boolean
-  allocationId?: boolean
+  budgetAccountId?: boolean
   name?: boolean
   sortOrder?: boolean
   createdAt?: boolean
   family?: boolean | Prisma.FamilyDefaultArgs<ExtArgs>
+  budgetAccount?: boolean | Prisma.BudgetAccountDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["userBudgetSubdivision"]>
 
 export type UserBudgetSubdivisionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   userId?: boolean
   familyId?: boolean
-  allocationId?: boolean
+  budgetAccountId?: boolean
   name?: boolean
   sortOrder?: boolean
   createdAt?: boolean
   family?: boolean | Prisma.FamilyDefaultArgs<ExtArgs>
+  budgetAccount?: boolean | Prisma.BudgetAccountDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["userBudgetSubdivision"]>
 
 export type UserBudgetSubdivisionSelectScalar = {
   id?: boolean
   userId?: boolean
   familyId?: boolean
-  allocationId?: boolean
+  budgetAccountId?: boolean
   name?: boolean
   sortOrder?: boolean
   createdAt?: boolean
 }
 
-export type UserBudgetSubdivisionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "familyId" | "allocationId" | "name" | "sortOrder" | "createdAt", ExtArgs["result"]["userBudgetSubdivision"]>
+export type UserBudgetSubdivisionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "userId" | "familyId" | "budgetAccountId" | "name" | "sortOrder" | "createdAt", ExtArgs["result"]["userBudgetSubdivision"]>
 export type UserBudgetSubdivisionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   family?: boolean | Prisma.FamilyDefaultArgs<ExtArgs>
+  budgetAccount?: boolean | Prisma.BudgetAccountDefaultArgs<ExtArgs>
 }
 export type UserBudgetSubdivisionIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   family?: boolean | Prisma.FamilyDefaultArgs<ExtArgs>
+  budgetAccount?: boolean | Prisma.BudgetAccountDefaultArgs<ExtArgs>
 }
 export type UserBudgetSubdivisionIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   family?: boolean | Prisma.FamilyDefaultArgs<ExtArgs>
+  budgetAccount?: boolean | Prisma.BudgetAccountDefaultArgs<ExtArgs>
 }
 
 export type $UserBudgetSubdivisionPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "UserBudgetSubdivision"
   objects: {
     family: Prisma.$FamilyPayload<ExtArgs>
+    budgetAccount: Prisma.$BudgetAccountPayload<ExtArgs>
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     userId: string
     familyId: string
-    allocationId: string
+    budgetAccountId: string
     name: string
     sortOrder: number
     createdAt: Date
@@ -1011,6 +1141,7 @@ readonly fields: UserBudgetSubdivisionFieldRefs;
 export interface Prisma__UserBudgetSubdivisionClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   family<T extends Prisma.FamilyDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.FamilyDefaultArgs<ExtArgs>>): Prisma.Prisma__FamilyClient<runtime.Types.Result.GetResult<Prisma.$FamilyPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  budgetAccount<T extends Prisma.BudgetAccountDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.BudgetAccountDefaultArgs<ExtArgs>>): Prisma.Prisma__BudgetAccountClient<runtime.Types.Result.GetResult<Prisma.$BudgetAccountPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1043,7 +1174,7 @@ export interface UserBudgetSubdivisionFieldRefs {
   readonly id: Prisma.FieldRef<"UserBudgetSubdivision", 'String'>
   readonly userId: Prisma.FieldRef<"UserBudgetSubdivision", 'String'>
   readonly familyId: Prisma.FieldRef<"UserBudgetSubdivision", 'String'>
-  readonly allocationId: Prisma.FieldRef<"UserBudgetSubdivision", 'String'>
+  readonly budgetAccountId: Prisma.FieldRef<"UserBudgetSubdivision", 'String'>
   readonly name: Prisma.FieldRef<"UserBudgetSubdivision", 'String'>
   readonly sortOrder: Prisma.FieldRef<"UserBudgetSubdivision", 'Int'>
   readonly createdAt: Prisma.FieldRef<"UserBudgetSubdivision", 'DateTime'>

@@ -66,6 +66,7 @@ export type FamilyCountAggregateOutputType = {
   budgetStartDate: number
   setupComplete: number
   planStatus: number
+  inventoryJson: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -112,6 +113,7 @@ export type FamilyCountAggregateInputType = {
   budgetStartDate?: true
   setupComplete?: true
   planStatus?: true
+  inventoryJson?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -211,6 +213,7 @@ export type FamilyGroupByOutputType = {
   budgetStartDate: Date
   setupComplete: boolean
   planStatus: string
+  inventoryJson: runtime.JsonValue | null
   createdAt: Date
   updatedAt: Date
   _count: FamilyCountAggregateOutputType | null
@@ -246,13 +249,16 @@ export type FamilyWhereInput = {
   budgetStartDate?: Prisma.DateTimeFilter<"Family"> | Date | string
   setupComplete?: Prisma.BoolFilter<"Family"> | boolean
   planStatus?: Prisma.StringFilter<"Family"> | string
+  inventoryJson?: Prisma.JsonNullableFilter<"Family">
   createdAt?: Prisma.DateTimeFilter<"Family"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Family"> | Date | string
   members?: Prisma.FamilyMemberListRelationFilter
-  budgetEntities?: Prisma.BudgetEntityListRelationFilter
-  entityOwners?: Prisma.BudgetEntityOwnerListRelationFilter
+  entities?: Prisma.EntityListRelationFilter
+  entityServices?: Prisma.EntityServiceListRelationFilter
+  customEntityTypes?: Prisma.FamilyEntityTypeListRelationFilter
+  entityOwners?: Prisma.EntityOwnerListRelationFilter
   budgetCategories?: Prisma.BudgetCategoryListRelationFilter
-  allocations?: Prisma.EntityBudgetAllocationListRelationFilter
+  budgetAccounts?: Prisma.BudgetAccountListRelationFilter
   transactions?: Prisma.TransactionListRelationFilter
   receipts?: Prisma.ReceiptListRelationFilter
   receiptExtractions?: Prisma.ReceiptExtractionListRelationFilter
@@ -261,8 +267,10 @@ export type FamilyWhereInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceListRelationFilter
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionListRelationFilter
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionListRelationFilter
+  userEntityPermissions?: Prisma.UserEntityPermissionListRelationFilter
   calendarEvents?: Prisma.FamilyCalendarEventListRelationFilter
   invites?: Prisma.FamilyInviteListRelationFilter
+  assets?: Prisma.FamilyAssetListRelationFilter
 }
 
 export type FamilyOrderByWithRelationInput = {
@@ -273,13 +281,16 @@ export type FamilyOrderByWithRelationInput = {
   budgetStartDate?: Prisma.SortOrder
   setupComplete?: Prisma.SortOrder
   planStatus?: Prisma.SortOrder
+  inventoryJson?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   members?: Prisma.FamilyMemberOrderByRelationAggregateInput
-  budgetEntities?: Prisma.BudgetEntityOrderByRelationAggregateInput
-  entityOwners?: Prisma.BudgetEntityOwnerOrderByRelationAggregateInput
+  entities?: Prisma.EntityOrderByRelationAggregateInput
+  entityServices?: Prisma.EntityServiceOrderByRelationAggregateInput
+  customEntityTypes?: Prisma.FamilyEntityTypeOrderByRelationAggregateInput
+  entityOwners?: Prisma.EntityOwnerOrderByRelationAggregateInput
   budgetCategories?: Prisma.BudgetCategoryOrderByRelationAggregateInput
-  allocations?: Prisma.EntityBudgetAllocationOrderByRelationAggregateInput
+  budgetAccounts?: Prisma.BudgetAccountOrderByRelationAggregateInput
   transactions?: Prisma.TransactionOrderByRelationAggregateInput
   receipts?: Prisma.ReceiptOrderByRelationAggregateInput
   receiptExtractions?: Prisma.ReceiptExtractionOrderByRelationAggregateInput
@@ -288,8 +299,10 @@ export type FamilyOrderByWithRelationInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceOrderByRelationAggregateInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionOrderByRelationAggregateInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionOrderByRelationAggregateInput
+  userEntityPermissions?: Prisma.UserEntityPermissionOrderByRelationAggregateInput
   calendarEvents?: Prisma.FamilyCalendarEventOrderByRelationAggregateInput
   invites?: Prisma.FamilyInviteOrderByRelationAggregateInput
+  assets?: Prisma.FamilyAssetOrderByRelationAggregateInput
 }
 
 export type FamilyWhereUniqueInput = Prisma.AtLeast<{
@@ -303,13 +316,16 @@ export type FamilyWhereUniqueInput = Prisma.AtLeast<{
   budgetStartDate?: Prisma.DateTimeFilter<"Family"> | Date | string
   setupComplete?: Prisma.BoolFilter<"Family"> | boolean
   planStatus?: Prisma.StringFilter<"Family"> | string
+  inventoryJson?: Prisma.JsonNullableFilter<"Family">
   createdAt?: Prisma.DateTimeFilter<"Family"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Family"> | Date | string
   members?: Prisma.FamilyMemberListRelationFilter
-  budgetEntities?: Prisma.BudgetEntityListRelationFilter
-  entityOwners?: Prisma.BudgetEntityOwnerListRelationFilter
+  entities?: Prisma.EntityListRelationFilter
+  entityServices?: Prisma.EntityServiceListRelationFilter
+  customEntityTypes?: Prisma.FamilyEntityTypeListRelationFilter
+  entityOwners?: Prisma.EntityOwnerListRelationFilter
   budgetCategories?: Prisma.BudgetCategoryListRelationFilter
-  allocations?: Prisma.EntityBudgetAllocationListRelationFilter
+  budgetAccounts?: Prisma.BudgetAccountListRelationFilter
   transactions?: Prisma.TransactionListRelationFilter
   receipts?: Prisma.ReceiptListRelationFilter
   receiptExtractions?: Prisma.ReceiptExtractionListRelationFilter
@@ -318,8 +334,10 @@ export type FamilyWhereUniqueInput = Prisma.AtLeast<{
   categoryPreferences?: Prisma.FamilyCategoryPreferenceListRelationFilter
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionListRelationFilter
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionListRelationFilter
+  userEntityPermissions?: Prisma.UserEntityPermissionListRelationFilter
   calendarEvents?: Prisma.FamilyCalendarEventListRelationFilter
   invites?: Prisma.FamilyInviteListRelationFilter
+  assets?: Prisma.FamilyAssetListRelationFilter
 }, "id">
 
 export type FamilyOrderByWithAggregationInput = {
@@ -330,6 +348,7 @@ export type FamilyOrderByWithAggregationInput = {
   budgetStartDate?: Prisma.SortOrder
   setupComplete?: Prisma.SortOrder
   planStatus?: Prisma.SortOrder
+  inventoryJson?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.FamilyCountOrderByAggregateInput
@@ -350,6 +369,7 @@ export type FamilyScalarWhereWithAggregatesInput = {
   budgetStartDate?: Prisma.DateTimeWithAggregatesFilter<"Family"> | Date | string
   setupComplete?: Prisma.BoolWithAggregatesFilter<"Family"> | boolean
   planStatus?: Prisma.StringWithAggregatesFilter<"Family"> | string
+  inventoryJson?: Prisma.JsonNullableWithAggregatesFilter<"Family">
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Family"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Family"> | Date | string
 }
@@ -362,13 +382,16 @@ export type FamilyCreateInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.FamilyMemberCreateNestedManyWithoutFamilyInput
-  budgetEntities?: Prisma.BudgetEntityCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerCreateNestedManyWithoutFamilyInput
   budgetCategories?: Prisma.BudgetCategoryCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountCreateNestedManyWithoutFamilyInput
   transactions?: Prisma.TransactionCreateNestedManyWithoutFamilyInput
   receipts?: Prisma.ReceiptCreateNestedManyWithoutFamilyInput
   receiptExtractions?: Prisma.ReceiptExtractionCreateNestedManyWithoutFamilyInput
@@ -377,8 +400,10 @@ export type FamilyCreateInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceCreateNestedManyWithoutFamilyInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionCreateNestedManyWithoutFamilyInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionCreateNestedManyWithoutFamilyInput
   calendarEvents?: Prisma.FamilyCalendarEventCreateNestedManyWithoutFamilyInput
   invites?: Prisma.FamilyInviteCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetCreateNestedManyWithoutFamilyInput
 }
 
 export type FamilyUncheckedCreateInput = {
@@ -389,13 +414,16 @@ export type FamilyUncheckedCreateInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutFamilyInput
-  budgetEntities?: Prisma.BudgetEntityUncheckedCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityUncheckedCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceUncheckedCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
   budgetCategories?: Prisma.BudgetCategoryUncheckedCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedCreateNestedManyWithoutFamilyInput
   transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutFamilyInput
   receipts?: Prisma.ReceiptUncheckedCreateNestedManyWithoutFamilyInput
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutFamilyInput
@@ -404,8 +432,10 @@ export type FamilyUncheckedCreateInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedCreateNestedManyWithoutFamilyInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedCreateNestedManyWithoutFamilyInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedCreateNestedManyWithoutFamilyInput
   calendarEvents?: Prisma.FamilyCalendarEventUncheckedCreateNestedManyWithoutFamilyInput
   invites?: Prisma.FamilyInviteUncheckedCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetUncheckedCreateNestedManyWithoutFamilyInput
 }
 
 export type FamilyUpdateInput = {
@@ -416,13 +446,16 @@ export type FamilyUpdateInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.FamilyMemberUpdateManyWithoutFamilyNestedInput
-  budgetEntities?: Prisma.BudgetEntityUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUpdateManyWithoutFamilyNestedInput
   budgetCategories?: Prisma.BudgetCategoryUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUpdateManyWithoutFamilyNestedInput
   transactions?: Prisma.TransactionUpdateManyWithoutFamilyNestedInput
   receipts?: Prisma.ReceiptUpdateManyWithoutFamilyNestedInput
   receiptExtractions?: Prisma.ReceiptExtractionUpdateManyWithoutFamilyNestedInput
@@ -431,8 +464,10 @@ export type FamilyUpdateInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUpdateManyWithoutFamilyNestedInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUpdateManyWithoutFamilyNestedInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUpdateManyWithoutFamilyNestedInput
   calendarEvents?: Prisma.FamilyCalendarEventUpdateManyWithoutFamilyNestedInput
   invites?: Prisma.FamilyInviteUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUpdateManyWithoutFamilyNestedInput
 }
 
 export type FamilyUncheckedUpdateInput = {
@@ -443,13 +478,16 @@ export type FamilyUncheckedUpdateInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.FamilyMemberUncheckedUpdateManyWithoutFamilyNestedInput
-  budgetEntities?: Prisma.BudgetEntityUncheckedUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUncheckedUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUncheckedUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
   budgetCategories?: Prisma.BudgetCategoryUncheckedUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedUpdateManyWithoutFamilyNestedInput
   transactions?: Prisma.TransactionUncheckedUpdateManyWithoutFamilyNestedInput
   receipts?: Prisma.ReceiptUncheckedUpdateManyWithoutFamilyNestedInput
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutFamilyNestedInput
@@ -458,8 +496,10 @@ export type FamilyUncheckedUpdateInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedUpdateManyWithoutFamilyNestedInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedUpdateManyWithoutFamilyNestedInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedUpdateManyWithoutFamilyNestedInput
   calendarEvents?: Prisma.FamilyCalendarEventUncheckedUpdateManyWithoutFamilyNestedInput
   invites?: Prisma.FamilyInviteUncheckedUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUncheckedUpdateManyWithoutFamilyNestedInput
 }
 
 export type FamilyCreateManyInput = {
@@ -470,6 +510,7 @@ export type FamilyCreateManyInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -482,6 +523,7 @@ export type FamilyUpdateManyMutationInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -494,6 +536,7 @@ export type FamilyUncheckedUpdateManyInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -506,6 +549,7 @@ export type FamilyCountOrderByAggregateInput = {
   budgetStartDate?: Prisma.SortOrder
   setupComplete?: Prisma.SortOrder
   planStatus?: Prisma.SortOrder
+  inventoryJson?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -559,6 +603,20 @@ export type BoolFieldUpdateOperationsInput = {
   set?: boolean
 }
 
+export type FamilyCreateNestedOneWithoutAssetsInput = {
+  create?: Prisma.XOR<Prisma.FamilyCreateWithoutAssetsInput, Prisma.FamilyUncheckedCreateWithoutAssetsInput>
+  connectOrCreate?: Prisma.FamilyCreateOrConnectWithoutAssetsInput
+  connect?: Prisma.FamilyWhereUniqueInput
+}
+
+export type FamilyUpdateOneRequiredWithoutAssetsNestedInput = {
+  create?: Prisma.XOR<Prisma.FamilyCreateWithoutAssetsInput, Prisma.FamilyUncheckedCreateWithoutAssetsInput>
+  connectOrCreate?: Prisma.FamilyCreateOrConnectWithoutAssetsInput
+  upsert?: Prisma.FamilyUpsertWithoutAssetsInput
+  connect?: Prisma.FamilyWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.FamilyUpdateToOneWithWhereWithoutAssetsInput, Prisma.FamilyUpdateWithoutAssetsInput>, Prisma.FamilyUncheckedUpdateWithoutAssetsInput>
+}
+
 export type FamilyCreateNestedOneWithoutMembersInput = {
   create?: Prisma.XOR<Prisma.FamilyCreateWithoutMembersInput, Prisma.FamilyUncheckedCreateWithoutMembersInput>
   connectOrCreate?: Prisma.FamilyCreateOrConnectWithoutMembersInput
@@ -587,18 +645,32 @@ export type FamilyUpdateOneRequiredWithoutInvitesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.FamilyUpdateToOneWithWhereWithoutInvitesInput, Prisma.FamilyUpdateWithoutInvitesInput>, Prisma.FamilyUncheckedUpdateWithoutInvitesInput>
 }
 
-export type FamilyCreateNestedOneWithoutBudgetEntitiesInput = {
-  create?: Prisma.XOR<Prisma.FamilyCreateWithoutBudgetEntitiesInput, Prisma.FamilyUncheckedCreateWithoutBudgetEntitiesInput>
-  connectOrCreate?: Prisma.FamilyCreateOrConnectWithoutBudgetEntitiesInput
+export type FamilyCreateNestedOneWithoutCustomEntityTypesInput = {
+  create?: Prisma.XOR<Prisma.FamilyCreateWithoutCustomEntityTypesInput, Prisma.FamilyUncheckedCreateWithoutCustomEntityTypesInput>
+  connectOrCreate?: Prisma.FamilyCreateOrConnectWithoutCustomEntityTypesInput
   connect?: Prisma.FamilyWhereUniqueInput
 }
 
-export type FamilyUpdateOneRequiredWithoutBudgetEntitiesNestedInput = {
-  create?: Prisma.XOR<Prisma.FamilyCreateWithoutBudgetEntitiesInput, Prisma.FamilyUncheckedCreateWithoutBudgetEntitiesInput>
-  connectOrCreate?: Prisma.FamilyCreateOrConnectWithoutBudgetEntitiesInput
-  upsert?: Prisma.FamilyUpsertWithoutBudgetEntitiesInput
+export type FamilyUpdateOneRequiredWithoutCustomEntityTypesNestedInput = {
+  create?: Prisma.XOR<Prisma.FamilyCreateWithoutCustomEntityTypesInput, Prisma.FamilyUncheckedCreateWithoutCustomEntityTypesInput>
+  connectOrCreate?: Prisma.FamilyCreateOrConnectWithoutCustomEntityTypesInput
+  upsert?: Prisma.FamilyUpsertWithoutCustomEntityTypesInput
   connect?: Prisma.FamilyWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.FamilyUpdateToOneWithWhereWithoutBudgetEntitiesInput, Prisma.FamilyUpdateWithoutBudgetEntitiesInput>, Prisma.FamilyUncheckedUpdateWithoutBudgetEntitiesInput>
+  update?: Prisma.XOR<Prisma.XOR<Prisma.FamilyUpdateToOneWithWhereWithoutCustomEntityTypesInput, Prisma.FamilyUpdateWithoutCustomEntityTypesInput>, Prisma.FamilyUncheckedUpdateWithoutCustomEntityTypesInput>
+}
+
+export type FamilyCreateNestedOneWithoutEntitiesInput = {
+  create?: Prisma.XOR<Prisma.FamilyCreateWithoutEntitiesInput, Prisma.FamilyUncheckedCreateWithoutEntitiesInput>
+  connectOrCreate?: Prisma.FamilyCreateOrConnectWithoutEntitiesInput
+  connect?: Prisma.FamilyWhereUniqueInput
+}
+
+export type FamilyUpdateOneRequiredWithoutEntitiesNestedInput = {
+  create?: Prisma.XOR<Prisma.FamilyCreateWithoutEntitiesInput, Prisma.FamilyUncheckedCreateWithoutEntitiesInput>
+  connectOrCreate?: Prisma.FamilyCreateOrConnectWithoutEntitiesInput
+  upsert?: Prisma.FamilyUpsertWithoutEntitiesInput
+  connect?: Prisma.FamilyWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.FamilyUpdateToOneWithWhereWithoutEntitiesInput, Prisma.FamilyUpdateWithoutEntitiesInput>, Prisma.FamilyUncheckedUpdateWithoutEntitiesInput>
 }
 
 export type FamilyCreateNestedOneWithoutEntityOwnersInput = {
@@ -613,6 +685,48 @@ export type FamilyUpdateOneRequiredWithoutEntityOwnersNestedInput = {
   upsert?: Prisma.FamilyUpsertWithoutEntityOwnersInput
   connect?: Prisma.FamilyWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.FamilyUpdateToOneWithWhereWithoutEntityOwnersInput, Prisma.FamilyUpdateWithoutEntityOwnersInput>, Prisma.FamilyUncheckedUpdateWithoutEntityOwnersInput>
+}
+
+export type FamilyCreateNestedOneWithoutEntityServicesInput = {
+  create?: Prisma.XOR<Prisma.FamilyCreateWithoutEntityServicesInput, Prisma.FamilyUncheckedCreateWithoutEntityServicesInput>
+  connectOrCreate?: Prisma.FamilyCreateOrConnectWithoutEntityServicesInput
+  connect?: Prisma.FamilyWhereUniqueInput
+}
+
+export type FamilyUpdateOneRequiredWithoutEntityServicesNestedInput = {
+  create?: Prisma.XOR<Prisma.FamilyCreateWithoutEntityServicesInput, Prisma.FamilyUncheckedCreateWithoutEntityServicesInput>
+  connectOrCreate?: Prisma.FamilyCreateOrConnectWithoutEntityServicesInput
+  upsert?: Prisma.FamilyUpsertWithoutEntityServicesInput
+  connect?: Prisma.FamilyWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.FamilyUpdateToOneWithWhereWithoutEntityServicesInput, Prisma.FamilyUpdateWithoutEntityServicesInput>, Prisma.FamilyUncheckedUpdateWithoutEntityServicesInput>
+}
+
+export type FamilyCreateNestedOneWithoutBudgetAccountsInput = {
+  create?: Prisma.XOR<Prisma.FamilyCreateWithoutBudgetAccountsInput, Prisma.FamilyUncheckedCreateWithoutBudgetAccountsInput>
+  connectOrCreate?: Prisma.FamilyCreateOrConnectWithoutBudgetAccountsInput
+  connect?: Prisma.FamilyWhereUniqueInput
+}
+
+export type FamilyUpdateOneRequiredWithoutBudgetAccountsNestedInput = {
+  create?: Prisma.XOR<Prisma.FamilyCreateWithoutBudgetAccountsInput, Prisma.FamilyUncheckedCreateWithoutBudgetAccountsInput>
+  connectOrCreate?: Prisma.FamilyCreateOrConnectWithoutBudgetAccountsInput
+  upsert?: Prisma.FamilyUpsertWithoutBudgetAccountsInput
+  connect?: Prisma.FamilyWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.FamilyUpdateToOneWithWhereWithoutBudgetAccountsInput, Prisma.FamilyUpdateWithoutBudgetAccountsInput>, Prisma.FamilyUncheckedUpdateWithoutBudgetAccountsInput>
+}
+
+export type FamilyCreateNestedOneWithoutUserEntityPermissionsInput = {
+  create?: Prisma.XOR<Prisma.FamilyCreateWithoutUserEntityPermissionsInput, Prisma.FamilyUncheckedCreateWithoutUserEntityPermissionsInput>
+  connectOrCreate?: Prisma.FamilyCreateOrConnectWithoutUserEntityPermissionsInput
+  connect?: Prisma.FamilyWhereUniqueInput
+}
+
+export type FamilyUpdateOneRequiredWithoutUserEntityPermissionsNestedInput = {
+  create?: Prisma.XOR<Prisma.FamilyCreateWithoutUserEntityPermissionsInput, Prisma.FamilyUncheckedCreateWithoutUserEntityPermissionsInput>
+  connectOrCreate?: Prisma.FamilyCreateOrConnectWithoutUserEntityPermissionsInput
+  upsert?: Prisma.FamilyUpsertWithoutUserEntityPermissionsInput
+  connect?: Prisma.FamilyWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.FamilyUpdateToOneWithWhereWithoutUserEntityPermissionsInput, Prisma.FamilyUpdateWithoutUserEntityPermissionsInput>, Prisma.FamilyUncheckedUpdateWithoutUserEntityPermissionsInput>
 }
 
 export type FamilyCreateNestedOneWithoutBudgetCategoriesInput = {
@@ -641,20 +755,6 @@ export type FamilyUpdateOneRequiredWithoutCategoryPreferencesNestedInput = {
   upsert?: Prisma.FamilyUpsertWithoutCategoryPreferencesInput
   connect?: Prisma.FamilyWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.FamilyUpdateToOneWithWhereWithoutCategoryPreferencesInput, Prisma.FamilyUpdateWithoutCategoryPreferencesInput>, Prisma.FamilyUncheckedUpdateWithoutCategoryPreferencesInput>
-}
-
-export type FamilyCreateNestedOneWithoutAllocationsInput = {
-  create?: Prisma.XOR<Prisma.FamilyCreateWithoutAllocationsInput, Prisma.FamilyUncheckedCreateWithoutAllocationsInput>
-  connectOrCreate?: Prisma.FamilyCreateOrConnectWithoutAllocationsInput
-  connect?: Prisma.FamilyWhereUniqueInput
-}
-
-export type FamilyUpdateOneRequiredWithoutAllocationsNestedInput = {
-  create?: Prisma.XOR<Prisma.FamilyCreateWithoutAllocationsInput, Prisma.FamilyUncheckedCreateWithoutAllocationsInput>
-  connectOrCreate?: Prisma.FamilyCreateOrConnectWithoutAllocationsInput
-  upsert?: Prisma.FamilyUpsertWithoutAllocationsInput
-  connect?: Prisma.FamilyWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.FamilyUpdateToOneWithWhereWithoutAllocationsInput, Prisma.FamilyUpdateWithoutAllocationsInput>, Prisma.FamilyUncheckedUpdateWithoutAllocationsInput>
 }
 
 export type FamilyCreateNestedOneWithoutCategorySuggestionsInput = {
@@ -769,7 +869,7 @@ export type FamilyUpdateOneRequiredWithoutCalendarEventsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.FamilyUpdateToOneWithWhereWithoutCalendarEventsInput, Prisma.FamilyUpdateWithoutCalendarEventsInput>, Prisma.FamilyUncheckedUpdateWithoutCalendarEventsInput>
 }
 
-export type FamilyCreateWithoutMembersInput = {
+export type FamilyCreateWithoutAssetsInput = {
   id?: string
   name: string
   currency?: string
@@ -777,12 +877,16 @@ export type FamilyCreateWithoutMembersInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
-  budgetEntities?: Prisma.BudgetEntityCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerCreateNestedManyWithoutFamilyInput
+  members?: Prisma.FamilyMemberCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerCreateNestedManyWithoutFamilyInput
   budgetCategories?: Prisma.BudgetCategoryCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountCreateNestedManyWithoutFamilyInput
   transactions?: Prisma.TransactionCreateNestedManyWithoutFamilyInput
   receipts?: Prisma.ReceiptCreateNestedManyWithoutFamilyInput
   receiptExtractions?: Prisma.ReceiptExtractionCreateNestedManyWithoutFamilyInput
@@ -791,8 +895,149 @@ export type FamilyCreateWithoutMembersInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceCreateNestedManyWithoutFamilyInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionCreateNestedManyWithoutFamilyInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionCreateNestedManyWithoutFamilyInput
   calendarEvents?: Prisma.FamilyCalendarEventCreateNestedManyWithoutFamilyInput
   invites?: Prisma.FamilyInviteCreateNestedManyWithoutFamilyInput
+}
+
+export type FamilyUncheckedCreateWithoutAssetsInput = {
+  id?: string
+  name: string
+  currency?: string
+  cutoffDay?: number
+  budgetStartDate: Date | string
+  setupComplete?: boolean
+  planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  members?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityUncheckedCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceUncheckedCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
+  budgetCategories?: Prisma.BudgetCategoryUncheckedCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedCreateNestedManyWithoutFamilyInput
+  transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutFamilyInput
+  receipts?: Prisma.ReceiptUncheckedCreateNestedManyWithoutFamilyInput
+  receiptExtractions?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutFamilyInput
+  moneyRequests?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutFamilyInput
+  categorySuggestions?: Prisma.CategorySuggestionUncheckedCreateNestedManyWithoutFamilyInput
+  categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedCreateNestedManyWithoutFamilyInput
+  budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedCreateNestedManyWithoutFamilyInput
+  userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedCreateNestedManyWithoutFamilyInput
+  calendarEvents?: Prisma.FamilyCalendarEventUncheckedCreateNestedManyWithoutFamilyInput
+  invites?: Prisma.FamilyInviteUncheckedCreateNestedManyWithoutFamilyInput
+}
+
+export type FamilyCreateOrConnectWithoutAssetsInput = {
+  where: Prisma.FamilyWhereUniqueInput
+  create: Prisma.XOR<Prisma.FamilyCreateWithoutAssetsInput, Prisma.FamilyUncheckedCreateWithoutAssetsInput>
+}
+
+export type FamilyUpsertWithoutAssetsInput = {
+  update: Prisma.XOR<Prisma.FamilyUpdateWithoutAssetsInput, Prisma.FamilyUncheckedUpdateWithoutAssetsInput>
+  create: Prisma.XOR<Prisma.FamilyCreateWithoutAssetsInput, Prisma.FamilyUncheckedCreateWithoutAssetsInput>
+  where?: Prisma.FamilyWhereInput
+}
+
+export type FamilyUpdateToOneWithWhereWithoutAssetsInput = {
+  where?: Prisma.FamilyWhereInput
+  data: Prisma.XOR<Prisma.FamilyUpdateWithoutAssetsInput, Prisma.FamilyUncheckedUpdateWithoutAssetsInput>
+}
+
+export type FamilyUpdateWithoutAssetsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  cutoffDay?: Prisma.IntFieldUpdateOperationsInput | number
+  budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  members?: Prisma.FamilyMemberUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUpdateManyWithoutFamilyNestedInput
+  budgetCategories?: Prisma.BudgetCategoryUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUpdateManyWithoutFamilyNestedInput
+  transactions?: Prisma.TransactionUpdateManyWithoutFamilyNestedInput
+  receipts?: Prisma.ReceiptUpdateManyWithoutFamilyNestedInput
+  receiptExtractions?: Prisma.ReceiptExtractionUpdateManyWithoutFamilyNestedInput
+  moneyRequests?: Prisma.MoneyRequestUpdateManyWithoutFamilyNestedInput
+  categorySuggestions?: Prisma.CategorySuggestionUpdateManyWithoutFamilyNestedInput
+  categoryPreferences?: Prisma.FamilyCategoryPreferenceUpdateManyWithoutFamilyNestedInput
+  budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUpdateManyWithoutFamilyNestedInput
+  userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUpdateManyWithoutFamilyNestedInput
+  calendarEvents?: Prisma.FamilyCalendarEventUpdateManyWithoutFamilyNestedInput
+  invites?: Prisma.FamilyInviteUpdateManyWithoutFamilyNestedInput
+}
+
+export type FamilyUncheckedUpdateWithoutAssetsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  cutoffDay?: Prisma.IntFieldUpdateOperationsInput | number
+  budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  members?: Prisma.FamilyMemberUncheckedUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUncheckedUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUncheckedUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
+  budgetCategories?: Prisma.BudgetCategoryUncheckedUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedUpdateManyWithoutFamilyNestedInput
+  transactions?: Prisma.TransactionUncheckedUpdateManyWithoutFamilyNestedInput
+  receipts?: Prisma.ReceiptUncheckedUpdateManyWithoutFamilyNestedInput
+  receiptExtractions?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutFamilyNestedInput
+  moneyRequests?: Prisma.MoneyRequestUncheckedUpdateManyWithoutFamilyNestedInput
+  categorySuggestions?: Prisma.CategorySuggestionUncheckedUpdateManyWithoutFamilyNestedInput
+  categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedUpdateManyWithoutFamilyNestedInput
+  budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedUpdateManyWithoutFamilyNestedInput
+  userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedUpdateManyWithoutFamilyNestedInput
+  calendarEvents?: Prisma.FamilyCalendarEventUncheckedUpdateManyWithoutFamilyNestedInput
+  invites?: Prisma.FamilyInviteUncheckedUpdateManyWithoutFamilyNestedInput
+}
+
+export type FamilyCreateWithoutMembersInput = {
+  id?: string
+  name: string
+  currency?: string
+  cutoffDay?: number
+  budgetStartDate: Date | string
+  setupComplete?: boolean
+  planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  entities?: Prisma.EntityCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerCreateNestedManyWithoutFamilyInput
+  budgetCategories?: Prisma.BudgetCategoryCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountCreateNestedManyWithoutFamilyInput
+  transactions?: Prisma.TransactionCreateNestedManyWithoutFamilyInput
+  receipts?: Prisma.ReceiptCreateNestedManyWithoutFamilyInput
+  receiptExtractions?: Prisma.ReceiptExtractionCreateNestedManyWithoutFamilyInput
+  moneyRequests?: Prisma.MoneyRequestCreateNestedManyWithoutFamilyInput
+  categorySuggestions?: Prisma.CategorySuggestionCreateNestedManyWithoutFamilyInput
+  categoryPreferences?: Prisma.FamilyCategoryPreferenceCreateNestedManyWithoutFamilyInput
+  budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionCreateNestedManyWithoutFamilyInput
+  userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionCreateNestedManyWithoutFamilyInput
+  calendarEvents?: Prisma.FamilyCalendarEventCreateNestedManyWithoutFamilyInput
+  invites?: Prisma.FamilyInviteCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetCreateNestedManyWithoutFamilyInput
 }
 
 export type FamilyUncheckedCreateWithoutMembersInput = {
@@ -803,12 +1048,15 @@ export type FamilyUncheckedCreateWithoutMembersInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
-  budgetEntities?: Prisma.BudgetEntityUncheckedCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityUncheckedCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceUncheckedCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
   budgetCategories?: Prisma.BudgetCategoryUncheckedCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedCreateNestedManyWithoutFamilyInput
   transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutFamilyInput
   receipts?: Prisma.ReceiptUncheckedCreateNestedManyWithoutFamilyInput
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutFamilyInput
@@ -817,8 +1065,10 @@ export type FamilyUncheckedCreateWithoutMembersInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedCreateNestedManyWithoutFamilyInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedCreateNestedManyWithoutFamilyInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedCreateNestedManyWithoutFamilyInput
   calendarEvents?: Prisma.FamilyCalendarEventUncheckedCreateNestedManyWithoutFamilyInput
   invites?: Prisma.FamilyInviteUncheckedCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetUncheckedCreateNestedManyWithoutFamilyInput
 }
 
 export type FamilyCreateOrConnectWithoutMembersInput = {
@@ -845,12 +1095,15 @@ export type FamilyUpdateWithoutMembersInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  budgetEntities?: Prisma.BudgetEntityUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUpdateManyWithoutFamilyNestedInput
   budgetCategories?: Prisma.BudgetCategoryUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUpdateManyWithoutFamilyNestedInput
   transactions?: Prisma.TransactionUpdateManyWithoutFamilyNestedInput
   receipts?: Prisma.ReceiptUpdateManyWithoutFamilyNestedInput
   receiptExtractions?: Prisma.ReceiptExtractionUpdateManyWithoutFamilyNestedInput
@@ -859,8 +1112,10 @@ export type FamilyUpdateWithoutMembersInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUpdateManyWithoutFamilyNestedInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUpdateManyWithoutFamilyNestedInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUpdateManyWithoutFamilyNestedInput
   calendarEvents?: Prisma.FamilyCalendarEventUpdateManyWithoutFamilyNestedInput
   invites?: Prisma.FamilyInviteUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUpdateManyWithoutFamilyNestedInput
 }
 
 export type FamilyUncheckedUpdateWithoutMembersInput = {
@@ -871,12 +1126,15 @@ export type FamilyUncheckedUpdateWithoutMembersInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  budgetEntities?: Prisma.BudgetEntityUncheckedUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUncheckedUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUncheckedUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
   budgetCategories?: Prisma.BudgetCategoryUncheckedUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedUpdateManyWithoutFamilyNestedInput
   transactions?: Prisma.TransactionUncheckedUpdateManyWithoutFamilyNestedInput
   receipts?: Prisma.ReceiptUncheckedUpdateManyWithoutFamilyNestedInput
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutFamilyNestedInput
@@ -885,8 +1143,10 @@ export type FamilyUncheckedUpdateWithoutMembersInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedUpdateManyWithoutFamilyNestedInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedUpdateManyWithoutFamilyNestedInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedUpdateManyWithoutFamilyNestedInput
   calendarEvents?: Prisma.FamilyCalendarEventUncheckedUpdateManyWithoutFamilyNestedInput
   invites?: Prisma.FamilyInviteUncheckedUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUncheckedUpdateManyWithoutFamilyNestedInput
 }
 
 export type FamilyCreateWithoutInvitesInput = {
@@ -897,13 +1157,16 @@ export type FamilyCreateWithoutInvitesInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.FamilyMemberCreateNestedManyWithoutFamilyInput
-  budgetEntities?: Prisma.BudgetEntityCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerCreateNestedManyWithoutFamilyInput
   budgetCategories?: Prisma.BudgetCategoryCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountCreateNestedManyWithoutFamilyInput
   transactions?: Prisma.TransactionCreateNestedManyWithoutFamilyInput
   receipts?: Prisma.ReceiptCreateNestedManyWithoutFamilyInput
   receiptExtractions?: Prisma.ReceiptExtractionCreateNestedManyWithoutFamilyInput
@@ -912,7 +1175,9 @@ export type FamilyCreateWithoutInvitesInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceCreateNestedManyWithoutFamilyInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionCreateNestedManyWithoutFamilyInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionCreateNestedManyWithoutFamilyInput
   calendarEvents?: Prisma.FamilyCalendarEventCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetCreateNestedManyWithoutFamilyInput
 }
 
 export type FamilyUncheckedCreateWithoutInvitesInput = {
@@ -923,13 +1188,16 @@ export type FamilyUncheckedCreateWithoutInvitesInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutFamilyInput
-  budgetEntities?: Prisma.BudgetEntityUncheckedCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityUncheckedCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceUncheckedCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
   budgetCategories?: Prisma.BudgetCategoryUncheckedCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedCreateNestedManyWithoutFamilyInput
   transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutFamilyInput
   receipts?: Prisma.ReceiptUncheckedCreateNestedManyWithoutFamilyInput
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutFamilyInput
@@ -938,7 +1206,9 @@ export type FamilyUncheckedCreateWithoutInvitesInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedCreateNestedManyWithoutFamilyInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedCreateNestedManyWithoutFamilyInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedCreateNestedManyWithoutFamilyInput
   calendarEvents?: Prisma.FamilyCalendarEventUncheckedCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetUncheckedCreateNestedManyWithoutFamilyInput
 }
 
 export type FamilyCreateOrConnectWithoutInvitesInput = {
@@ -965,13 +1235,16 @@ export type FamilyUpdateWithoutInvitesInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.FamilyMemberUpdateManyWithoutFamilyNestedInput
-  budgetEntities?: Prisma.BudgetEntityUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUpdateManyWithoutFamilyNestedInput
   budgetCategories?: Prisma.BudgetCategoryUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUpdateManyWithoutFamilyNestedInput
   transactions?: Prisma.TransactionUpdateManyWithoutFamilyNestedInput
   receipts?: Prisma.ReceiptUpdateManyWithoutFamilyNestedInput
   receiptExtractions?: Prisma.ReceiptExtractionUpdateManyWithoutFamilyNestedInput
@@ -980,7 +1253,9 @@ export type FamilyUpdateWithoutInvitesInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUpdateManyWithoutFamilyNestedInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUpdateManyWithoutFamilyNestedInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUpdateManyWithoutFamilyNestedInput
   calendarEvents?: Prisma.FamilyCalendarEventUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUpdateManyWithoutFamilyNestedInput
 }
 
 export type FamilyUncheckedUpdateWithoutInvitesInput = {
@@ -991,13 +1266,16 @@ export type FamilyUncheckedUpdateWithoutInvitesInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.FamilyMemberUncheckedUpdateManyWithoutFamilyNestedInput
-  budgetEntities?: Prisma.BudgetEntityUncheckedUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUncheckedUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUncheckedUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
   budgetCategories?: Prisma.BudgetCategoryUncheckedUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedUpdateManyWithoutFamilyNestedInput
   transactions?: Prisma.TransactionUncheckedUpdateManyWithoutFamilyNestedInput
   receipts?: Prisma.ReceiptUncheckedUpdateManyWithoutFamilyNestedInput
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutFamilyNestedInput
@@ -1006,10 +1284,12 @@ export type FamilyUncheckedUpdateWithoutInvitesInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedUpdateManyWithoutFamilyNestedInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedUpdateManyWithoutFamilyNestedInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedUpdateManyWithoutFamilyNestedInput
   calendarEvents?: Prisma.FamilyCalendarEventUncheckedUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUncheckedUpdateManyWithoutFamilyNestedInput
 }
 
-export type FamilyCreateWithoutBudgetEntitiesInput = {
+export type FamilyCreateWithoutCustomEntityTypesInput = {
   id?: string
   name: string
   currency?: string
@@ -1017,12 +1297,15 @@ export type FamilyCreateWithoutBudgetEntitiesInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.FamilyMemberCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerCreateNestedManyWithoutFamilyInput
   budgetCategories?: Prisma.BudgetCategoryCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountCreateNestedManyWithoutFamilyInput
   transactions?: Prisma.TransactionCreateNestedManyWithoutFamilyInput
   receipts?: Prisma.ReceiptCreateNestedManyWithoutFamilyInput
   receiptExtractions?: Prisma.ReceiptExtractionCreateNestedManyWithoutFamilyInput
@@ -1031,11 +1314,13 @@ export type FamilyCreateWithoutBudgetEntitiesInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceCreateNestedManyWithoutFamilyInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionCreateNestedManyWithoutFamilyInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionCreateNestedManyWithoutFamilyInput
   calendarEvents?: Prisma.FamilyCalendarEventCreateNestedManyWithoutFamilyInput
   invites?: Prisma.FamilyInviteCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetCreateNestedManyWithoutFamilyInput
 }
 
-export type FamilyUncheckedCreateWithoutBudgetEntitiesInput = {
+export type FamilyUncheckedCreateWithoutCustomEntityTypesInput = {
   id?: string
   name: string
   currency?: string
@@ -1043,12 +1328,15 @@ export type FamilyUncheckedCreateWithoutBudgetEntitiesInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityUncheckedCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceUncheckedCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
   budgetCategories?: Prisma.BudgetCategoryUncheckedCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedCreateNestedManyWithoutFamilyInput
   transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutFamilyInput
   receipts?: Prisma.ReceiptUncheckedCreateNestedManyWithoutFamilyInput
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutFamilyInput
@@ -1057,27 +1345,29 @@ export type FamilyUncheckedCreateWithoutBudgetEntitiesInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedCreateNestedManyWithoutFamilyInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedCreateNestedManyWithoutFamilyInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedCreateNestedManyWithoutFamilyInput
   calendarEvents?: Prisma.FamilyCalendarEventUncheckedCreateNestedManyWithoutFamilyInput
   invites?: Prisma.FamilyInviteUncheckedCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetUncheckedCreateNestedManyWithoutFamilyInput
 }
 
-export type FamilyCreateOrConnectWithoutBudgetEntitiesInput = {
+export type FamilyCreateOrConnectWithoutCustomEntityTypesInput = {
   where: Prisma.FamilyWhereUniqueInput
-  create: Prisma.XOR<Prisma.FamilyCreateWithoutBudgetEntitiesInput, Prisma.FamilyUncheckedCreateWithoutBudgetEntitiesInput>
+  create: Prisma.XOR<Prisma.FamilyCreateWithoutCustomEntityTypesInput, Prisma.FamilyUncheckedCreateWithoutCustomEntityTypesInput>
 }
 
-export type FamilyUpsertWithoutBudgetEntitiesInput = {
-  update: Prisma.XOR<Prisma.FamilyUpdateWithoutBudgetEntitiesInput, Prisma.FamilyUncheckedUpdateWithoutBudgetEntitiesInput>
-  create: Prisma.XOR<Prisma.FamilyCreateWithoutBudgetEntitiesInput, Prisma.FamilyUncheckedCreateWithoutBudgetEntitiesInput>
+export type FamilyUpsertWithoutCustomEntityTypesInput = {
+  update: Prisma.XOR<Prisma.FamilyUpdateWithoutCustomEntityTypesInput, Prisma.FamilyUncheckedUpdateWithoutCustomEntityTypesInput>
+  create: Prisma.XOR<Prisma.FamilyCreateWithoutCustomEntityTypesInput, Prisma.FamilyUncheckedCreateWithoutCustomEntityTypesInput>
   where?: Prisma.FamilyWhereInput
 }
 
-export type FamilyUpdateToOneWithWhereWithoutBudgetEntitiesInput = {
+export type FamilyUpdateToOneWithWhereWithoutCustomEntityTypesInput = {
   where?: Prisma.FamilyWhereInput
-  data: Prisma.XOR<Prisma.FamilyUpdateWithoutBudgetEntitiesInput, Prisma.FamilyUncheckedUpdateWithoutBudgetEntitiesInput>
+  data: Prisma.XOR<Prisma.FamilyUpdateWithoutCustomEntityTypesInput, Prisma.FamilyUncheckedUpdateWithoutCustomEntityTypesInput>
 }
 
-export type FamilyUpdateWithoutBudgetEntitiesInput = {
+export type FamilyUpdateWithoutCustomEntityTypesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   currency?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1085,12 +1375,15 @@ export type FamilyUpdateWithoutBudgetEntitiesInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.FamilyMemberUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUpdateManyWithoutFamilyNestedInput
   budgetCategories?: Prisma.BudgetCategoryUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUpdateManyWithoutFamilyNestedInput
   transactions?: Prisma.TransactionUpdateManyWithoutFamilyNestedInput
   receipts?: Prisma.ReceiptUpdateManyWithoutFamilyNestedInput
   receiptExtractions?: Prisma.ReceiptExtractionUpdateManyWithoutFamilyNestedInput
@@ -1099,11 +1392,13 @@ export type FamilyUpdateWithoutBudgetEntitiesInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUpdateManyWithoutFamilyNestedInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUpdateManyWithoutFamilyNestedInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUpdateManyWithoutFamilyNestedInput
   calendarEvents?: Prisma.FamilyCalendarEventUpdateManyWithoutFamilyNestedInput
   invites?: Prisma.FamilyInviteUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUpdateManyWithoutFamilyNestedInput
 }
 
-export type FamilyUncheckedUpdateWithoutBudgetEntitiesInput = {
+export type FamilyUncheckedUpdateWithoutCustomEntityTypesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   currency?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1111,12 +1406,15 @@ export type FamilyUncheckedUpdateWithoutBudgetEntitiesInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.FamilyMemberUncheckedUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUncheckedUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUncheckedUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
   budgetCategories?: Prisma.BudgetCategoryUncheckedUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedUpdateManyWithoutFamilyNestedInput
   transactions?: Prisma.TransactionUncheckedUpdateManyWithoutFamilyNestedInput
   receipts?: Prisma.ReceiptUncheckedUpdateManyWithoutFamilyNestedInput
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutFamilyNestedInput
@@ -1125,8 +1423,150 @@ export type FamilyUncheckedUpdateWithoutBudgetEntitiesInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedUpdateManyWithoutFamilyNestedInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedUpdateManyWithoutFamilyNestedInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedUpdateManyWithoutFamilyNestedInput
   calendarEvents?: Prisma.FamilyCalendarEventUncheckedUpdateManyWithoutFamilyNestedInput
   invites?: Prisma.FamilyInviteUncheckedUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUncheckedUpdateManyWithoutFamilyNestedInput
+}
+
+export type FamilyCreateWithoutEntitiesInput = {
+  id?: string
+  name: string
+  currency?: string
+  cutoffDay?: number
+  budgetStartDate: Date | string
+  setupComplete?: boolean
+  planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  members?: Prisma.FamilyMemberCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerCreateNestedManyWithoutFamilyInput
+  budgetCategories?: Prisma.BudgetCategoryCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountCreateNestedManyWithoutFamilyInput
+  transactions?: Prisma.TransactionCreateNestedManyWithoutFamilyInput
+  receipts?: Prisma.ReceiptCreateNestedManyWithoutFamilyInput
+  receiptExtractions?: Prisma.ReceiptExtractionCreateNestedManyWithoutFamilyInput
+  moneyRequests?: Prisma.MoneyRequestCreateNestedManyWithoutFamilyInput
+  categorySuggestions?: Prisma.CategorySuggestionCreateNestedManyWithoutFamilyInput
+  categoryPreferences?: Prisma.FamilyCategoryPreferenceCreateNestedManyWithoutFamilyInput
+  budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionCreateNestedManyWithoutFamilyInput
+  userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionCreateNestedManyWithoutFamilyInput
+  calendarEvents?: Prisma.FamilyCalendarEventCreateNestedManyWithoutFamilyInput
+  invites?: Prisma.FamilyInviteCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetCreateNestedManyWithoutFamilyInput
+}
+
+export type FamilyUncheckedCreateWithoutEntitiesInput = {
+  id?: string
+  name: string
+  currency?: string
+  cutoffDay?: number
+  budgetStartDate: Date | string
+  setupComplete?: boolean
+  planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  members?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceUncheckedCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
+  budgetCategories?: Prisma.BudgetCategoryUncheckedCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedCreateNestedManyWithoutFamilyInput
+  transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutFamilyInput
+  receipts?: Prisma.ReceiptUncheckedCreateNestedManyWithoutFamilyInput
+  receiptExtractions?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutFamilyInput
+  moneyRequests?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutFamilyInput
+  categorySuggestions?: Prisma.CategorySuggestionUncheckedCreateNestedManyWithoutFamilyInput
+  categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedCreateNestedManyWithoutFamilyInput
+  budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedCreateNestedManyWithoutFamilyInput
+  userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedCreateNestedManyWithoutFamilyInput
+  calendarEvents?: Prisma.FamilyCalendarEventUncheckedCreateNestedManyWithoutFamilyInput
+  invites?: Prisma.FamilyInviteUncheckedCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetUncheckedCreateNestedManyWithoutFamilyInput
+}
+
+export type FamilyCreateOrConnectWithoutEntitiesInput = {
+  where: Prisma.FamilyWhereUniqueInput
+  create: Prisma.XOR<Prisma.FamilyCreateWithoutEntitiesInput, Prisma.FamilyUncheckedCreateWithoutEntitiesInput>
+}
+
+export type FamilyUpsertWithoutEntitiesInput = {
+  update: Prisma.XOR<Prisma.FamilyUpdateWithoutEntitiesInput, Prisma.FamilyUncheckedUpdateWithoutEntitiesInput>
+  create: Prisma.XOR<Prisma.FamilyCreateWithoutEntitiesInput, Prisma.FamilyUncheckedCreateWithoutEntitiesInput>
+  where?: Prisma.FamilyWhereInput
+}
+
+export type FamilyUpdateToOneWithWhereWithoutEntitiesInput = {
+  where?: Prisma.FamilyWhereInput
+  data: Prisma.XOR<Prisma.FamilyUpdateWithoutEntitiesInput, Prisma.FamilyUncheckedUpdateWithoutEntitiesInput>
+}
+
+export type FamilyUpdateWithoutEntitiesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  cutoffDay?: Prisma.IntFieldUpdateOperationsInput | number
+  budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  members?: Prisma.FamilyMemberUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUpdateManyWithoutFamilyNestedInput
+  budgetCategories?: Prisma.BudgetCategoryUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUpdateManyWithoutFamilyNestedInput
+  transactions?: Prisma.TransactionUpdateManyWithoutFamilyNestedInput
+  receipts?: Prisma.ReceiptUpdateManyWithoutFamilyNestedInput
+  receiptExtractions?: Prisma.ReceiptExtractionUpdateManyWithoutFamilyNestedInput
+  moneyRequests?: Prisma.MoneyRequestUpdateManyWithoutFamilyNestedInput
+  categorySuggestions?: Prisma.CategorySuggestionUpdateManyWithoutFamilyNestedInput
+  categoryPreferences?: Prisma.FamilyCategoryPreferenceUpdateManyWithoutFamilyNestedInput
+  budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUpdateManyWithoutFamilyNestedInput
+  userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUpdateManyWithoutFamilyNestedInput
+  calendarEvents?: Prisma.FamilyCalendarEventUpdateManyWithoutFamilyNestedInput
+  invites?: Prisma.FamilyInviteUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUpdateManyWithoutFamilyNestedInput
+}
+
+export type FamilyUncheckedUpdateWithoutEntitiesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  cutoffDay?: Prisma.IntFieldUpdateOperationsInput | number
+  budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  members?: Prisma.FamilyMemberUncheckedUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUncheckedUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
+  budgetCategories?: Prisma.BudgetCategoryUncheckedUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedUpdateManyWithoutFamilyNestedInput
+  transactions?: Prisma.TransactionUncheckedUpdateManyWithoutFamilyNestedInput
+  receipts?: Prisma.ReceiptUncheckedUpdateManyWithoutFamilyNestedInput
+  receiptExtractions?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutFamilyNestedInput
+  moneyRequests?: Prisma.MoneyRequestUncheckedUpdateManyWithoutFamilyNestedInput
+  categorySuggestions?: Prisma.CategorySuggestionUncheckedUpdateManyWithoutFamilyNestedInput
+  categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedUpdateManyWithoutFamilyNestedInput
+  budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedUpdateManyWithoutFamilyNestedInput
+  userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedUpdateManyWithoutFamilyNestedInput
+  calendarEvents?: Prisma.FamilyCalendarEventUncheckedUpdateManyWithoutFamilyNestedInput
+  invites?: Prisma.FamilyInviteUncheckedUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUncheckedUpdateManyWithoutFamilyNestedInput
 }
 
 export type FamilyCreateWithoutEntityOwnersInput = {
@@ -1137,12 +1577,15 @@ export type FamilyCreateWithoutEntityOwnersInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.FamilyMemberCreateNestedManyWithoutFamilyInput
-  budgetEntities?: Prisma.BudgetEntityCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeCreateNestedManyWithoutFamilyInput
   budgetCategories?: Prisma.BudgetCategoryCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountCreateNestedManyWithoutFamilyInput
   transactions?: Prisma.TransactionCreateNestedManyWithoutFamilyInput
   receipts?: Prisma.ReceiptCreateNestedManyWithoutFamilyInput
   receiptExtractions?: Prisma.ReceiptExtractionCreateNestedManyWithoutFamilyInput
@@ -1151,8 +1594,10 @@ export type FamilyCreateWithoutEntityOwnersInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceCreateNestedManyWithoutFamilyInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionCreateNestedManyWithoutFamilyInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionCreateNestedManyWithoutFamilyInput
   calendarEvents?: Prisma.FamilyCalendarEventCreateNestedManyWithoutFamilyInput
   invites?: Prisma.FamilyInviteCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetCreateNestedManyWithoutFamilyInput
 }
 
 export type FamilyUncheckedCreateWithoutEntityOwnersInput = {
@@ -1163,12 +1608,15 @@ export type FamilyUncheckedCreateWithoutEntityOwnersInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutFamilyInput
-  budgetEntities?: Prisma.BudgetEntityUncheckedCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityUncheckedCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceUncheckedCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedCreateNestedManyWithoutFamilyInput
   budgetCategories?: Prisma.BudgetCategoryUncheckedCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedCreateNestedManyWithoutFamilyInput
   transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutFamilyInput
   receipts?: Prisma.ReceiptUncheckedCreateNestedManyWithoutFamilyInput
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutFamilyInput
@@ -1177,8 +1625,10 @@ export type FamilyUncheckedCreateWithoutEntityOwnersInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedCreateNestedManyWithoutFamilyInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedCreateNestedManyWithoutFamilyInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedCreateNestedManyWithoutFamilyInput
   calendarEvents?: Prisma.FamilyCalendarEventUncheckedCreateNestedManyWithoutFamilyInput
   invites?: Prisma.FamilyInviteUncheckedCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetUncheckedCreateNestedManyWithoutFamilyInput
 }
 
 export type FamilyCreateOrConnectWithoutEntityOwnersInput = {
@@ -1205,12 +1655,15 @@ export type FamilyUpdateWithoutEntityOwnersInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.FamilyMemberUpdateManyWithoutFamilyNestedInput
-  budgetEntities?: Prisma.BudgetEntityUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUpdateManyWithoutFamilyNestedInput
   budgetCategories?: Prisma.BudgetCategoryUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUpdateManyWithoutFamilyNestedInput
   transactions?: Prisma.TransactionUpdateManyWithoutFamilyNestedInput
   receipts?: Prisma.ReceiptUpdateManyWithoutFamilyNestedInput
   receiptExtractions?: Prisma.ReceiptExtractionUpdateManyWithoutFamilyNestedInput
@@ -1219,8 +1672,10 @@ export type FamilyUpdateWithoutEntityOwnersInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUpdateManyWithoutFamilyNestedInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUpdateManyWithoutFamilyNestedInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUpdateManyWithoutFamilyNestedInput
   calendarEvents?: Prisma.FamilyCalendarEventUpdateManyWithoutFamilyNestedInput
   invites?: Prisma.FamilyInviteUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUpdateManyWithoutFamilyNestedInput
 }
 
 export type FamilyUncheckedUpdateWithoutEntityOwnersInput = {
@@ -1231,12 +1686,15 @@ export type FamilyUncheckedUpdateWithoutEntityOwnersInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.FamilyMemberUncheckedUpdateManyWithoutFamilyNestedInput
-  budgetEntities?: Prisma.BudgetEntityUncheckedUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUncheckedUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUncheckedUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedUpdateManyWithoutFamilyNestedInput
   budgetCategories?: Prisma.BudgetCategoryUncheckedUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedUpdateManyWithoutFamilyNestedInput
   transactions?: Prisma.TransactionUncheckedUpdateManyWithoutFamilyNestedInput
   receipts?: Prisma.ReceiptUncheckedUpdateManyWithoutFamilyNestedInput
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutFamilyNestedInput
@@ -1245,11 +1703,13 @@ export type FamilyUncheckedUpdateWithoutEntityOwnersInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedUpdateManyWithoutFamilyNestedInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedUpdateManyWithoutFamilyNestedInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedUpdateManyWithoutFamilyNestedInput
   calendarEvents?: Prisma.FamilyCalendarEventUncheckedUpdateManyWithoutFamilyNestedInput
   invites?: Prisma.FamilyInviteUncheckedUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUncheckedUpdateManyWithoutFamilyNestedInput
 }
 
-export type FamilyCreateWithoutBudgetCategoriesInput = {
+export type FamilyCreateWithoutEntityServicesInput = {
   id?: string
   name: string
   currency?: string
@@ -1257,12 +1717,296 @@ export type FamilyCreateWithoutBudgetCategoriesInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.FamilyMemberCreateNestedManyWithoutFamilyInput
-  budgetEntities?: Prisma.BudgetEntityCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerCreateNestedManyWithoutFamilyInput
+  budgetCategories?: Prisma.BudgetCategoryCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountCreateNestedManyWithoutFamilyInput
+  transactions?: Prisma.TransactionCreateNestedManyWithoutFamilyInput
+  receipts?: Prisma.ReceiptCreateNestedManyWithoutFamilyInput
+  receiptExtractions?: Prisma.ReceiptExtractionCreateNestedManyWithoutFamilyInput
+  moneyRequests?: Prisma.MoneyRequestCreateNestedManyWithoutFamilyInput
+  categorySuggestions?: Prisma.CategorySuggestionCreateNestedManyWithoutFamilyInput
+  categoryPreferences?: Prisma.FamilyCategoryPreferenceCreateNestedManyWithoutFamilyInput
+  budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionCreateNestedManyWithoutFamilyInput
+  userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionCreateNestedManyWithoutFamilyInput
+  calendarEvents?: Prisma.FamilyCalendarEventCreateNestedManyWithoutFamilyInput
+  invites?: Prisma.FamilyInviteCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetCreateNestedManyWithoutFamilyInput
+}
+
+export type FamilyUncheckedCreateWithoutEntityServicesInput = {
+  id?: string
+  name: string
+  currency?: string
+  cutoffDay?: number
+  budgetStartDate: Date | string
+  setupComplete?: boolean
+  planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  members?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityUncheckedCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
+  budgetCategories?: Prisma.BudgetCategoryUncheckedCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedCreateNestedManyWithoutFamilyInput
+  transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutFamilyInput
+  receipts?: Prisma.ReceiptUncheckedCreateNestedManyWithoutFamilyInput
+  receiptExtractions?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutFamilyInput
+  moneyRequests?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutFamilyInput
+  categorySuggestions?: Prisma.CategorySuggestionUncheckedCreateNestedManyWithoutFamilyInput
+  categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedCreateNestedManyWithoutFamilyInput
+  budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedCreateNestedManyWithoutFamilyInput
+  userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedCreateNestedManyWithoutFamilyInput
+  calendarEvents?: Prisma.FamilyCalendarEventUncheckedCreateNestedManyWithoutFamilyInput
+  invites?: Prisma.FamilyInviteUncheckedCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetUncheckedCreateNestedManyWithoutFamilyInput
+}
+
+export type FamilyCreateOrConnectWithoutEntityServicesInput = {
+  where: Prisma.FamilyWhereUniqueInput
+  create: Prisma.XOR<Prisma.FamilyCreateWithoutEntityServicesInput, Prisma.FamilyUncheckedCreateWithoutEntityServicesInput>
+}
+
+export type FamilyUpsertWithoutEntityServicesInput = {
+  update: Prisma.XOR<Prisma.FamilyUpdateWithoutEntityServicesInput, Prisma.FamilyUncheckedUpdateWithoutEntityServicesInput>
+  create: Prisma.XOR<Prisma.FamilyCreateWithoutEntityServicesInput, Prisma.FamilyUncheckedCreateWithoutEntityServicesInput>
+  where?: Prisma.FamilyWhereInput
+}
+
+export type FamilyUpdateToOneWithWhereWithoutEntityServicesInput = {
+  where?: Prisma.FamilyWhereInput
+  data: Prisma.XOR<Prisma.FamilyUpdateWithoutEntityServicesInput, Prisma.FamilyUncheckedUpdateWithoutEntityServicesInput>
+}
+
+export type FamilyUpdateWithoutEntityServicesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  cutoffDay?: Prisma.IntFieldUpdateOperationsInput | number
+  budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  members?: Prisma.FamilyMemberUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUpdateManyWithoutFamilyNestedInput
+  budgetCategories?: Prisma.BudgetCategoryUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUpdateManyWithoutFamilyNestedInput
+  transactions?: Prisma.TransactionUpdateManyWithoutFamilyNestedInput
+  receipts?: Prisma.ReceiptUpdateManyWithoutFamilyNestedInput
+  receiptExtractions?: Prisma.ReceiptExtractionUpdateManyWithoutFamilyNestedInput
+  moneyRequests?: Prisma.MoneyRequestUpdateManyWithoutFamilyNestedInput
+  categorySuggestions?: Prisma.CategorySuggestionUpdateManyWithoutFamilyNestedInput
+  categoryPreferences?: Prisma.FamilyCategoryPreferenceUpdateManyWithoutFamilyNestedInput
+  budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUpdateManyWithoutFamilyNestedInput
+  userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUpdateManyWithoutFamilyNestedInput
+  calendarEvents?: Prisma.FamilyCalendarEventUpdateManyWithoutFamilyNestedInput
+  invites?: Prisma.FamilyInviteUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUpdateManyWithoutFamilyNestedInput
+}
+
+export type FamilyUncheckedUpdateWithoutEntityServicesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  cutoffDay?: Prisma.IntFieldUpdateOperationsInput | number
+  budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  members?: Prisma.FamilyMemberUncheckedUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUncheckedUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
+  budgetCategories?: Prisma.BudgetCategoryUncheckedUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedUpdateManyWithoutFamilyNestedInput
+  transactions?: Prisma.TransactionUncheckedUpdateManyWithoutFamilyNestedInput
+  receipts?: Prisma.ReceiptUncheckedUpdateManyWithoutFamilyNestedInput
+  receiptExtractions?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutFamilyNestedInput
+  moneyRequests?: Prisma.MoneyRequestUncheckedUpdateManyWithoutFamilyNestedInput
+  categorySuggestions?: Prisma.CategorySuggestionUncheckedUpdateManyWithoutFamilyNestedInput
+  categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedUpdateManyWithoutFamilyNestedInput
+  budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedUpdateManyWithoutFamilyNestedInput
+  userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedUpdateManyWithoutFamilyNestedInput
+  calendarEvents?: Prisma.FamilyCalendarEventUncheckedUpdateManyWithoutFamilyNestedInput
+  invites?: Prisma.FamilyInviteUncheckedUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUncheckedUpdateManyWithoutFamilyNestedInput
+}
+
+export type FamilyCreateWithoutBudgetAccountsInput = {
+  id?: string
+  name: string
+  currency?: string
+  cutoffDay?: number
+  budgetStartDate: Date | string
+  setupComplete?: boolean
+  planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  members?: Prisma.FamilyMemberCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerCreateNestedManyWithoutFamilyInput
+  budgetCategories?: Prisma.BudgetCategoryCreateNestedManyWithoutFamilyInput
+  transactions?: Prisma.TransactionCreateNestedManyWithoutFamilyInput
+  receipts?: Prisma.ReceiptCreateNestedManyWithoutFamilyInput
+  receiptExtractions?: Prisma.ReceiptExtractionCreateNestedManyWithoutFamilyInput
+  moneyRequests?: Prisma.MoneyRequestCreateNestedManyWithoutFamilyInput
+  categorySuggestions?: Prisma.CategorySuggestionCreateNestedManyWithoutFamilyInput
+  categoryPreferences?: Prisma.FamilyCategoryPreferenceCreateNestedManyWithoutFamilyInput
+  budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionCreateNestedManyWithoutFamilyInput
+  userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionCreateNestedManyWithoutFamilyInput
+  calendarEvents?: Prisma.FamilyCalendarEventCreateNestedManyWithoutFamilyInput
+  invites?: Prisma.FamilyInviteCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetCreateNestedManyWithoutFamilyInput
+}
+
+export type FamilyUncheckedCreateWithoutBudgetAccountsInput = {
+  id?: string
+  name: string
+  currency?: string
+  cutoffDay?: number
+  budgetStartDate: Date | string
+  setupComplete?: boolean
+  planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  members?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityUncheckedCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceUncheckedCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
+  budgetCategories?: Prisma.BudgetCategoryUncheckedCreateNestedManyWithoutFamilyInput
+  transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutFamilyInput
+  receipts?: Prisma.ReceiptUncheckedCreateNestedManyWithoutFamilyInput
+  receiptExtractions?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutFamilyInput
+  moneyRequests?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutFamilyInput
+  categorySuggestions?: Prisma.CategorySuggestionUncheckedCreateNestedManyWithoutFamilyInput
+  categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedCreateNestedManyWithoutFamilyInput
+  budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedCreateNestedManyWithoutFamilyInput
+  userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedCreateNestedManyWithoutFamilyInput
+  calendarEvents?: Prisma.FamilyCalendarEventUncheckedCreateNestedManyWithoutFamilyInput
+  invites?: Prisma.FamilyInviteUncheckedCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetUncheckedCreateNestedManyWithoutFamilyInput
+}
+
+export type FamilyCreateOrConnectWithoutBudgetAccountsInput = {
+  where: Prisma.FamilyWhereUniqueInput
+  create: Prisma.XOR<Prisma.FamilyCreateWithoutBudgetAccountsInput, Prisma.FamilyUncheckedCreateWithoutBudgetAccountsInput>
+}
+
+export type FamilyUpsertWithoutBudgetAccountsInput = {
+  update: Prisma.XOR<Prisma.FamilyUpdateWithoutBudgetAccountsInput, Prisma.FamilyUncheckedUpdateWithoutBudgetAccountsInput>
+  create: Prisma.XOR<Prisma.FamilyCreateWithoutBudgetAccountsInput, Prisma.FamilyUncheckedCreateWithoutBudgetAccountsInput>
+  where?: Prisma.FamilyWhereInput
+}
+
+export type FamilyUpdateToOneWithWhereWithoutBudgetAccountsInput = {
+  where?: Prisma.FamilyWhereInput
+  data: Prisma.XOR<Prisma.FamilyUpdateWithoutBudgetAccountsInput, Prisma.FamilyUncheckedUpdateWithoutBudgetAccountsInput>
+}
+
+export type FamilyUpdateWithoutBudgetAccountsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  cutoffDay?: Prisma.IntFieldUpdateOperationsInput | number
+  budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  members?: Prisma.FamilyMemberUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUpdateManyWithoutFamilyNestedInput
+  budgetCategories?: Prisma.BudgetCategoryUpdateManyWithoutFamilyNestedInput
+  transactions?: Prisma.TransactionUpdateManyWithoutFamilyNestedInput
+  receipts?: Prisma.ReceiptUpdateManyWithoutFamilyNestedInput
+  receiptExtractions?: Prisma.ReceiptExtractionUpdateManyWithoutFamilyNestedInput
+  moneyRequests?: Prisma.MoneyRequestUpdateManyWithoutFamilyNestedInput
+  categorySuggestions?: Prisma.CategorySuggestionUpdateManyWithoutFamilyNestedInput
+  categoryPreferences?: Prisma.FamilyCategoryPreferenceUpdateManyWithoutFamilyNestedInput
+  budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUpdateManyWithoutFamilyNestedInput
+  userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUpdateManyWithoutFamilyNestedInput
+  calendarEvents?: Prisma.FamilyCalendarEventUpdateManyWithoutFamilyNestedInput
+  invites?: Prisma.FamilyInviteUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUpdateManyWithoutFamilyNestedInput
+}
+
+export type FamilyUncheckedUpdateWithoutBudgetAccountsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  cutoffDay?: Prisma.IntFieldUpdateOperationsInput | number
+  budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  members?: Prisma.FamilyMemberUncheckedUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUncheckedUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUncheckedUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
+  budgetCategories?: Prisma.BudgetCategoryUncheckedUpdateManyWithoutFamilyNestedInput
+  transactions?: Prisma.TransactionUncheckedUpdateManyWithoutFamilyNestedInput
+  receipts?: Prisma.ReceiptUncheckedUpdateManyWithoutFamilyNestedInput
+  receiptExtractions?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutFamilyNestedInput
+  moneyRequests?: Prisma.MoneyRequestUncheckedUpdateManyWithoutFamilyNestedInput
+  categorySuggestions?: Prisma.CategorySuggestionUncheckedUpdateManyWithoutFamilyNestedInput
+  categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedUpdateManyWithoutFamilyNestedInput
+  budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedUpdateManyWithoutFamilyNestedInput
+  userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedUpdateManyWithoutFamilyNestedInput
+  calendarEvents?: Prisma.FamilyCalendarEventUncheckedUpdateManyWithoutFamilyNestedInput
+  invites?: Prisma.FamilyInviteUncheckedUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUncheckedUpdateManyWithoutFamilyNestedInput
+}
+
+export type FamilyCreateWithoutUserEntityPermissionsInput = {
+  id?: string
+  name: string
+  currency?: string
+  cutoffDay?: number
+  budgetStartDate: Date | string
+  setupComplete?: boolean
+  planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  members?: Prisma.FamilyMemberCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerCreateNestedManyWithoutFamilyInput
+  budgetCategories?: Prisma.BudgetCategoryCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountCreateNestedManyWithoutFamilyInput
   transactions?: Prisma.TransactionCreateNestedManyWithoutFamilyInput
   receipts?: Prisma.ReceiptCreateNestedManyWithoutFamilyInput
   receiptExtractions?: Prisma.ReceiptExtractionCreateNestedManyWithoutFamilyInput
@@ -1273,9 +2017,10 @@ export type FamilyCreateWithoutBudgetCategoriesInput = {
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionCreateNestedManyWithoutFamilyInput
   calendarEvents?: Prisma.FamilyCalendarEventCreateNestedManyWithoutFamilyInput
   invites?: Prisma.FamilyInviteCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetCreateNestedManyWithoutFamilyInput
 }
 
-export type FamilyUncheckedCreateWithoutBudgetCategoriesInput = {
+export type FamilyUncheckedCreateWithoutUserEntityPermissionsInput = {
   id?: string
   name: string
   currency?: string
@@ -1283,12 +2028,16 @@ export type FamilyUncheckedCreateWithoutBudgetCategoriesInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutFamilyInput
-  budgetEntities?: Prisma.BudgetEntityUncheckedCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityUncheckedCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceUncheckedCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
+  budgetCategories?: Prisma.BudgetCategoryUncheckedCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedCreateNestedManyWithoutFamilyInput
   transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutFamilyInput
   receipts?: Prisma.ReceiptUncheckedCreateNestedManyWithoutFamilyInput
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutFamilyInput
@@ -1299,6 +2048,147 @@ export type FamilyUncheckedCreateWithoutBudgetCategoriesInput = {
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedCreateNestedManyWithoutFamilyInput
   calendarEvents?: Prisma.FamilyCalendarEventUncheckedCreateNestedManyWithoutFamilyInput
   invites?: Prisma.FamilyInviteUncheckedCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetUncheckedCreateNestedManyWithoutFamilyInput
+}
+
+export type FamilyCreateOrConnectWithoutUserEntityPermissionsInput = {
+  where: Prisma.FamilyWhereUniqueInput
+  create: Prisma.XOR<Prisma.FamilyCreateWithoutUserEntityPermissionsInput, Prisma.FamilyUncheckedCreateWithoutUserEntityPermissionsInput>
+}
+
+export type FamilyUpsertWithoutUserEntityPermissionsInput = {
+  update: Prisma.XOR<Prisma.FamilyUpdateWithoutUserEntityPermissionsInput, Prisma.FamilyUncheckedUpdateWithoutUserEntityPermissionsInput>
+  create: Prisma.XOR<Prisma.FamilyCreateWithoutUserEntityPermissionsInput, Prisma.FamilyUncheckedCreateWithoutUserEntityPermissionsInput>
+  where?: Prisma.FamilyWhereInput
+}
+
+export type FamilyUpdateToOneWithWhereWithoutUserEntityPermissionsInput = {
+  where?: Prisma.FamilyWhereInput
+  data: Prisma.XOR<Prisma.FamilyUpdateWithoutUserEntityPermissionsInput, Prisma.FamilyUncheckedUpdateWithoutUserEntityPermissionsInput>
+}
+
+export type FamilyUpdateWithoutUserEntityPermissionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  cutoffDay?: Prisma.IntFieldUpdateOperationsInput | number
+  budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  members?: Prisma.FamilyMemberUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUpdateManyWithoutFamilyNestedInput
+  budgetCategories?: Prisma.BudgetCategoryUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUpdateManyWithoutFamilyNestedInput
+  transactions?: Prisma.TransactionUpdateManyWithoutFamilyNestedInput
+  receipts?: Prisma.ReceiptUpdateManyWithoutFamilyNestedInput
+  receiptExtractions?: Prisma.ReceiptExtractionUpdateManyWithoutFamilyNestedInput
+  moneyRequests?: Prisma.MoneyRequestUpdateManyWithoutFamilyNestedInput
+  categorySuggestions?: Prisma.CategorySuggestionUpdateManyWithoutFamilyNestedInput
+  categoryPreferences?: Prisma.FamilyCategoryPreferenceUpdateManyWithoutFamilyNestedInput
+  budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUpdateManyWithoutFamilyNestedInput
+  userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUpdateManyWithoutFamilyNestedInput
+  calendarEvents?: Prisma.FamilyCalendarEventUpdateManyWithoutFamilyNestedInput
+  invites?: Prisma.FamilyInviteUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUpdateManyWithoutFamilyNestedInput
+}
+
+export type FamilyUncheckedUpdateWithoutUserEntityPermissionsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  currency?: Prisma.StringFieldUpdateOperationsInput | string
+  cutoffDay?: Prisma.IntFieldUpdateOperationsInput | number
+  budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  members?: Prisma.FamilyMemberUncheckedUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUncheckedUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUncheckedUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
+  budgetCategories?: Prisma.BudgetCategoryUncheckedUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedUpdateManyWithoutFamilyNestedInput
+  transactions?: Prisma.TransactionUncheckedUpdateManyWithoutFamilyNestedInput
+  receipts?: Prisma.ReceiptUncheckedUpdateManyWithoutFamilyNestedInput
+  receiptExtractions?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutFamilyNestedInput
+  moneyRequests?: Prisma.MoneyRequestUncheckedUpdateManyWithoutFamilyNestedInput
+  categorySuggestions?: Prisma.CategorySuggestionUncheckedUpdateManyWithoutFamilyNestedInput
+  categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedUpdateManyWithoutFamilyNestedInput
+  budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedUpdateManyWithoutFamilyNestedInput
+  userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedUpdateManyWithoutFamilyNestedInput
+  calendarEvents?: Prisma.FamilyCalendarEventUncheckedUpdateManyWithoutFamilyNestedInput
+  invites?: Prisma.FamilyInviteUncheckedUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUncheckedUpdateManyWithoutFamilyNestedInput
+}
+
+export type FamilyCreateWithoutBudgetCategoriesInput = {
+  id?: string
+  name: string
+  currency?: string
+  cutoffDay?: number
+  budgetStartDate: Date | string
+  setupComplete?: boolean
+  planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  members?: Prisma.FamilyMemberCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountCreateNestedManyWithoutFamilyInput
+  transactions?: Prisma.TransactionCreateNestedManyWithoutFamilyInput
+  receipts?: Prisma.ReceiptCreateNestedManyWithoutFamilyInput
+  receiptExtractions?: Prisma.ReceiptExtractionCreateNestedManyWithoutFamilyInput
+  moneyRequests?: Prisma.MoneyRequestCreateNestedManyWithoutFamilyInput
+  categorySuggestions?: Prisma.CategorySuggestionCreateNestedManyWithoutFamilyInput
+  categoryPreferences?: Prisma.FamilyCategoryPreferenceCreateNestedManyWithoutFamilyInput
+  budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionCreateNestedManyWithoutFamilyInput
+  userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionCreateNestedManyWithoutFamilyInput
+  calendarEvents?: Prisma.FamilyCalendarEventCreateNestedManyWithoutFamilyInput
+  invites?: Prisma.FamilyInviteCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetCreateNestedManyWithoutFamilyInput
+}
+
+export type FamilyUncheckedCreateWithoutBudgetCategoriesInput = {
+  id?: string
+  name: string
+  currency?: string
+  cutoffDay?: number
+  budgetStartDate: Date | string
+  setupComplete?: boolean
+  planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  members?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityUncheckedCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceUncheckedCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedCreateNestedManyWithoutFamilyInput
+  transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutFamilyInput
+  receipts?: Prisma.ReceiptUncheckedCreateNestedManyWithoutFamilyInput
+  receiptExtractions?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutFamilyInput
+  moneyRequests?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutFamilyInput
+  categorySuggestions?: Prisma.CategorySuggestionUncheckedCreateNestedManyWithoutFamilyInput
+  categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedCreateNestedManyWithoutFamilyInput
+  budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedCreateNestedManyWithoutFamilyInput
+  userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedCreateNestedManyWithoutFamilyInput
+  calendarEvents?: Prisma.FamilyCalendarEventUncheckedCreateNestedManyWithoutFamilyInput
+  invites?: Prisma.FamilyInviteUncheckedCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetUncheckedCreateNestedManyWithoutFamilyInput
 }
 
 export type FamilyCreateOrConnectWithoutBudgetCategoriesInput = {
@@ -1325,12 +2215,15 @@ export type FamilyUpdateWithoutBudgetCategoriesInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.FamilyMemberUpdateManyWithoutFamilyNestedInput
-  budgetEntities?: Prisma.BudgetEntityUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUpdateManyWithoutFamilyNestedInput
   transactions?: Prisma.TransactionUpdateManyWithoutFamilyNestedInput
   receipts?: Prisma.ReceiptUpdateManyWithoutFamilyNestedInput
   receiptExtractions?: Prisma.ReceiptExtractionUpdateManyWithoutFamilyNestedInput
@@ -1339,8 +2232,10 @@ export type FamilyUpdateWithoutBudgetCategoriesInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUpdateManyWithoutFamilyNestedInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUpdateManyWithoutFamilyNestedInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUpdateManyWithoutFamilyNestedInput
   calendarEvents?: Prisma.FamilyCalendarEventUpdateManyWithoutFamilyNestedInput
   invites?: Prisma.FamilyInviteUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUpdateManyWithoutFamilyNestedInput
 }
 
 export type FamilyUncheckedUpdateWithoutBudgetCategoriesInput = {
@@ -1351,12 +2246,15 @@ export type FamilyUncheckedUpdateWithoutBudgetCategoriesInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.FamilyMemberUncheckedUpdateManyWithoutFamilyNestedInput
-  budgetEntities?: Prisma.BudgetEntityUncheckedUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUncheckedUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUncheckedUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedUpdateManyWithoutFamilyNestedInput
   transactions?: Prisma.TransactionUncheckedUpdateManyWithoutFamilyNestedInput
   receipts?: Prisma.ReceiptUncheckedUpdateManyWithoutFamilyNestedInput
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutFamilyNestedInput
@@ -1365,8 +2263,10 @@ export type FamilyUncheckedUpdateWithoutBudgetCategoriesInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedUpdateManyWithoutFamilyNestedInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedUpdateManyWithoutFamilyNestedInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedUpdateManyWithoutFamilyNestedInput
   calendarEvents?: Prisma.FamilyCalendarEventUncheckedUpdateManyWithoutFamilyNestedInput
   invites?: Prisma.FamilyInviteUncheckedUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUncheckedUpdateManyWithoutFamilyNestedInput
 }
 
 export type FamilyCreateWithoutCategoryPreferencesInput = {
@@ -1377,13 +2277,16 @@ export type FamilyCreateWithoutCategoryPreferencesInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.FamilyMemberCreateNestedManyWithoutFamilyInput
-  budgetEntities?: Prisma.BudgetEntityCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerCreateNestedManyWithoutFamilyInput
   budgetCategories?: Prisma.BudgetCategoryCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountCreateNestedManyWithoutFamilyInput
   transactions?: Prisma.TransactionCreateNestedManyWithoutFamilyInput
   receipts?: Prisma.ReceiptCreateNestedManyWithoutFamilyInput
   receiptExtractions?: Prisma.ReceiptExtractionCreateNestedManyWithoutFamilyInput
@@ -1391,8 +2294,10 @@ export type FamilyCreateWithoutCategoryPreferencesInput = {
   categorySuggestions?: Prisma.CategorySuggestionCreateNestedManyWithoutFamilyInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionCreateNestedManyWithoutFamilyInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionCreateNestedManyWithoutFamilyInput
   calendarEvents?: Prisma.FamilyCalendarEventCreateNestedManyWithoutFamilyInput
   invites?: Prisma.FamilyInviteCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetCreateNestedManyWithoutFamilyInput
 }
 
 export type FamilyUncheckedCreateWithoutCategoryPreferencesInput = {
@@ -1403,13 +2308,16 @@ export type FamilyUncheckedCreateWithoutCategoryPreferencesInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutFamilyInput
-  budgetEntities?: Prisma.BudgetEntityUncheckedCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityUncheckedCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceUncheckedCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
   budgetCategories?: Prisma.BudgetCategoryUncheckedCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedCreateNestedManyWithoutFamilyInput
   transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutFamilyInput
   receipts?: Prisma.ReceiptUncheckedCreateNestedManyWithoutFamilyInput
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutFamilyInput
@@ -1417,8 +2325,10 @@ export type FamilyUncheckedCreateWithoutCategoryPreferencesInput = {
   categorySuggestions?: Prisma.CategorySuggestionUncheckedCreateNestedManyWithoutFamilyInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedCreateNestedManyWithoutFamilyInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedCreateNestedManyWithoutFamilyInput
   calendarEvents?: Prisma.FamilyCalendarEventUncheckedCreateNestedManyWithoutFamilyInput
   invites?: Prisma.FamilyInviteUncheckedCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetUncheckedCreateNestedManyWithoutFamilyInput
 }
 
 export type FamilyCreateOrConnectWithoutCategoryPreferencesInput = {
@@ -1445,13 +2355,16 @@ export type FamilyUpdateWithoutCategoryPreferencesInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.FamilyMemberUpdateManyWithoutFamilyNestedInput
-  budgetEntities?: Prisma.BudgetEntityUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUpdateManyWithoutFamilyNestedInput
   budgetCategories?: Prisma.BudgetCategoryUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUpdateManyWithoutFamilyNestedInput
   transactions?: Prisma.TransactionUpdateManyWithoutFamilyNestedInput
   receipts?: Prisma.ReceiptUpdateManyWithoutFamilyNestedInput
   receiptExtractions?: Prisma.ReceiptExtractionUpdateManyWithoutFamilyNestedInput
@@ -1459,8 +2372,10 @@ export type FamilyUpdateWithoutCategoryPreferencesInput = {
   categorySuggestions?: Prisma.CategorySuggestionUpdateManyWithoutFamilyNestedInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUpdateManyWithoutFamilyNestedInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUpdateManyWithoutFamilyNestedInput
   calendarEvents?: Prisma.FamilyCalendarEventUpdateManyWithoutFamilyNestedInput
   invites?: Prisma.FamilyInviteUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUpdateManyWithoutFamilyNestedInput
 }
 
 export type FamilyUncheckedUpdateWithoutCategoryPreferencesInput = {
@@ -1471,13 +2386,16 @@ export type FamilyUncheckedUpdateWithoutCategoryPreferencesInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.FamilyMemberUncheckedUpdateManyWithoutFamilyNestedInput
-  budgetEntities?: Prisma.BudgetEntityUncheckedUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUncheckedUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUncheckedUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
   budgetCategories?: Prisma.BudgetCategoryUncheckedUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedUpdateManyWithoutFamilyNestedInput
   transactions?: Prisma.TransactionUncheckedUpdateManyWithoutFamilyNestedInput
   receipts?: Prisma.ReceiptUncheckedUpdateManyWithoutFamilyNestedInput
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutFamilyNestedInput
@@ -1485,128 +2403,10 @@ export type FamilyUncheckedUpdateWithoutCategoryPreferencesInput = {
   categorySuggestions?: Prisma.CategorySuggestionUncheckedUpdateManyWithoutFamilyNestedInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedUpdateManyWithoutFamilyNestedInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedUpdateManyWithoutFamilyNestedInput
   calendarEvents?: Prisma.FamilyCalendarEventUncheckedUpdateManyWithoutFamilyNestedInput
   invites?: Prisma.FamilyInviteUncheckedUpdateManyWithoutFamilyNestedInput
-}
-
-export type FamilyCreateWithoutAllocationsInput = {
-  id?: string
-  name: string
-  currency?: string
-  cutoffDay?: number
-  budgetStartDate: Date | string
-  setupComplete?: boolean
-  planStatus?: string
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  members?: Prisma.FamilyMemberCreateNestedManyWithoutFamilyInput
-  budgetEntities?: Prisma.BudgetEntityCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerCreateNestedManyWithoutFamilyInput
-  budgetCategories?: Prisma.BudgetCategoryCreateNestedManyWithoutFamilyInput
-  transactions?: Prisma.TransactionCreateNestedManyWithoutFamilyInput
-  receipts?: Prisma.ReceiptCreateNestedManyWithoutFamilyInput
-  receiptExtractions?: Prisma.ReceiptExtractionCreateNestedManyWithoutFamilyInput
-  moneyRequests?: Prisma.MoneyRequestCreateNestedManyWithoutFamilyInput
-  categorySuggestions?: Prisma.CategorySuggestionCreateNestedManyWithoutFamilyInput
-  categoryPreferences?: Prisma.FamilyCategoryPreferenceCreateNestedManyWithoutFamilyInput
-  budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionCreateNestedManyWithoutFamilyInput
-  userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionCreateNestedManyWithoutFamilyInput
-  calendarEvents?: Prisma.FamilyCalendarEventCreateNestedManyWithoutFamilyInput
-  invites?: Prisma.FamilyInviteCreateNestedManyWithoutFamilyInput
-}
-
-export type FamilyUncheckedCreateWithoutAllocationsInput = {
-  id?: string
-  name: string
-  currency?: string
-  cutoffDay?: number
-  budgetStartDate: Date | string
-  setupComplete?: boolean
-  planStatus?: string
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  members?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutFamilyInput
-  budgetEntities?: Prisma.BudgetEntityUncheckedCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
-  budgetCategories?: Prisma.BudgetCategoryUncheckedCreateNestedManyWithoutFamilyInput
-  transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutFamilyInput
-  receipts?: Prisma.ReceiptUncheckedCreateNestedManyWithoutFamilyInput
-  receiptExtractions?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutFamilyInput
-  moneyRequests?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutFamilyInput
-  categorySuggestions?: Prisma.CategorySuggestionUncheckedCreateNestedManyWithoutFamilyInput
-  categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedCreateNestedManyWithoutFamilyInput
-  budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedCreateNestedManyWithoutFamilyInput
-  userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedCreateNestedManyWithoutFamilyInput
-  calendarEvents?: Prisma.FamilyCalendarEventUncheckedCreateNestedManyWithoutFamilyInput
-  invites?: Prisma.FamilyInviteUncheckedCreateNestedManyWithoutFamilyInput
-}
-
-export type FamilyCreateOrConnectWithoutAllocationsInput = {
-  where: Prisma.FamilyWhereUniqueInput
-  create: Prisma.XOR<Prisma.FamilyCreateWithoutAllocationsInput, Prisma.FamilyUncheckedCreateWithoutAllocationsInput>
-}
-
-export type FamilyUpsertWithoutAllocationsInput = {
-  update: Prisma.XOR<Prisma.FamilyUpdateWithoutAllocationsInput, Prisma.FamilyUncheckedUpdateWithoutAllocationsInput>
-  create: Prisma.XOR<Prisma.FamilyCreateWithoutAllocationsInput, Prisma.FamilyUncheckedCreateWithoutAllocationsInput>
-  where?: Prisma.FamilyWhereInput
-}
-
-export type FamilyUpdateToOneWithWhereWithoutAllocationsInput = {
-  where?: Prisma.FamilyWhereInput
-  data: Prisma.XOR<Prisma.FamilyUpdateWithoutAllocationsInput, Prisma.FamilyUncheckedUpdateWithoutAllocationsInput>
-}
-
-export type FamilyUpdateWithoutAllocationsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  currency?: Prisma.StringFieldUpdateOperationsInput | string
-  cutoffDay?: Prisma.IntFieldUpdateOperationsInput | number
-  budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  planStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  members?: Prisma.FamilyMemberUpdateManyWithoutFamilyNestedInput
-  budgetEntities?: Prisma.BudgetEntityUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUpdateManyWithoutFamilyNestedInput
-  budgetCategories?: Prisma.BudgetCategoryUpdateManyWithoutFamilyNestedInput
-  transactions?: Prisma.TransactionUpdateManyWithoutFamilyNestedInput
-  receipts?: Prisma.ReceiptUpdateManyWithoutFamilyNestedInput
-  receiptExtractions?: Prisma.ReceiptExtractionUpdateManyWithoutFamilyNestedInput
-  moneyRequests?: Prisma.MoneyRequestUpdateManyWithoutFamilyNestedInput
-  categorySuggestions?: Prisma.CategorySuggestionUpdateManyWithoutFamilyNestedInput
-  categoryPreferences?: Prisma.FamilyCategoryPreferenceUpdateManyWithoutFamilyNestedInput
-  budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUpdateManyWithoutFamilyNestedInput
-  userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUpdateManyWithoutFamilyNestedInput
-  calendarEvents?: Prisma.FamilyCalendarEventUpdateManyWithoutFamilyNestedInput
-  invites?: Prisma.FamilyInviteUpdateManyWithoutFamilyNestedInput
-}
-
-export type FamilyUncheckedUpdateWithoutAllocationsInput = {
-  id?: Prisma.StringFieldUpdateOperationsInput | string
-  name?: Prisma.StringFieldUpdateOperationsInput | string
-  currency?: Prisma.StringFieldUpdateOperationsInput | string
-  cutoffDay?: Prisma.IntFieldUpdateOperationsInput | number
-  budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
-  planStatus?: Prisma.StringFieldUpdateOperationsInput | string
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  members?: Prisma.FamilyMemberUncheckedUpdateManyWithoutFamilyNestedInput
-  budgetEntities?: Prisma.BudgetEntityUncheckedUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
-  budgetCategories?: Prisma.BudgetCategoryUncheckedUpdateManyWithoutFamilyNestedInput
-  transactions?: Prisma.TransactionUncheckedUpdateManyWithoutFamilyNestedInput
-  receipts?: Prisma.ReceiptUncheckedUpdateManyWithoutFamilyNestedInput
-  receiptExtractions?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutFamilyNestedInput
-  moneyRequests?: Prisma.MoneyRequestUncheckedUpdateManyWithoutFamilyNestedInput
-  categorySuggestions?: Prisma.CategorySuggestionUncheckedUpdateManyWithoutFamilyNestedInput
-  categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedUpdateManyWithoutFamilyNestedInput
-  budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedUpdateManyWithoutFamilyNestedInput
-  userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedUpdateManyWithoutFamilyNestedInput
-  calendarEvents?: Prisma.FamilyCalendarEventUncheckedUpdateManyWithoutFamilyNestedInput
-  invites?: Prisma.FamilyInviteUncheckedUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUncheckedUpdateManyWithoutFamilyNestedInput
 }
 
 export type FamilyCreateWithoutCategorySuggestionsInput = {
@@ -1617,13 +2417,16 @@ export type FamilyCreateWithoutCategorySuggestionsInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.FamilyMemberCreateNestedManyWithoutFamilyInput
-  budgetEntities?: Prisma.BudgetEntityCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerCreateNestedManyWithoutFamilyInput
   budgetCategories?: Prisma.BudgetCategoryCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountCreateNestedManyWithoutFamilyInput
   transactions?: Prisma.TransactionCreateNestedManyWithoutFamilyInput
   receipts?: Prisma.ReceiptCreateNestedManyWithoutFamilyInput
   receiptExtractions?: Prisma.ReceiptExtractionCreateNestedManyWithoutFamilyInput
@@ -1631,8 +2434,10 @@ export type FamilyCreateWithoutCategorySuggestionsInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceCreateNestedManyWithoutFamilyInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionCreateNestedManyWithoutFamilyInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionCreateNestedManyWithoutFamilyInput
   calendarEvents?: Prisma.FamilyCalendarEventCreateNestedManyWithoutFamilyInput
   invites?: Prisma.FamilyInviteCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetCreateNestedManyWithoutFamilyInput
 }
 
 export type FamilyUncheckedCreateWithoutCategorySuggestionsInput = {
@@ -1643,13 +2448,16 @@ export type FamilyUncheckedCreateWithoutCategorySuggestionsInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutFamilyInput
-  budgetEntities?: Prisma.BudgetEntityUncheckedCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityUncheckedCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceUncheckedCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
   budgetCategories?: Prisma.BudgetCategoryUncheckedCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedCreateNestedManyWithoutFamilyInput
   transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutFamilyInput
   receipts?: Prisma.ReceiptUncheckedCreateNestedManyWithoutFamilyInput
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutFamilyInput
@@ -1657,8 +2465,10 @@ export type FamilyUncheckedCreateWithoutCategorySuggestionsInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedCreateNestedManyWithoutFamilyInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedCreateNestedManyWithoutFamilyInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedCreateNestedManyWithoutFamilyInput
   calendarEvents?: Prisma.FamilyCalendarEventUncheckedCreateNestedManyWithoutFamilyInput
   invites?: Prisma.FamilyInviteUncheckedCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetUncheckedCreateNestedManyWithoutFamilyInput
 }
 
 export type FamilyCreateOrConnectWithoutCategorySuggestionsInput = {
@@ -1685,13 +2495,16 @@ export type FamilyUpdateWithoutCategorySuggestionsInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.FamilyMemberUpdateManyWithoutFamilyNestedInput
-  budgetEntities?: Prisma.BudgetEntityUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUpdateManyWithoutFamilyNestedInput
   budgetCategories?: Prisma.BudgetCategoryUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUpdateManyWithoutFamilyNestedInput
   transactions?: Prisma.TransactionUpdateManyWithoutFamilyNestedInput
   receipts?: Prisma.ReceiptUpdateManyWithoutFamilyNestedInput
   receiptExtractions?: Prisma.ReceiptExtractionUpdateManyWithoutFamilyNestedInput
@@ -1699,8 +2512,10 @@ export type FamilyUpdateWithoutCategorySuggestionsInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUpdateManyWithoutFamilyNestedInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUpdateManyWithoutFamilyNestedInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUpdateManyWithoutFamilyNestedInput
   calendarEvents?: Prisma.FamilyCalendarEventUpdateManyWithoutFamilyNestedInput
   invites?: Prisma.FamilyInviteUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUpdateManyWithoutFamilyNestedInput
 }
 
 export type FamilyUncheckedUpdateWithoutCategorySuggestionsInput = {
@@ -1711,13 +2526,16 @@ export type FamilyUncheckedUpdateWithoutCategorySuggestionsInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.FamilyMemberUncheckedUpdateManyWithoutFamilyNestedInput
-  budgetEntities?: Prisma.BudgetEntityUncheckedUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUncheckedUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUncheckedUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
   budgetCategories?: Prisma.BudgetCategoryUncheckedUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedUpdateManyWithoutFamilyNestedInput
   transactions?: Prisma.TransactionUncheckedUpdateManyWithoutFamilyNestedInput
   receipts?: Prisma.ReceiptUncheckedUpdateManyWithoutFamilyNestedInput
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutFamilyNestedInput
@@ -1725,8 +2543,10 @@ export type FamilyUncheckedUpdateWithoutCategorySuggestionsInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedUpdateManyWithoutFamilyNestedInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedUpdateManyWithoutFamilyNestedInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedUpdateManyWithoutFamilyNestedInput
   calendarEvents?: Prisma.FamilyCalendarEventUncheckedUpdateManyWithoutFamilyNestedInput
   invites?: Prisma.FamilyInviteUncheckedUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUncheckedUpdateManyWithoutFamilyNestedInput
 }
 
 export type FamilyCreateWithoutBudgetAdjustmentSuggestionsInput = {
@@ -1737,13 +2557,16 @@ export type FamilyCreateWithoutBudgetAdjustmentSuggestionsInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.FamilyMemberCreateNestedManyWithoutFamilyInput
-  budgetEntities?: Prisma.BudgetEntityCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerCreateNestedManyWithoutFamilyInput
   budgetCategories?: Prisma.BudgetCategoryCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountCreateNestedManyWithoutFamilyInput
   transactions?: Prisma.TransactionCreateNestedManyWithoutFamilyInput
   receipts?: Prisma.ReceiptCreateNestedManyWithoutFamilyInput
   receiptExtractions?: Prisma.ReceiptExtractionCreateNestedManyWithoutFamilyInput
@@ -1751,8 +2574,10 @@ export type FamilyCreateWithoutBudgetAdjustmentSuggestionsInput = {
   categorySuggestions?: Prisma.CategorySuggestionCreateNestedManyWithoutFamilyInput
   categoryPreferences?: Prisma.FamilyCategoryPreferenceCreateNestedManyWithoutFamilyInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionCreateNestedManyWithoutFamilyInput
   calendarEvents?: Prisma.FamilyCalendarEventCreateNestedManyWithoutFamilyInput
   invites?: Prisma.FamilyInviteCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetCreateNestedManyWithoutFamilyInput
 }
 
 export type FamilyUncheckedCreateWithoutBudgetAdjustmentSuggestionsInput = {
@@ -1763,13 +2588,16 @@ export type FamilyUncheckedCreateWithoutBudgetAdjustmentSuggestionsInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutFamilyInput
-  budgetEntities?: Prisma.BudgetEntityUncheckedCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityUncheckedCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceUncheckedCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
   budgetCategories?: Prisma.BudgetCategoryUncheckedCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedCreateNestedManyWithoutFamilyInput
   transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutFamilyInput
   receipts?: Prisma.ReceiptUncheckedCreateNestedManyWithoutFamilyInput
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutFamilyInput
@@ -1777,8 +2605,10 @@ export type FamilyUncheckedCreateWithoutBudgetAdjustmentSuggestionsInput = {
   categorySuggestions?: Prisma.CategorySuggestionUncheckedCreateNestedManyWithoutFamilyInput
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedCreateNestedManyWithoutFamilyInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedCreateNestedManyWithoutFamilyInput
   calendarEvents?: Prisma.FamilyCalendarEventUncheckedCreateNestedManyWithoutFamilyInput
   invites?: Prisma.FamilyInviteUncheckedCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetUncheckedCreateNestedManyWithoutFamilyInput
 }
 
 export type FamilyCreateOrConnectWithoutBudgetAdjustmentSuggestionsInput = {
@@ -1805,13 +2635,16 @@ export type FamilyUpdateWithoutBudgetAdjustmentSuggestionsInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.FamilyMemberUpdateManyWithoutFamilyNestedInput
-  budgetEntities?: Prisma.BudgetEntityUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUpdateManyWithoutFamilyNestedInput
   budgetCategories?: Prisma.BudgetCategoryUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUpdateManyWithoutFamilyNestedInput
   transactions?: Prisma.TransactionUpdateManyWithoutFamilyNestedInput
   receipts?: Prisma.ReceiptUpdateManyWithoutFamilyNestedInput
   receiptExtractions?: Prisma.ReceiptExtractionUpdateManyWithoutFamilyNestedInput
@@ -1819,8 +2652,10 @@ export type FamilyUpdateWithoutBudgetAdjustmentSuggestionsInput = {
   categorySuggestions?: Prisma.CategorySuggestionUpdateManyWithoutFamilyNestedInput
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUpdateManyWithoutFamilyNestedInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUpdateManyWithoutFamilyNestedInput
   calendarEvents?: Prisma.FamilyCalendarEventUpdateManyWithoutFamilyNestedInput
   invites?: Prisma.FamilyInviteUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUpdateManyWithoutFamilyNestedInput
 }
 
 export type FamilyUncheckedUpdateWithoutBudgetAdjustmentSuggestionsInput = {
@@ -1831,13 +2666,16 @@ export type FamilyUncheckedUpdateWithoutBudgetAdjustmentSuggestionsInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.FamilyMemberUncheckedUpdateManyWithoutFamilyNestedInput
-  budgetEntities?: Prisma.BudgetEntityUncheckedUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUncheckedUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUncheckedUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
   budgetCategories?: Prisma.BudgetCategoryUncheckedUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedUpdateManyWithoutFamilyNestedInput
   transactions?: Prisma.TransactionUncheckedUpdateManyWithoutFamilyNestedInput
   receipts?: Prisma.ReceiptUncheckedUpdateManyWithoutFamilyNestedInput
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutFamilyNestedInput
@@ -1845,8 +2683,10 @@ export type FamilyUncheckedUpdateWithoutBudgetAdjustmentSuggestionsInput = {
   categorySuggestions?: Prisma.CategorySuggestionUncheckedUpdateManyWithoutFamilyNestedInput
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedUpdateManyWithoutFamilyNestedInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedUpdateManyWithoutFamilyNestedInput
   calendarEvents?: Prisma.FamilyCalendarEventUncheckedUpdateManyWithoutFamilyNestedInput
   invites?: Prisma.FamilyInviteUncheckedUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUncheckedUpdateManyWithoutFamilyNestedInput
 }
 
 export type FamilyCreateWithoutUserBudgetSubdivisionsInput = {
@@ -1857,13 +2697,16 @@ export type FamilyCreateWithoutUserBudgetSubdivisionsInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.FamilyMemberCreateNestedManyWithoutFamilyInput
-  budgetEntities?: Prisma.BudgetEntityCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerCreateNestedManyWithoutFamilyInput
   budgetCategories?: Prisma.BudgetCategoryCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountCreateNestedManyWithoutFamilyInput
   transactions?: Prisma.TransactionCreateNestedManyWithoutFamilyInput
   receipts?: Prisma.ReceiptCreateNestedManyWithoutFamilyInput
   receiptExtractions?: Prisma.ReceiptExtractionCreateNestedManyWithoutFamilyInput
@@ -1871,8 +2714,10 @@ export type FamilyCreateWithoutUserBudgetSubdivisionsInput = {
   categorySuggestions?: Prisma.CategorySuggestionCreateNestedManyWithoutFamilyInput
   categoryPreferences?: Prisma.FamilyCategoryPreferenceCreateNestedManyWithoutFamilyInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionCreateNestedManyWithoutFamilyInput
   calendarEvents?: Prisma.FamilyCalendarEventCreateNestedManyWithoutFamilyInput
   invites?: Prisma.FamilyInviteCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetCreateNestedManyWithoutFamilyInput
 }
 
 export type FamilyUncheckedCreateWithoutUserBudgetSubdivisionsInput = {
@@ -1883,13 +2728,16 @@ export type FamilyUncheckedCreateWithoutUserBudgetSubdivisionsInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutFamilyInput
-  budgetEntities?: Prisma.BudgetEntityUncheckedCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityUncheckedCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceUncheckedCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
   budgetCategories?: Prisma.BudgetCategoryUncheckedCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedCreateNestedManyWithoutFamilyInput
   transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutFamilyInput
   receipts?: Prisma.ReceiptUncheckedCreateNestedManyWithoutFamilyInput
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutFamilyInput
@@ -1897,8 +2745,10 @@ export type FamilyUncheckedCreateWithoutUserBudgetSubdivisionsInput = {
   categorySuggestions?: Prisma.CategorySuggestionUncheckedCreateNestedManyWithoutFamilyInput
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedCreateNestedManyWithoutFamilyInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedCreateNestedManyWithoutFamilyInput
   calendarEvents?: Prisma.FamilyCalendarEventUncheckedCreateNestedManyWithoutFamilyInput
   invites?: Prisma.FamilyInviteUncheckedCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetUncheckedCreateNestedManyWithoutFamilyInput
 }
 
 export type FamilyCreateOrConnectWithoutUserBudgetSubdivisionsInput = {
@@ -1925,13 +2775,16 @@ export type FamilyUpdateWithoutUserBudgetSubdivisionsInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.FamilyMemberUpdateManyWithoutFamilyNestedInput
-  budgetEntities?: Prisma.BudgetEntityUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUpdateManyWithoutFamilyNestedInput
   budgetCategories?: Prisma.BudgetCategoryUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUpdateManyWithoutFamilyNestedInput
   transactions?: Prisma.TransactionUpdateManyWithoutFamilyNestedInput
   receipts?: Prisma.ReceiptUpdateManyWithoutFamilyNestedInput
   receiptExtractions?: Prisma.ReceiptExtractionUpdateManyWithoutFamilyNestedInput
@@ -1939,8 +2792,10 @@ export type FamilyUpdateWithoutUserBudgetSubdivisionsInput = {
   categorySuggestions?: Prisma.CategorySuggestionUpdateManyWithoutFamilyNestedInput
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUpdateManyWithoutFamilyNestedInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUpdateManyWithoutFamilyNestedInput
   calendarEvents?: Prisma.FamilyCalendarEventUpdateManyWithoutFamilyNestedInput
   invites?: Prisma.FamilyInviteUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUpdateManyWithoutFamilyNestedInput
 }
 
 export type FamilyUncheckedUpdateWithoutUserBudgetSubdivisionsInput = {
@@ -1951,13 +2806,16 @@ export type FamilyUncheckedUpdateWithoutUserBudgetSubdivisionsInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.FamilyMemberUncheckedUpdateManyWithoutFamilyNestedInput
-  budgetEntities?: Prisma.BudgetEntityUncheckedUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUncheckedUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUncheckedUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
   budgetCategories?: Prisma.BudgetCategoryUncheckedUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedUpdateManyWithoutFamilyNestedInput
   transactions?: Prisma.TransactionUncheckedUpdateManyWithoutFamilyNestedInput
   receipts?: Prisma.ReceiptUncheckedUpdateManyWithoutFamilyNestedInput
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutFamilyNestedInput
@@ -1965,8 +2823,10 @@ export type FamilyUncheckedUpdateWithoutUserBudgetSubdivisionsInput = {
   categorySuggestions?: Prisma.CategorySuggestionUncheckedUpdateManyWithoutFamilyNestedInput
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedUpdateManyWithoutFamilyNestedInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedUpdateManyWithoutFamilyNestedInput
   calendarEvents?: Prisma.FamilyCalendarEventUncheckedUpdateManyWithoutFamilyNestedInput
   invites?: Prisma.FamilyInviteUncheckedUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUncheckedUpdateManyWithoutFamilyNestedInput
 }
 
 export type FamilyCreateWithoutTransactionsInput = {
@@ -1977,13 +2837,16 @@ export type FamilyCreateWithoutTransactionsInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.FamilyMemberCreateNestedManyWithoutFamilyInput
-  budgetEntities?: Prisma.BudgetEntityCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerCreateNestedManyWithoutFamilyInput
   budgetCategories?: Prisma.BudgetCategoryCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountCreateNestedManyWithoutFamilyInput
   receipts?: Prisma.ReceiptCreateNestedManyWithoutFamilyInput
   receiptExtractions?: Prisma.ReceiptExtractionCreateNestedManyWithoutFamilyInput
   moneyRequests?: Prisma.MoneyRequestCreateNestedManyWithoutFamilyInput
@@ -1991,8 +2854,10 @@ export type FamilyCreateWithoutTransactionsInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceCreateNestedManyWithoutFamilyInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionCreateNestedManyWithoutFamilyInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionCreateNestedManyWithoutFamilyInput
   calendarEvents?: Prisma.FamilyCalendarEventCreateNestedManyWithoutFamilyInput
   invites?: Prisma.FamilyInviteCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetCreateNestedManyWithoutFamilyInput
 }
 
 export type FamilyUncheckedCreateWithoutTransactionsInput = {
@@ -2003,13 +2868,16 @@ export type FamilyUncheckedCreateWithoutTransactionsInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutFamilyInput
-  budgetEntities?: Prisma.BudgetEntityUncheckedCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityUncheckedCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceUncheckedCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
   budgetCategories?: Prisma.BudgetCategoryUncheckedCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedCreateNestedManyWithoutFamilyInput
   receipts?: Prisma.ReceiptUncheckedCreateNestedManyWithoutFamilyInput
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutFamilyInput
   moneyRequests?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutFamilyInput
@@ -2017,8 +2885,10 @@ export type FamilyUncheckedCreateWithoutTransactionsInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedCreateNestedManyWithoutFamilyInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedCreateNestedManyWithoutFamilyInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedCreateNestedManyWithoutFamilyInput
   calendarEvents?: Prisma.FamilyCalendarEventUncheckedCreateNestedManyWithoutFamilyInput
   invites?: Prisma.FamilyInviteUncheckedCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetUncheckedCreateNestedManyWithoutFamilyInput
 }
 
 export type FamilyCreateOrConnectWithoutTransactionsInput = {
@@ -2045,13 +2915,16 @@ export type FamilyUpdateWithoutTransactionsInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.FamilyMemberUpdateManyWithoutFamilyNestedInput
-  budgetEntities?: Prisma.BudgetEntityUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUpdateManyWithoutFamilyNestedInput
   budgetCategories?: Prisma.BudgetCategoryUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUpdateManyWithoutFamilyNestedInput
   receipts?: Prisma.ReceiptUpdateManyWithoutFamilyNestedInput
   receiptExtractions?: Prisma.ReceiptExtractionUpdateManyWithoutFamilyNestedInput
   moneyRequests?: Prisma.MoneyRequestUpdateManyWithoutFamilyNestedInput
@@ -2059,8 +2932,10 @@ export type FamilyUpdateWithoutTransactionsInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUpdateManyWithoutFamilyNestedInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUpdateManyWithoutFamilyNestedInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUpdateManyWithoutFamilyNestedInput
   calendarEvents?: Prisma.FamilyCalendarEventUpdateManyWithoutFamilyNestedInput
   invites?: Prisma.FamilyInviteUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUpdateManyWithoutFamilyNestedInput
 }
 
 export type FamilyUncheckedUpdateWithoutTransactionsInput = {
@@ -2071,13 +2946,16 @@ export type FamilyUncheckedUpdateWithoutTransactionsInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.FamilyMemberUncheckedUpdateManyWithoutFamilyNestedInput
-  budgetEntities?: Prisma.BudgetEntityUncheckedUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUncheckedUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUncheckedUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
   budgetCategories?: Prisma.BudgetCategoryUncheckedUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedUpdateManyWithoutFamilyNestedInput
   receipts?: Prisma.ReceiptUncheckedUpdateManyWithoutFamilyNestedInput
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutFamilyNestedInput
   moneyRequests?: Prisma.MoneyRequestUncheckedUpdateManyWithoutFamilyNestedInput
@@ -2085,8 +2963,10 @@ export type FamilyUncheckedUpdateWithoutTransactionsInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedUpdateManyWithoutFamilyNestedInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedUpdateManyWithoutFamilyNestedInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedUpdateManyWithoutFamilyNestedInput
   calendarEvents?: Prisma.FamilyCalendarEventUncheckedUpdateManyWithoutFamilyNestedInput
   invites?: Prisma.FamilyInviteUncheckedUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUncheckedUpdateManyWithoutFamilyNestedInput
 }
 
 export type FamilyCreateWithoutReceiptsInput = {
@@ -2097,13 +2977,16 @@ export type FamilyCreateWithoutReceiptsInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.FamilyMemberCreateNestedManyWithoutFamilyInput
-  budgetEntities?: Prisma.BudgetEntityCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerCreateNestedManyWithoutFamilyInput
   budgetCategories?: Prisma.BudgetCategoryCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountCreateNestedManyWithoutFamilyInput
   transactions?: Prisma.TransactionCreateNestedManyWithoutFamilyInput
   receiptExtractions?: Prisma.ReceiptExtractionCreateNestedManyWithoutFamilyInput
   moneyRequests?: Prisma.MoneyRequestCreateNestedManyWithoutFamilyInput
@@ -2111,8 +2994,10 @@ export type FamilyCreateWithoutReceiptsInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceCreateNestedManyWithoutFamilyInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionCreateNestedManyWithoutFamilyInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionCreateNestedManyWithoutFamilyInput
   calendarEvents?: Prisma.FamilyCalendarEventCreateNestedManyWithoutFamilyInput
   invites?: Prisma.FamilyInviteCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetCreateNestedManyWithoutFamilyInput
 }
 
 export type FamilyUncheckedCreateWithoutReceiptsInput = {
@@ -2123,13 +3008,16 @@ export type FamilyUncheckedCreateWithoutReceiptsInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutFamilyInput
-  budgetEntities?: Prisma.BudgetEntityUncheckedCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityUncheckedCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceUncheckedCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
   budgetCategories?: Prisma.BudgetCategoryUncheckedCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedCreateNestedManyWithoutFamilyInput
   transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutFamilyInput
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutFamilyInput
   moneyRequests?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutFamilyInput
@@ -2137,8 +3025,10 @@ export type FamilyUncheckedCreateWithoutReceiptsInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedCreateNestedManyWithoutFamilyInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedCreateNestedManyWithoutFamilyInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedCreateNestedManyWithoutFamilyInput
   calendarEvents?: Prisma.FamilyCalendarEventUncheckedCreateNestedManyWithoutFamilyInput
   invites?: Prisma.FamilyInviteUncheckedCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetUncheckedCreateNestedManyWithoutFamilyInput
 }
 
 export type FamilyCreateOrConnectWithoutReceiptsInput = {
@@ -2165,13 +3055,16 @@ export type FamilyUpdateWithoutReceiptsInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.FamilyMemberUpdateManyWithoutFamilyNestedInput
-  budgetEntities?: Prisma.BudgetEntityUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUpdateManyWithoutFamilyNestedInput
   budgetCategories?: Prisma.BudgetCategoryUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUpdateManyWithoutFamilyNestedInput
   transactions?: Prisma.TransactionUpdateManyWithoutFamilyNestedInput
   receiptExtractions?: Prisma.ReceiptExtractionUpdateManyWithoutFamilyNestedInput
   moneyRequests?: Prisma.MoneyRequestUpdateManyWithoutFamilyNestedInput
@@ -2179,8 +3072,10 @@ export type FamilyUpdateWithoutReceiptsInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUpdateManyWithoutFamilyNestedInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUpdateManyWithoutFamilyNestedInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUpdateManyWithoutFamilyNestedInput
   calendarEvents?: Prisma.FamilyCalendarEventUpdateManyWithoutFamilyNestedInput
   invites?: Prisma.FamilyInviteUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUpdateManyWithoutFamilyNestedInput
 }
 
 export type FamilyUncheckedUpdateWithoutReceiptsInput = {
@@ -2191,13 +3086,16 @@ export type FamilyUncheckedUpdateWithoutReceiptsInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.FamilyMemberUncheckedUpdateManyWithoutFamilyNestedInput
-  budgetEntities?: Prisma.BudgetEntityUncheckedUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUncheckedUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUncheckedUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
   budgetCategories?: Prisma.BudgetCategoryUncheckedUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedUpdateManyWithoutFamilyNestedInput
   transactions?: Prisma.TransactionUncheckedUpdateManyWithoutFamilyNestedInput
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutFamilyNestedInput
   moneyRequests?: Prisma.MoneyRequestUncheckedUpdateManyWithoutFamilyNestedInput
@@ -2205,8 +3103,10 @@ export type FamilyUncheckedUpdateWithoutReceiptsInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedUpdateManyWithoutFamilyNestedInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedUpdateManyWithoutFamilyNestedInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedUpdateManyWithoutFamilyNestedInput
   calendarEvents?: Prisma.FamilyCalendarEventUncheckedUpdateManyWithoutFamilyNestedInput
   invites?: Prisma.FamilyInviteUncheckedUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUncheckedUpdateManyWithoutFamilyNestedInput
 }
 
 export type FamilyCreateWithoutReceiptExtractionsInput = {
@@ -2217,13 +3117,16 @@ export type FamilyCreateWithoutReceiptExtractionsInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.FamilyMemberCreateNestedManyWithoutFamilyInput
-  budgetEntities?: Prisma.BudgetEntityCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerCreateNestedManyWithoutFamilyInput
   budgetCategories?: Prisma.BudgetCategoryCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountCreateNestedManyWithoutFamilyInput
   transactions?: Prisma.TransactionCreateNestedManyWithoutFamilyInput
   receipts?: Prisma.ReceiptCreateNestedManyWithoutFamilyInput
   moneyRequests?: Prisma.MoneyRequestCreateNestedManyWithoutFamilyInput
@@ -2231,8 +3134,10 @@ export type FamilyCreateWithoutReceiptExtractionsInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceCreateNestedManyWithoutFamilyInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionCreateNestedManyWithoutFamilyInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionCreateNestedManyWithoutFamilyInput
   calendarEvents?: Prisma.FamilyCalendarEventCreateNestedManyWithoutFamilyInput
   invites?: Prisma.FamilyInviteCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetCreateNestedManyWithoutFamilyInput
 }
 
 export type FamilyUncheckedCreateWithoutReceiptExtractionsInput = {
@@ -2243,13 +3148,16 @@ export type FamilyUncheckedCreateWithoutReceiptExtractionsInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutFamilyInput
-  budgetEntities?: Prisma.BudgetEntityUncheckedCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityUncheckedCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceUncheckedCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
   budgetCategories?: Prisma.BudgetCategoryUncheckedCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedCreateNestedManyWithoutFamilyInput
   transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutFamilyInput
   receipts?: Prisma.ReceiptUncheckedCreateNestedManyWithoutFamilyInput
   moneyRequests?: Prisma.MoneyRequestUncheckedCreateNestedManyWithoutFamilyInput
@@ -2257,8 +3165,10 @@ export type FamilyUncheckedCreateWithoutReceiptExtractionsInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedCreateNestedManyWithoutFamilyInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedCreateNestedManyWithoutFamilyInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedCreateNestedManyWithoutFamilyInput
   calendarEvents?: Prisma.FamilyCalendarEventUncheckedCreateNestedManyWithoutFamilyInput
   invites?: Prisma.FamilyInviteUncheckedCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetUncheckedCreateNestedManyWithoutFamilyInput
 }
 
 export type FamilyCreateOrConnectWithoutReceiptExtractionsInput = {
@@ -2285,13 +3195,16 @@ export type FamilyUpdateWithoutReceiptExtractionsInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.FamilyMemberUpdateManyWithoutFamilyNestedInput
-  budgetEntities?: Prisma.BudgetEntityUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUpdateManyWithoutFamilyNestedInput
   budgetCategories?: Prisma.BudgetCategoryUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUpdateManyWithoutFamilyNestedInput
   transactions?: Prisma.TransactionUpdateManyWithoutFamilyNestedInput
   receipts?: Prisma.ReceiptUpdateManyWithoutFamilyNestedInput
   moneyRequests?: Prisma.MoneyRequestUpdateManyWithoutFamilyNestedInput
@@ -2299,8 +3212,10 @@ export type FamilyUpdateWithoutReceiptExtractionsInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUpdateManyWithoutFamilyNestedInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUpdateManyWithoutFamilyNestedInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUpdateManyWithoutFamilyNestedInput
   calendarEvents?: Prisma.FamilyCalendarEventUpdateManyWithoutFamilyNestedInput
   invites?: Prisma.FamilyInviteUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUpdateManyWithoutFamilyNestedInput
 }
 
 export type FamilyUncheckedUpdateWithoutReceiptExtractionsInput = {
@@ -2311,13 +3226,16 @@ export type FamilyUncheckedUpdateWithoutReceiptExtractionsInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.FamilyMemberUncheckedUpdateManyWithoutFamilyNestedInput
-  budgetEntities?: Prisma.BudgetEntityUncheckedUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUncheckedUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUncheckedUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
   budgetCategories?: Prisma.BudgetCategoryUncheckedUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedUpdateManyWithoutFamilyNestedInput
   transactions?: Prisma.TransactionUncheckedUpdateManyWithoutFamilyNestedInput
   receipts?: Prisma.ReceiptUncheckedUpdateManyWithoutFamilyNestedInput
   moneyRequests?: Prisma.MoneyRequestUncheckedUpdateManyWithoutFamilyNestedInput
@@ -2325,8 +3243,10 @@ export type FamilyUncheckedUpdateWithoutReceiptExtractionsInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedUpdateManyWithoutFamilyNestedInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedUpdateManyWithoutFamilyNestedInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedUpdateManyWithoutFamilyNestedInput
   calendarEvents?: Prisma.FamilyCalendarEventUncheckedUpdateManyWithoutFamilyNestedInput
   invites?: Prisma.FamilyInviteUncheckedUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUncheckedUpdateManyWithoutFamilyNestedInput
 }
 
 export type FamilyCreateWithoutMoneyRequestsInput = {
@@ -2337,13 +3257,16 @@ export type FamilyCreateWithoutMoneyRequestsInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.FamilyMemberCreateNestedManyWithoutFamilyInput
-  budgetEntities?: Prisma.BudgetEntityCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerCreateNestedManyWithoutFamilyInput
   budgetCategories?: Prisma.BudgetCategoryCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountCreateNestedManyWithoutFamilyInput
   transactions?: Prisma.TransactionCreateNestedManyWithoutFamilyInput
   receipts?: Prisma.ReceiptCreateNestedManyWithoutFamilyInput
   receiptExtractions?: Prisma.ReceiptExtractionCreateNestedManyWithoutFamilyInput
@@ -2351,8 +3274,10 @@ export type FamilyCreateWithoutMoneyRequestsInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceCreateNestedManyWithoutFamilyInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionCreateNestedManyWithoutFamilyInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionCreateNestedManyWithoutFamilyInput
   calendarEvents?: Prisma.FamilyCalendarEventCreateNestedManyWithoutFamilyInput
   invites?: Prisma.FamilyInviteCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetCreateNestedManyWithoutFamilyInput
 }
 
 export type FamilyUncheckedCreateWithoutMoneyRequestsInput = {
@@ -2363,13 +3288,16 @@ export type FamilyUncheckedCreateWithoutMoneyRequestsInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutFamilyInput
-  budgetEntities?: Prisma.BudgetEntityUncheckedCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityUncheckedCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceUncheckedCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
   budgetCategories?: Prisma.BudgetCategoryUncheckedCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedCreateNestedManyWithoutFamilyInput
   transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutFamilyInput
   receipts?: Prisma.ReceiptUncheckedCreateNestedManyWithoutFamilyInput
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutFamilyInput
@@ -2377,8 +3305,10 @@ export type FamilyUncheckedCreateWithoutMoneyRequestsInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedCreateNestedManyWithoutFamilyInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedCreateNestedManyWithoutFamilyInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedCreateNestedManyWithoutFamilyInput
   calendarEvents?: Prisma.FamilyCalendarEventUncheckedCreateNestedManyWithoutFamilyInput
   invites?: Prisma.FamilyInviteUncheckedCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetUncheckedCreateNestedManyWithoutFamilyInput
 }
 
 export type FamilyCreateOrConnectWithoutMoneyRequestsInput = {
@@ -2405,13 +3335,16 @@ export type FamilyUpdateWithoutMoneyRequestsInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.FamilyMemberUpdateManyWithoutFamilyNestedInput
-  budgetEntities?: Prisma.BudgetEntityUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUpdateManyWithoutFamilyNestedInput
   budgetCategories?: Prisma.BudgetCategoryUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUpdateManyWithoutFamilyNestedInput
   transactions?: Prisma.TransactionUpdateManyWithoutFamilyNestedInput
   receipts?: Prisma.ReceiptUpdateManyWithoutFamilyNestedInput
   receiptExtractions?: Prisma.ReceiptExtractionUpdateManyWithoutFamilyNestedInput
@@ -2419,8 +3352,10 @@ export type FamilyUpdateWithoutMoneyRequestsInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUpdateManyWithoutFamilyNestedInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUpdateManyWithoutFamilyNestedInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUpdateManyWithoutFamilyNestedInput
   calendarEvents?: Prisma.FamilyCalendarEventUpdateManyWithoutFamilyNestedInput
   invites?: Prisma.FamilyInviteUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUpdateManyWithoutFamilyNestedInput
 }
 
 export type FamilyUncheckedUpdateWithoutMoneyRequestsInput = {
@@ -2431,13 +3366,16 @@ export type FamilyUncheckedUpdateWithoutMoneyRequestsInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.FamilyMemberUncheckedUpdateManyWithoutFamilyNestedInput
-  budgetEntities?: Prisma.BudgetEntityUncheckedUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUncheckedUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUncheckedUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
   budgetCategories?: Prisma.BudgetCategoryUncheckedUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedUpdateManyWithoutFamilyNestedInput
   transactions?: Prisma.TransactionUncheckedUpdateManyWithoutFamilyNestedInput
   receipts?: Prisma.ReceiptUncheckedUpdateManyWithoutFamilyNestedInput
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutFamilyNestedInput
@@ -2445,8 +3383,10 @@ export type FamilyUncheckedUpdateWithoutMoneyRequestsInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedUpdateManyWithoutFamilyNestedInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedUpdateManyWithoutFamilyNestedInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedUpdateManyWithoutFamilyNestedInput
   calendarEvents?: Prisma.FamilyCalendarEventUncheckedUpdateManyWithoutFamilyNestedInput
   invites?: Prisma.FamilyInviteUncheckedUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUncheckedUpdateManyWithoutFamilyNestedInput
 }
 
 export type FamilyCreateWithoutCalendarEventsInput = {
@@ -2457,13 +3397,16 @@ export type FamilyCreateWithoutCalendarEventsInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.FamilyMemberCreateNestedManyWithoutFamilyInput
-  budgetEntities?: Prisma.BudgetEntityCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerCreateNestedManyWithoutFamilyInput
   budgetCategories?: Prisma.BudgetCategoryCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountCreateNestedManyWithoutFamilyInput
   transactions?: Prisma.TransactionCreateNestedManyWithoutFamilyInput
   receipts?: Prisma.ReceiptCreateNestedManyWithoutFamilyInput
   receiptExtractions?: Prisma.ReceiptExtractionCreateNestedManyWithoutFamilyInput
@@ -2472,7 +3415,9 @@ export type FamilyCreateWithoutCalendarEventsInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceCreateNestedManyWithoutFamilyInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionCreateNestedManyWithoutFamilyInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionCreateNestedManyWithoutFamilyInput
   invites?: Prisma.FamilyInviteCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetCreateNestedManyWithoutFamilyInput
 }
 
 export type FamilyUncheckedCreateWithoutCalendarEventsInput = {
@@ -2483,13 +3428,16 @@ export type FamilyUncheckedCreateWithoutCalendarEventsInput = {
   budgetStartDate: Date | string
   setupComplete?: boolean
   planStatus?: string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
   members?: Prisma.FamilyMemberUncheckedCreateNestedManyWithoutFamilyInput
-  budgetEntities?: Prisma.BudgetEntityUncheckedCreateNestedManyWithoutFamilyInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
+  entities?: Prisma.EntityUncheckedCreateNestedManyWithoutFamilyInput
+  entityServices?: Prisma.EntityServiceUncheckedCreateNestedManyWithoutFamilyInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedCreateNestedManyWithoutFamilyInput
+  entityOwners?: Prisma.EntityOwnerUncheckedCreateNestedManyWithoutFamilyInput
   budgetCategories?: Prisma.BudgetCategoryUncheckedCreateNestedManyWithoutFamilyInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedCreateNestedManyWithoutFamilyInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedCreateNestedManyWithoutFamilyInput
   transactions?: Prisma.TransactionUncheckedCreateNestedManyWithoutFamilyInput
   receipts?: Prisma.ReceiptUncheckedCreateNestedManyWithoutFamilyInput
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedCreateNestedManyWithoutFamilyInput
@@ -2498,7 +3446,9 @@ export type FamilyUncheckedCreateWithoutCalendarEventsInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedCreateNestedManyWithoutFamilyInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedCreateNestedManyWithoutFamilyInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedCreateNestedManyWithoutFamilyInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedCreateNestedManyWithoutFamilyInput
   invites?: Prisma.FamilyInviteUncheckedCreateNestedManyWithoutFamilyInput
+  assets?: Prisma.FamilyAssetUncheckedCreateNestedManyWithoutFamilyInput
 }
 
 export type FamilyCreateOrConnectWithoutCalendarEventsInput = {
@@ -2525,13 +3475,16 @@ export type FamilyUpdateWithoutCalendarEventsInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.FamilyMemberUpdateManyWithoutFamilyNestedInput
-  budgetEntities?: Prisma.BudgetEntityUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUpdateManyWithoutFamilyNestedInput
   budgetCategories?: Prisma.BudgetCategoryUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUpdateManyWithoutFamilyNestedInput
   transactions?: Prisma.TransactionUpdateManyWithoutFamilyNestedInput
   receipts?: Prisma.ReceiptUpdateManyWithoutFamilyNestedInput
   receiptExtractions?: Prisma.ReceiptExtractionUpdateManyWithoutFamilyNestedInput
@@ -2540,7 +3493,9 @@ export type FamilyUpdateWithoutCalendarEventsInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUpdateManyWithoutFamilyNestedInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUpdateManyWithoutFamilyNestedInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUpdateManyWithoutFamilyNestedInput
   invites?: Prisma.FamilyInviteUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUpdateManyWithoutFamilyNestedInput
 }
 
 export type FamilyUncheckedUpdateWithoutCalendarEventsInput = {
@@ -2551,13 +3506,16 @@ export type FamilyUncheckedUpdateWithoutCalendarEventsInput = {
   budgetStartDate?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   setupComplete?: Prisma.BoolFieldUpdateOperationsInput | boolean
   planStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  inventoryJson?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   members?: Prisma.FamilyMemberUncheckedUpdateManyWithoutFamilyNestedInput
-  budgetEntities?: Prisma.BudgetEntityUncheckedUpdateManyWithoutFamilyNestedInput
-  entityOwners?: Prisma.BudgetEntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
+  entities?: Prisma.EntityUncheckedUpdateManyWithoutFamilyNestedInput
+  entityServices?: Prisma.EntityServiceUncheckedUpdateManyWithoutFamilyNestedInput
+  customEntityTypes?: Prisma.FamilyEntityTypeUncheckedUpdateManyWithoutFamilyNestedInput
+  entityOwners?: Prisma.EntityOwnerUncheckedUpdateManyWithoutFamilyNestedInput
   budgetCategories?: Prisma.BudgetCategoryUncheckedUpdateManyWithoutFamilyNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUncheckedUpdateManyWithoutFamilyNestedInput
+  budgetAccounts?: Prisma.BudgetAccountUncheckedUpdateManyWithoutFamilyNestedInput
   transactions?: Prisma.TransactionUncheckedUpdateManyWithoutFamilyNestedInput
   receipts?: Prisma.ReceiptUncheckedUpdateManyWithoutFamilyNestedInput
   receiptExtractions?: Prisma.ReceiptExtractionUncheckedUpdateManyWithoutFamilyNestedInput
@@ -2566,7 +3524,9 @@ export type FamilyUncheckedUpdateWithoutCalendarEventsInput = {
   categoryPreferences?: Prisma.FamilyCategoryPreferenceUncheckedUpdateManyWithoutFamilyNestedInput
   budgetAdjustmentSuggestions?: Prisma.BudgetAdjustmentSuggestionUncheckedUpdateManyWithoutFamilyNestedInput
   userBudgetSubdivisions?: Prisma.UserBudgetSubdivisionUncheckedUpdateManyWithoutFamilyNestedInput
+  userEntityPermissions?: Prisma.UserEntityPermissionUncheckedUpdateManyWithoutFamilyNestedInput
   invites?: Prisma.FamilyInviteUncheckedUpdateManyWithoutFamilyNestedInput
+  assets?: Prisma.FamilyAssetUncheckedUpdateManyWithoutFamilyNestedInput
 }
 
 
@@ -2576,10 +3536,12 @@ export type FamilyUncheckedUpdateWithoutCalendarEventsInput = {
 
 export type FamilyCountOutputType = {
   members: number
-  budgetEntities: number
+  entities: number
+  entityServices: number
+  customEntityTypes: number
   entityOwners: number
   budgetCategories: number
-  allocations: number
+  budgetAccounts: number
   transactions: number
   receipts: number
   receiptExtractions: number
@@ -2588,16 +3550,20 @@ export type FamilyCountOutputType = {
   categoryPreferences: number
   budgetAdjustmentSuggestions: number
   userBudgetSubdivisions: number
+  userEntityPermissions: number
   calendarEvents: number
   invites: number
+  assets: number
 }
 
 export type FamilyCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   members?: boolean | FamilyCountOutputTypeCountMembersArgs
-  budgetEntities?: boolean | FamilyCountOutputTypeCountBudgetEntitiesArgs
+  entities?: boolean | FamilyCountOutputTypeCountEntitiesArgs
+  entityServices?: boolean | FamilyCountOutputTypeCountEntityServicesArgs
+  customEntityTypes?: boolean | FamilyCountOutputTypeCountCustomEntityTypesArgs
   entityOwners?: boolean | FamilyCountOutputTypeCountEntityOwnersArgs
   budgetCategories?: boolean | FamilyCountOutputTypeCountBudgetCategoriesArgs
-  allocations?: boolean | FamilyCountOutputTypeCountAllocationsArgs
+  budgetAccounts?: boolean | FamilyCountOutputTypeCountBudgetAccountsArgs
   transactions?: boolean | FamilyCountOutputTypeCountTransactionsArgs
   receipts?: boolean | FamilyCountOutputTypeCountReceiptsArgs
   receiptExtractions?: boolean | FamilyCountOutputTypeCountReceiptExtractionsArgs
@@ -2606,8 +3572,10 @@ export type FamilyCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions
   categoryPreferences?: boolean | FamilyCountOutputTypeCountCategoryPreferencesArgs
   budgetAdjustmentSuggestions?: boolean | FamilyCountOutputTypeCountBudgetAdjustmentSuggestionsArgs
   userBudgetSubdivisions?: boolean | FamilyCountOutputTypeCountUserBudgetSubdivisionsArgs
+  userEntityPermissions?: boolean | FamilyCountOutputTypeCountUserEntityPermissionsArgs
   calendarEvents?: boolean | FamilyCountOutputTypeCountCalendarEventsArgs
   invites?: boolean | FamilyCountOutputTypeCountInvitesArgs
+  assets?: boolean | FamilyCountOutputTypeCountAssetsArgs
 }
 
 /**
@@ -2630,15 +3598,29 @@ export type FamilyCountOutputTypeCountMembersArgs<ExtArgs extends runtime.Types.
 /**
  * FamilyCountOutputType without action
  */
-export type FamilyCountOutputTypeCountBudgetEntitiesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.BudgetEntityWhereInput
+export type FamilyCountOutputTypeCountEntitiesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.EntityWhereInput
+}
+
+/**
+ * FamilyCountOutputType without action
+ */
+export type FamilyCountOutputTypeCountEntityServicesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.EntityServiceWhereInput
+}
+
+/**
+ * FamilyCountOutputType without action
+ */
+export type FamilyCountOutputTypeCountCustomEntityTypesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.FamilyEntityTypeWhereInput
 }
 
 /**
  * FamilyCountOutputType without action
  */
 export type FamilyCountOutputTypeCountEntityOwnersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.BudgetEntityOwnerWhereInput
+  where?: Prisma.EntityOwnerWhereInput
 }
 
 /**
@@ -2651,8 +3633,8 @@ export type FamilyCountOutputTypeCountBudgetCategoriesArgs<ExtArgs extends runti
 /**
  * FamilyCountOutputType without action
  */
-export type FamilyCountOutputTypeCountAllocationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.EntityBudgetAllocationWhereInput
+export type FamilyCountOutputTypeCountBudgetAccountsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.BudgetAccountWhereInput
 }
 
 /**
@@ -2714,6 +3696,13 @@ export type FamilyCountOutputTypeCountUserBudgetSubdivisionsArgs<ExtArgs extends
 /**
  * FamilyCountOutputType without action
  */
+export type FamilyCountOutputTypeCountUserEntityPermissionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.UserEntityPermissionWhereInput
+}
+
+/**
+ * FamilyCountOutputType without action
+ */
 export type FamilyCountOutputTypeCountCalendarEventsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.FamilyCalendarEventWhereInput
 }
@@ -2725,6 +3714,13 @@ export type FamilyCountOutputTypeCountInvitesArgs<ExtArgs extends runtime.Types.
   where?: Prisma.FamilyInviteWhereInput
 }
 
+/**
+ * FamilyCountOutputType without action
+ */
+export type FamilyCountOutputTypeCountAssetsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.FamilyAssetWhereInput
+}
+
 
 export type FamilySelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -2734,13 +3730,16 @@ export type FamilySelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   budgetStartDate?: boolean
   setupComplete?: boolean
   planStatus?: boolean
+  inventoryJson?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   members?: boolean | Prisma.Family$membersArgs<ExtArgs>
-  budgetEntities?: boolean | Prisma.Family$budgetEntitiesArgs<ExtArgs>
+  entities?: boolean | Prisma.Family$entitiesArgs<ExtArgs>
+  entityServices?: boolean | Prisma.Family$entityServicesArgs<ExtArgs>
+  customEntityTypes?: boolean | Prisma.Family$customEntityTypesArgs<ExtArgs>
   entityOwners?: boolean | Prisma.Family$entityOwnersArgs<ExtArgs>
   budgetCategories?: boolean | Prisma.Family$budgetCategoriesArgs<ExtArgs>
-  allocations?: boolean | Prisma.Family$allocationsArgs<ExtArgs>
+  budgetAccounts?: boolean | Prisma.Family$budgetAccountsArgs<ExtArgs>
   transactions?: boolean | Prisma.Family$transactionsArgs<ExtArgs>
   receipts?: boolean | Prisma.Family$receiptsArgs<ExtArgs>
   receiptExtractions?: boolean | Prisma.Family$receiptExtractionsArgs<ExtArgs>
@@ -2749,8 +3748,10 @@ export type FamilySelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   categoryPreferences?: boolean | Prisma.Family$categoryPreferencesArgs<ExtArgs>
   budgetAdjustmentSuggestions?: boolean | Prisma.Family$budgetAdjustmentSuggestionsArgs<ExtArgs>
   userBudgetSubdivisions?: boolean | Prisma.Family$userBudgetSubdivisionsArgs<ExtArgs>
+  userEntityPermissions?: boolean | Prisma.Family$userEntityPermissionsArgs<ExtArgs>
   calendarEvents?: boolean | Prisma.Family$calendarEventsArgs<ExtArgs>
   invites?: boolean | Prisma.Family$invitesArgs<ExtArgs>
+  assets?: boolean | Prisma.Family$assetsArgs<ExtArgs>
   _count?: boolean | Prisma.FamilyCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["family"]>
 
@@ -2762,6 +3763,7 @@ export type FamilySelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extens
   budgetStartDate?: boolean
   setupComplete?: boolean
   planStatus?: boolean
+  inventoryJson?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["family"]>
@@ -2774,6 +3776,7 @@ export type FamilySelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extens
   budgetStartDate?: boolean
   setupComplete?: boolean
   planStatus?: boolean
+  inventoryJson?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }, ExtArgs["result"]["family"]>
@@ -2786,17 +3789,20 @@ export type FamilySelectScalar = {
   budgetStartDate?: boolean
   setupComplete?: boolean
   planStatus?: boolean
+  inventoryJson?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type FamilyOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "currency" | "cutoffDay" | "budgetStartDate" | "setupComplete" | "planStatus" | "createdAt" | "updatedAt", ExtArgs["result"]["family"]>
+export type FamilyOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "currency" | "cutoffDay" | "budgetStartDate" | "setupComplete" | "planStatus" | "inventoryJson" | "createdAt" | "updatedAt", ExtArgs["result"]["family"]>
 export type FamilyInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   members?: boolean | Prisma.Family$membersArgs<ExtArgs>
-  budgetEntities?: boolean | Prisma.Family$budgetEntitiesArgs<ExtArgs>
+  entities?: boolean | Prisma.Family$entitiesArgs<ExtArgs>
+  entityServices?: boolean | Prisma.Family$entityServicesArgs<ExtArgs>
+  customEntityTypes?: boolean | Prisma.Family$customEntityTypesArgs<ExtArgs>
   entityOwners?: boolean | Prisma.Family$entityOwnersArgs<ExtArgs>
   budgetCategories?: boolean | Prisma.Family$budgetCategoriesArgs<ExtArgs>
-  allocations?: boolean | Prisma.Family$allocationsArgs<ExtArgs>
+  budgetAccounts?: boolean | Prisma.Family$budgetAccountsArgs<ExtArgs>
   transactions?: boolean | Prisma.Family$transactionsArgs<ExtArgs>
   receipts?: boolean | Prisma.Family$receiptsArgs<ExtArgs>
   receiptExtractions?: boolean | Prisma.Family$receiptExtractionsArgs<ExtArgs>
@@ -2805,8 +3811,10 @@ export type FamilyInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   categoryPreferences?: boolean | Prisma.Family$categoryPreferencesArgs<ExtArgs>
   budgetAdjustmentSuggestions?: boolean | Prisma.Family$budgetAdjustmentSuggestionsArgs<ExtArgs>
   userBudgetSubdivisions?: boolean | Prisma.Family$userBudgetSubdivisionsArgs<ExtArgs>
+  userEntityPermissions?: boolean | Prisma.Family$userEntityPermissionsArgs<ExtArgs>
   calendarEvents?: boolean | Prisma.Family$calendarEventsArgs<ExtArgs>
   invites?: boolean | Prisma.Family$invitesArgs<ExtArgs>
+  assets?: boolean | Prisma.Family$assetsArgs<ExtArgs>
   _count?: boolean | Prisma.FamilyCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type FamilyIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -2816,10 +3824,12 @@ export type $FamilyPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
   name: "Family"
   objects: {
     members: Prisma.$FamilyMemberPayload<ExtArgs>[]
-    budgetEntities: Prisma.$BudgetEntityPayload<ExtArgs>[]
-    entityOwners: Prisma.$BudgetEntityOwnerPayload<ExtArgs>[]
+    entities: Prisma.$EntityPayload<ExtArgs>[]
+    entityServices: Prisma.$EntityServicePayload<ExtArgs>[]
+    customEntityTypes: Prisma.$FamilyEntityTypePayload<ExtArgs>[]
+    entityOwners: Prisma.$EntityOwnerPayload<ExtArgs>[]
     budgetCategories: Prisma.$BudgetCategoryPayload<ExtArgs>[]
-    allocations: Prisma.$EntityBudgetAllocationPayload<ExtArgs>[]
+    budgetAccounts: Prisma.$BudgetAccountPayload<ExtArgs>[]
     transactions: Prisma.$TransactionPayload<ExtArgs>[]
     receipts: Prisma.$ReceiptPayload<ExtArgs>[]
     receiptExtractions: Prisma.$ReceiptExtractionPayload<ExtArgs>[]
@@ -2828,8 +3838,10 @@ export type $FamilyPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     categoryPreferences: Prisma.$FamilyCategoryPreferencePayload<ExtArgs>[]
     budgetAdjustmentSuggestions: Prisma.$BudgetAdjustmentSuggestionPayload<ExtArgs>[]
     userBudgetSubdivisions: Prisma.$UserBudgetSubdivisionPayload<ExtArgs>[]
+    userEntityPermissions: Prisma.$UserEntityPermissionPayload<ExtArgs>[]
     calendarEvents: Prisma.$FamilyCalendarEventPayload<ExtArgs>[]
     invites: Prisma.$FamilyInvitePayload<ExtArgs>[]
+    assets: Prisma.$FamilyAssetPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -2839,6 +3851,7 @@ export type $FamilyPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     budgetStartDate: Date
     setupComplete: boolean
     planStatus: string
+    inventoryJson: runtime.JsonValue | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["family"]>
@@ -3236,10 +4249,12 @@ readonly fields: FamilyFieldRefs;
 export interface Prisma__FamilyClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   members<T extends Prisma.Family$membersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Family$membersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FamilyMemberPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-  budgetEntities<T extends Prisma.Family$budgetEntitiesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Family$budgetEntitiesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BudgetEntityPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-  entityOwners<T extends Prisma.Family$entityOwnersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Family$entityOwnersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BudgetEntityOwnerPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  entities<T extends Prisma.Family$entitiesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Family$entitiesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EntityPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  entityServices<T extends Prisma.Family$entityServicesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Family$entityServicesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EntityServicePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  customEntityTypes<T extends Prisma.Family$customEntityTypesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Family$customEntityTypesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FamilyEntityTypePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  entityOwners<T extends Prisma.Family$entityOwnersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Family$entityOwnersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EntityOwnerPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   budgetCategories<T extends Prisma.Family$budgetCategoriesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Family$budgetCategoriesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BudgetCategoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-  allocations<T extends Prisma.Family$allocationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Family$allocationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EntityBudgetAllocationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  budgetAccounts<T extends Prisma.Family$budgetAccountsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Family$budgetAccountsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BudgetAccountPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   transactions<T extends Prisma.Family$transactionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Family$transactionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TransactionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   receipts<T extends Prisma.Family$receiptsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Family$receiptsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ReceiptPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   receiptExtractions<T extends Prisma.Family$receiptExtractionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Family$receiptExtractionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ReceiptExtractionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
@@ -3248,8 +4263,10 @@ export interface Prisma__FamilyClient<T, Null = never, ExtArgs extends runtime.T
   categoryPreferences<T extends Prisma.Family$categoryPreferencesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Family$categoryPreferencesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FamilyCategoryPreferencePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   budgetAdjustmentSuggestions<T extends Prisma.Family$budgetAdjustmentSuggestionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Family$budgetAdjustmentSuggestionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BudgetAdjustmentSuggestionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   userBudgetSubdivisions<T extends Prisma.Family$userBudgetSubdivisionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Family$userBudgetSubdivisionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$UserBudgetSubdivisionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  userEntityPermissions<T extends Prisma.Family$userEntityPermissionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Family$userEntityPermissionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$UserEntityPermissionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   calendarEvents<T extends Prisma.Family$calendarEventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Family$calendarEventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FamilyCalendarEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   invites<T extends Prisma.Family$invitesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Family$invitesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FamilyInvitePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  assets<T extends Prisma.Family$assetsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Family$assetsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FamilyAssetPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -3286,6 +4303,7 @@ export interface FamilyFieldRefs {
   readonly budgetStartDate: Prisma.FieldRef<"Family", 'DateTime'>
   readonly setupComplete: Prisma.FieldRef<"Family", 'Boolean'>
   readonly planStatus: Prisma.FieldRef<"Family", 'String'>
+  readonly inventoryJson: Prisma.FieldRef<"Family", 'Json'>
   readonly createdAt: Prisma.FieldRef<"Family", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Family", 'DateTime'>
 }
@@ -3698,27 +4716,75 @@ export type Family$membersArgs<ExtArgs extends runtime.Types.Extensions.Internal
 }
 
 /**
- * Family.budgetEntities
+ * Family.entities
  */
-export type Family$budgetEntitiesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+export type Family$entitiesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
-   * Select specific fields to fetch from the BudgetEntity
+   * Select specific fields to fetch from the Entity
    */
-  select?: Prisma.BudgetEntitySelect<ExtArgs> | null
+  select?: Prisma.EntitySelect<ExtArgs> | null
   /**
-   * Omit specific fields from the BudgetEntity
+   * Omit specific fields from the Entity
    */
-  omit?: Prisma.BudgetEntityOmit<ExtArgs> | null
+  omit?: Prisma.EntityOmit<ExtArgs> | null
   /**
    * Choose, which related nodes to fetch as well
    */
-  include?: Prisma.BudgetEntityInclude<ExtArgs> | null
-  where?: Prisma.BudgetEntityWhereInput
-  orderBy?: Prisma.BudgetEntityOrderByWithRelationInput | Prisma.BudgetEntityOrderByWithRelationInput[]
-  cursor?: Prisma.BudgetEntityWhereUniqueInput
+  include?: Prisma.EntityInclude<ExtArgs> | null
+  where?: Prisma.EntityWhereInput
+  orderBy?: Prisma.EntityOrderByWithRelationInput | Prisma.EntityOrderByWithRelationInput[]
+  cursor?: Prisma.EntityWhereUniqueInput
   take?: number
   skip?: number
-  distinct?: Prisma.BudgetEntityScalarFieldEnum | Prisma.BudgetEntityScalarFieldEnum[]
+  distinct?: Prisma.EntityScalarFieldEnum | Prisma.EntityScalarFieldEnum[]
+}
+
+/**
+ * Family.entityServices
+ */
+export type Family$entityServicesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the EntityService
+   */
+  select?: Prisma.EntityServiceSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the EntityService
+   */
+  omit?: Prisma.EntityServiceOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EntityServiceInclude<ExtArgs> | null
+  where?: Prisma.EntityServiceWhereInput
+  orderBy?: Prisma.EntityServiceOrderByWithRelationInput | Prisma.EntityServiceOrderByWithRelationInput[]
+  cursor?: Prisma.EntityServiceWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.EntityServiceScalarFieldEnum | Prisma.EntityServiceScalarFieldEnum[]
+}
+
+/**
+ * Family.customEntityTypes
+ */
+export type Family$customEntityTypesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the FamilyEntityType
+   */
+  select?: Prisma.FamilyEntityTypeSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the FamilyEntityType
+   */
+  omit?: Prisma.FamilyEntityTypeOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.FamilyEntityTypeInclude<ExtArgs> | null
+  where?: Prisma.FamilyEntityTypeWhereInput
+  orderBy?: Prisma.FamilyEntityTypeOrderByWithRelationInput | Prisma.FamilyEntityTypeOrderByWithRelationInput[]
+  cursor?: Prisma.FamilyEntityTypeWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.FamilyEntityTypeScalarFieldEnum | Prisma.FamilyEntityTypeScalarFieldEnum[]
 }
 
 /**
@@ -3726,23 +4792,23 @@ export type Family$budgetEntitiesArgs<ExtArgs extends runtime.Types.Extensions.I
  */
 export type Family$entityOwnersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
-   * Select specific fields to fetch from the BudgetEntityOwner
+   * Select specific fields to fetch from the EntityOwner
    */
-  select?: Prisma.BudgetEntityOwnerSelect<ExtArgs> | null
+  select?: Prisma.EntityOwnerSelect<ExtArgs> | null
   /**
-   * Omit specific fields from the BudgetEntityOwner
+   * Omit specific fields from the EntityOwner
    */
-  omit?: Prisma.BudgetEntityOwnerOmit<ExtArgs> | null
+  omit?: Prisma.EntityOwnerOmit<ExtArgs> | null
   /**
    * Choose, which related nodes to fetch as well
    */
-  include?: Prisma.BudgetEntityOwnerInclude<ExtArgs> | null
-  where?: Prisma.BudgetEntityOwnerWhereInput
-  orderBy?: Prisma.BudgetEntityOwnerOrderByWithRelationInput | Prisma.BudgetEntityOwnerOrderByWithRelationInput[]
-  cursor?: Prisma.BudgetEntityOwnerWhereUniqueInput
+  include?: Prisma.EntityOwnerInclude<ExtArgs> | null
+  where?: Prisma.EntityOwnerWhereInput
+  orderBy?: Prisma.EntityOwnerOrderByWithRelationInput | Prisma.EntityOwnerOrderByWithRelationInput[]
+  cursor?: Prisma.EntityOwnerWhereUniqueInput
   take?: number
   skip?: number
-  distinct?: Prisma.BudgetEntityOwnerScalarFieldEnum | Prisma.BudgetEntityOwnerScalarFieldEnum[]
+  distinct?: Prisma.EntityOwnerScalarFieldEnum | Prisma.EntityOwnerScalarFieldEnum[]
 }
 
 /**
@@ -3770,27 +4836,27 @@ export type Family$budgetCategoriesArgs<ExtArgs extends runtime.Types.Extensions
 }
 
 /**
- * Family.allocations
+ * Family.budgetAccounts
  */
-export type Family$allocationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+export type Family$budgetAccountsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
-   * Select specific fields to fetch from the EntityBudgetAllocation
+   * Select specific fields to fetch from the BudgetAccount
    */
-  select?: Prisma.EntityBudgetAllocationSelect<ExtArgs> | null
+  select?: Prisma.BudgetAccountSelect<ExtArgs> | null
   /**
-   * Omit specific fields from the EntityBudgetAllocation
+   * Omit specific fields from the BudgetAccount
    */
-  omit?: Prisma.EntityBudgetAllocationOmit<ExtArgs> | null
+  omit?: Prisma.BudgetAccountOmit<ExtArgs> | null
   /**
    * Choose, which related nodes to fetch as well
    */
-  include?: Prisma.EntityBudgetAllocationInclude<ExtArgs> | null
-  where?: Prisma.EntityBudgetAllocationWhereInput
-  orderBy?: Prisma.EntityBudgetAllocationOrderByWithRelationInput | Prisma.EntityBudgetAllocationOrderByWithRelationInput[]
-  cursor?: Prisma.EntityBudgetAllocationWhereUniqueInput
+  include?: Prisma.BudgetAccountInclude<ExtArgs> | null
+  where?: Prisma.BudgetAccountWhereInput
+  orderBy?: Prisma.BudgetAccountOrderByWithRelationInput | Prisma.BudgetAccountOrderByWithRelationInput[]
+  cursor?: Prisma.BudgetAccountWhereUniqueInput
   take?: number
   skip?: number
-  distinct?: Prisma.EntityBudgetAllocationScalarFieldEnum | Prisma.EntityBudgetAllocationScalarFieldEnum[]
+  distinct?: Prisma.BudgetAccountScalarFieldEnum | Prisma.BudgetAccountScalarFieldEnum[]
 }
 
 /**
@@ -3986,6 +5052,30 @@ export type Family$userBudgetSubdivisionsArgs<ExtArgs extends runtime.Types.Exte
 }
 
 /**
+ * Family.userEntityPermissions
+ */
+export type Family$userEntityPermissionsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the UserEntityPermission
+   */
+  select?: Prisma.UserEntityPermissionSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the UserEntityPermission
+   */
+  omit?: Prisma.UserEntityPermissionOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UserEntityPermissionInclude<ExtArgs> | null
+  where?: Prisma.UserEntityPermissionWhereInput
+  orderBy?: Prisma.UserEntityPermissionOrderByWithRelationInput | Prisma.UserEntityPermissionOrderByWithRelationInput[]
+  cursor?: Prisma.UserEntityPermissionWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.UserEntityPermissionScalarFieldEnum | Prisma.UserEntityPermissionScalarFieldEnum[]
+}
+
+/**
  * Family.calendarEvents
  */
 export type Family$calendarEventsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -4031,6 +5121,30 @@ export type Family$invitesArgs<ExtArgs extends runtime.Types.Extensions.Internal
   take?: number
   skip?: number
   distinct?: Prisma.FamilyInviteScalarFieldEnum | Prisma.FamilyInviteScalarFieldEnum[]
+}
+
+/**
+ * Family.assets
+ */
+export type Family$assetsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the FamilyAsset
+   */
+  select?: Prisma.FamilyAssetSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the FamilyAsset
+   */
+  omit?: Prisma.FamilyAssetOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.FamilyAssetInclude<ExtArgs> | null
+  where?: Prisma.FamilyAssetWhereInput
+  orderBy?: Prisma.FamilyAssetOrderByWithRelationInput | Prisma.FamilyAssetOrderByWithRelationInput[]
+  cursor?: Prisma.FamilyAssetWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.FamilyAssetScalarFieldEnum | Prisma.FamilyAssetScalarFieldEnum[]
 }
 
 /**

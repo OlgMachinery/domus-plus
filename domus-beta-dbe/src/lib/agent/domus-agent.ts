@@ -16,6 +16,8 @@ export type AgentContext = {
   userName: string
   /** A2: totales por categoría del mes en curso */
   totalsByCategory: Array<{ categoryName: string; total: number }>
+  /** Mis cosas: dispositivos, auto, bicicleta, servicios, registros de mantenimiento */
+  thingsSummary: string
 }
 
 export async function buildAgentContext(familyId: string, userId: string, userName: string | null): Promise<AgentContext> {
@@ -23,7 +25,7 @@ export async function buildAgentContext(familyId: string, userId: string, userNa
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
 
-  const [family, lastTx, pendingCount, txThisMonth] = await Promise.all([
+  const [family, lastTx, pendingCount, txThisMonth, userThings] = await Promise.all([
     prisma.family.findUnique({
       where: { id: familyId },
       select: { name: true, currency: true },
@@ -39,7 +41,11 @@ export async function buildAgentContext(familyId: string, userId: string, userNa
     }),
     prisma.transaction.findMany({
       where: { familyId, date: { gte: monthStart, lte: monthEnd } },
-      select: { amount: true, allocation: { select: { category: { select: { name: true } } } } },
+      select: { amount: true, budgetAccount: { select: { service: { select: { name: true } } } } },
+    }),
+    prisma.userThing.findMany({
+      where: { userId },
+      include: { records: { orderBy: { date: 'desc' }, take: 20 } },
     }),
   ])
 
@@ -51,7 +57,7 @@ export async function buildAgentContext(familyId: string, userId: string, userNa
 
   const byCat: Record<string, number> = {}
   for (const t of txThisMonth) {
-    const name = t.allocation?.category?.name || 'Sin categoría'
+    const name = t.budgetAccount?.service?.name || 'Sin categoría'
     const amt = Number(t.amount) || 0
     byCat[name] = (byCat[name] || 0) + amt
   }
@@ -60,6 +66,16 @@ export async function buildAgentContext(familyId: string, userId: string, userNa
     .sort((a, b) => b.total - a.total)
     .slice(0, 15)
 
+  const thingsLines: string[] = []
+  for (const t of userThings) {
+    const extra = t.extraJson && typeof t.extraJson === 'object' ? ` ${JSON.stringify(t.extraJson)}` : ''
+    thingsLines.push(`- ${t.type} "${t.name}": marca ${t.brand || '—'}, modelo ${t.model || '—'}, serie ${t.serialNumber || '—'}, adquisición ${t.acquisitionDate ? t.acquisitionDate.toISOString().slice(0, 10) : '—'}, garantía ${t.warrantyInfo || '—'}, contacto ${t.serviceProviderContact || '—'}${extra}.`)
+    for (const r of t.records) {
+      thingsLines.push(`  Registro: ${r.recordType} fecha ${r.date.toISOString().slice(0, 10)}${r.nextDueDate ? ` próximo ${r.nextDueDate.toISOString().slice(0, 10)}` : ''}${r.amount ? ` $${r.amount}` : ''} ${r.description || ''}`)
+    }
+  }
+  const thingsSummary = thingsLines.length ? `Mis cosas del usuario:\n${thingsLines.join('\n')}` : 'El usuario aún no tiene nada en "Mis cosas".'
+
   return {
     familyName: family?.name || 'Familia',
     currency: family?.currency || 'MXN',
@@ -67,6 +83,7 @@ export async function buildAgentContext(familyId: string, userId: string, userNa
     pendingRequestsCount: pendingCount,
     userName: userName || 'Usuario',
     totalsByCategory,
+    thingsSummary,
   }
 }
 
@@ -90,6 +107,7 @@ function formatContextForPrompt(ctx: AgentContext): string {
   } else if (!ctx.totalsByCategory?.length) {
     lines.push('Aún no hay gastos registrados este periodo.')
   }
+  lines.push(ctx.thingsSummary)
   return lines.join('\n')
 }
 
@@ -103,6 +121,7 @@ Puedes:
 - Explicar cómo registrar un gasto: "Envía monto y concepto (ej. 500 cine Sofía) o una foto/PDF del recibo."
 - Explicar solicitud de efectivo: pueden hacerla por aquí con "solicitud 500 motivo", "necesito 300 super" o "quiero 200 para farmacia"; también desde la app (Solicitudes → Solicitud de efectivo).
 - Explicar reasignar: "Responde al mensaje de confirmación con 'para [nombre]' o escribe la clave y asignación: E-ABC12 cumpleaños Sofía."
+- Responder preguntas sobre "Mis cosas" del usuario (dispositivos, auto, bicicleta, servicios): usar el bloque "Mis cosas del usuario" del contexto. Ejemplos: qué marca/modelo/serie es su computadora o carro, qué placas tiene el carro (si están en datos extra), cuánto paga de Internet, cuándo fue la última vez que fue al doctor o que le cambió las llantas al carro, cuánto falta para el próximo servicio. Responde solo con los datos que aparezcan en el contexto; si no hay datos, di que los registre en la app en "Mis cosas".
 
 No inventes montos ni datos que no estén en el contexto. Si tienes la información en el contexto, responde directamente. Si el mensaje parece un gasto mal formado (ej. "500 cine" sin más), indica: "Para registrar ese gasto envía: 500 cine [opcional: para Sofía]. O envía una foto del recibo."`
 

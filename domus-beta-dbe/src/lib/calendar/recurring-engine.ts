@@ -31,6 +31,8 @@ export type RecurringItem = {
   id: string
   label: string
   descriptionNorm: string
+  budgetAccountId: string
+  /** @deprecated misma que budgetAccountId (compat) */
   allocationId: string
   categoryName: string | null
   entityName: string | null
@@ -52,8 +54,8 @@ function median(values: number[]): number {
 }
 
 /** Genera una clave estable para agrupar transacciones recurrentes. */
-function recurrenceKey(description: string | null, allocationId: string): string {
-  return `${normDesc(description)}|${allocationId}`
+function recurrenceKey(description: string | null, budgetAccountId: string): string {
+  return `${normDesc(description)}|${budgetAccountId}`
 }
 
 /**
@@ -75,10 +77,10 @@ export async function detectRecurringPayments(
       date: true,
       amount: true,
       description: true,
-      allocationId: true,
-      allocation: {
+      budgetAccountId: true,
+      budgetAccount: {
         select: {
-          category: { select: { name: true } },
+          service: { select: { name: true } },
           entity: { select: { name: true } },
         },
       },
@@ -88,20 +90,20 @@ export async function detectRecurringPayments(
 
   const byKey = new Map<
     string,
-    Array<{ id: string; date: Date; amount: number; description: string | null; allocationId: string; categoryName: string | null; entityName: string | null }>
+    Array<{ id: string; date: Date; amount: number; description: string | null; budgetAccountId: string; categoryName: string | null; entityName: string | null }>
   >()
 
   for (const t of txs) {
-    const key = recurrenceKey(t.description, t.allocationId)
+    const key = recurrenceKey(t.description, t.budgetAccountId)
     const list = byKey.get(key) ?? []
     list.push({
       id: t.id,
       date: t.date,
       amount: toNum(t.amount),
       description: t.description,
-      allocationId: t.allocationId,
-      categoryName: t.allocation?.category?.name ?? null,
-      entityName: t.allocation?.entity?.name ?? null,
+      budgetAccountId: t.budgetAccountId,
+      categoryName: t.budgetAccount?.service?.name ?? null,
+      entityName: t.budgetAccount?.entity?.name ?? null,
     })
     byKey.set(key, list)
   }
@@ -140,10 +142,11 @@ export async function detectRecurringPayments(
 
     const label = last.description?.trim() || last.categoryName || 'Pago recurrente'
     result.push({
-      id: `recurring-${recurrenceKey(last.description, last.allocationId)}`,
+      id: `recurring-${recurrenceKey(last.description, last.budgetAccountId)}`,
       label: label.slice(0, 60),
       descriptionNorm: normDesc(last.description),
-      allocationId: last.allocationId,
+      budgetAccountId: last.budgetAccountId,
+      allocationId: last.budgetAccountId,
       categoryName: last.categoryName,
       entityName: last.entityName,
       suggestedAmount: Math.round(medianAmount * 100) / 100,
@@ -175,16 +178,16 @@ export async function getUpcomingExpectedPayments(
 
   const paidInRange = await prisma.transaction.findMany({
     where: { familyId, date: { gte: from, lte: to } },
-    select: { id: true, date: true, amount: true, description: true, allocationId: true },
+    select: { id: true, date: true, amount: true, description: true, budgetAccountId: true },
   })
 
   const paidByKey = new Set<string>()
   for (const t of paidInRange) {
-    paidByKey.add(recurrenceKey(t.description, t.allocationId))
+    paidByKey.add(recurrenceKey(t.description, t.budgetAccountId))
   }
 
   return recurring.filter((r) => {
     if (r.nextExpectedDate < fromStr || r.nextExpectedDate > toStr) return false
-    return !paidByKey.has(recurrenceKey(r.descriptionNorm, r.allocationId))
+    return !paidByKey.has(recurrenceKey(r.descriptionNorm, r.budgetAccountId))
   })
 }

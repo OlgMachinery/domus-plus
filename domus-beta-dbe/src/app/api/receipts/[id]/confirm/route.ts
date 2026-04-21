@@ -23,7 +23,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const { id } = await params
 
     const body = (await req.json().catch(() => ({}))) as any
-    const allocationId = typeof body?.allocationId === 'string' ? body.allocationId.trim() : ''
+    const budgetAccountId =
+      (typeof body?.budgetAccountId === 'string' ? body.budgetAccountId.trim() : '') ||
+      (typeof body?.allocationId === 'string' ? body.allocationId.trim() : '')
 
     const receipt = await prisma.receipt.findUnique({
       where: { id },
@@ -32,11 +34,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!receipt) return jsonError('Recibo no encontrado', 404)
     if (receipt.familyId !== familyId) return jsonError('No tienes acceso a este recibo', 403)
 
-    if (allocationId) {
-      const alloc = await prisma.entityBudgetAllocation.findUnique({ where: { id: allocationId }, select: { id: true, familyId: true, isActive: true } })
-      if (!alloc) return jsonError('Asignación no encontrada', 404)
-      if (alloc.familyId !== familyId) return jsonError('No tienes acceso a esa asignación', 403)
-      if (!alloc.isActive) return jsonError('Esa asignación está inactiva', 409)
+    if (budgetAccountId) {
+      const acc = await prisma.budgetAccount.findUnique({
+        where: { id: budgetAccountId },
+        select: { id: true, familyId: true, isActive: true },
+      })
+      if (!acc) return jsonError('Cuenta de presupuesto no encontrada', 404)
+      if (acc.familyId !== familyId) return jsonError('No tienes acceso a esa cuenta', 403)
+      if (!acc.isActive) return jsonError('Esa cuenta está inactiva', 409)
     }
 
     const ext = await prisma.receiptExtraction.findUnique({
@@ -58,10 +63,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           confirmedByUserId: userId,
         },
       })
-      if (allocationId) {
+      if (budgetAccountId) {
         await tx.transaction.update({
           where: { id: receipt.transactionId },
-          data: { allocationId },
+          data: { budgetAccountId },
         })
       }
       return u

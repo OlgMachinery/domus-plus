@@ -41,7 +41,7 @@ export type MoneyRequestMinAggregateOutputType = {
   requestedAt: Date | null
   forEntityId: string | null
   forName: string | null
-  allocationId: string | null
+  budgetAccountId: string | null
   date: Date | null
   reason: string | null
   amount: runtime.Decimal | null
@@ -67,7 +67,7 @@ export type MoneyRequestMaxAggregateOutputType = {
   requestedAt: Date | null
   forEntityId: string | null
   forName: string | null
-  allocationId: string | null
+  budgetAccountId: string | null
   date: Date | null
   reason: string | null
   amount: runtime.Decimal | null
@@ -93,7 +93,7 @@ export type MoneyRequestCountAggregateOutputType = {
   requestedAt: number
   forEntityId: number
   forName: number
-  allocationId: number
+  budgetAccountId: number
   date: number
   reason: number
   amount: number
@@ -129,7 +129,7 @@ export type MoneyRequestMinAggregateInputType = {
   requestedAt?: true
   forEntityId?: true
   forName?: true
-  allocationId?: true
+  budgetAccountId?: true
   date?: true
   reason?: true
   amount?: true
@@ -155,7 +155,7 @@ export type MoneyRequestMaxAggregateInputType = {
   requestedAt?: true
   forEntityId?: true
   forName?: true
-  allocationId?: true
+  budgetAccountId?: true
   date?: true
   reason?: true
   amount?: true
@@ -181,7 +181,7 @@ export type MoneyRequestCountAggregateInputType = {
   requestedAt?: true
   forEntityId?: true
   forName?: true
-  allocationId?: true
+  budgetAccountId?: true
   date?: true
   reason?: true
   amount?: true
@@ -294,7 +294,7 @@ export type MoneyRequestGroupByOutputType = {
   requestedAt: Date
   forEntityId: string | null
   forName: string | null
-  allocationId: string | null
+  budgetAccountId: string | null
   date: Date
   reason: string
   amount: runtime.Decimal
@@ -343,7 +343,7 @@ export type MoneyRequestWhereInput = {
   requestedAt?: Prisma.DateTimeFilter<"MoneyRequest"> | Date | string
   forEntityId?: Prisma.StringNullableFilter<"MoneyRequest"> | string | null
   forName?: Prisma.StringNullableFilter<"MoneyRequest"> | string | null
-  allocationId?: Prisma.StringNullableFilter<"MoneyRequest"> | string | null
+  budgetAccountId?: Prisma.StringNullableFilter<"MoneyRequest"> | string | null
   date?: Prisma.DateTimeFilter<"MoneyRequest"> | Date | string
   reason?: Prisma.StringFilter<"MoneyRequest"> | string
   amount?: Prisma.DecimalFilter<"MoneyRequest"> | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -362,8 +362,8 @@ export type MoneyRequestWhereInput = {
   lastReminderAt?: Prisma.DateTimeNullableFilter<"MoneyRequest"> | Date | string | null
   family?: Prisma.XOR<Prisma.FamilyScalarRelationFilter, Prisma.FamilyWhereInput>
   createdBy?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
-  forEntity?: Prisma.XOR<Prisma.BudgetEntityNullableScalarRelationFilter, Prisma.BudgetEntityWhereInput> | null
-  allocation?: Prisma.XOR<Prisma.EntityBudgetAllocationNullableScalarRelationFilter, Prisma.EntityBudgetAllocationWhereInput> | null
+  forEntity?: Prisma.XOR<Prisma.EntityNullableScalarRelationFilter, Prisma.EntityWhereInput> | null
+  budgetAccount?: Prisma.XOR<Prisma.BudgetAccountNullableScalarRelationFilter, Prisma.BudgetAccountWhereInput> | null
   transaction?: Prisma.XOR<Prisma.TransactionNullableScalarRelationFilter, Prisma.TransactionWhereInput> | null
   approvedBy?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   rejectedBy?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
@@ -376,7 +376,7 @@ export type MoneyRequestOrderByWithRelationInput = {
   requestedAt?: Prisma.SortOrder
   forEntityId?: Prisma.SortOrderInput | Prisma.SortOrder
   forName?: Prisma.SortOrderInput | Prisma.SortOrder
-  allocationId?: Prisma.SortOrderInput | Prisma.SortOrder
+  budgetAccountId?: Prisma.SortOrderInput | Prisma.SortOrder
   date?: Prisma.SortOrder
   reason?: Prisma.SortOrder
   amount?: Prisma.SortOrder
@@ -395,8 +395,8 @@ export type MoneyRequestOrderByWithRelationInput = {
   lastReminderAt?: Prisma.SortOrderInput | Prisma.SortOrder
   family?: Prisma.FamilyOrderByWithRelationInput
   createdBy?: Prisma.UserOrderByWithRelationInput
-  forEntity?: Prisma.BudgetEntityOrderByWithRelationInput
-  allocation?: Prisma.EntityBudgetAllocationOrderByWithRelationInput
+  forEntity?: Prisma.EntityOrderByWithRelationInput
+  budgetAccount?: Prisma.BudgetAccountOrderByWithRelationInput
   transaction?: Prisma.TransactionOrderByWithRelationInput
   approvedBy?: Prisma.UserOrderByWithRelationInput
   rejectedBy?: Prisma.UserOrderByWithRelationInput
@@ -414,7 +414,7 @@ export type MoneyRequestWhereUniqueInput = Prisma.AtLeast<{
   requestedAt?: Prisma.DateTimeFilter<"MoneyRequest"> | Date | string
   forEntityId?: Prisma.StringNullableFilter<"MoneyRequest"> | string | null
   forName?: Prisma.StringNullableFilter<"MoneyRequest"> | string | null
-  allocationId?: Prisma.StringNullableFilter<"MoneyRequest"> | string | null
+  budgetAccountId?: Prisma.StringNullableFilter<"MoneyRequest"> | string | null
   date?: Prisma.DateTimeFilter<"MoneyRequest"> | Date | string
   reason?: Prisma.StringFilter<"MoneyRequest"> | string
   amount?: Prisma.DecimalFilter<"MoneyRequest"> | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -432,8 +432,8 @@ export type MoneyRequestWhereUniqueInput = Prisma.AtLeast<{
   lastReminderAt?: Prisma.DateTimeNullableFilter<"MoneyRequest"> | Date | string | null
   family?: Prisma.XOR<Prisma.FamilyScalarRelationFilter, Prisma.FamilyWhereInput>
   createdBy?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
-  forEntity?: Prisma.XOR<Prisma.BudgetEntityNullableScalarRelationFilter, Prisma.BudgetEntityWhereInput> | null
-  allocation?: Prisma.XOR<Prisma.EntityBudgetAllocationNullableScalarRelationFilter, Prisma.EntityBudgetAllocationWhereInput> | null
+  forEntity?: Prisma.XOR<Prisma.EntityNullableScalarRelationFilter, Prisma.EntityWhereInput> | null
+  budgetAccount?: Prisma.XOR<Prisma.BudgetAccountNullableScalarRelationFilter, Prisma.BudgetAccountWhereInput> | null
   transaction?: Prisma.XOR<Prisma.TransactionNullableScalarRelationFilter, Prisma.TransactionWhereInput> | null
   approvedBy?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
   rejectedBy?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
@@ -446,7 +446,7 @@ export type MoneyRequestOrderByWithAggregationInput = {
   requestedAt?: Prisma.SortOrder
   forEntityId?: Prisma.SortOrderInput | Prisma.SortOrder
   forName?: Prisma.SortOrderInput | Prisma.SortOrder
-  allocationId?: Prisma.SortOrderInput | Prisma.SortOrder
+  budgetAccountId?: Prisma.SortOrderInput | Prisma.SortOrder
   date?: Prisma.SortOrder
   reason?: Prisma.SortOrder
   amount?: Prisma.SortOrder
@@ -480,7 +480,7 @@ export type MoneyRequestScalarWhereWithAggregatesInput = {
   requestedAt?: Prisma.DateTimeWithAggregatesFilter<"MoneyRequest"> | Date | string
   forEntityId?: Prisma.StringNullableWithAggregatesFilter<"MoneyRequest"> | string | null
   forName?: Prisma.StringNullableWithAggregatesFilter<"MoneyRequest"> | string | null
-  allocationId?: Prisma.StringNullableWithAggregatesFilter<"MoneyRequest"> | string | null
+  budgetAccountId?: Prisma.StringNullableWithAggregatesFilter<"MoneyRequest"> | string | null
   date?: Prisma.DateTimeWithAggregatesFilter<"MoneyRequest"> | Date | string
   reason?: Prisma.StringWithAggregatesFilter<"MoneyRequest"> | string
   amount?: Prisma.DecimalWithAggregatesFilter<"MoneyRequest"> | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -518,8 +518,8 @@ export type MoneyRequestCreateInput = {
   lastReminderAt?: Date | string | null
   family: Prisma.FamilyCreateNestedOneWithoutMoneyRequestsInput
   createdBy: Prisma.UserCreateNestedOneWithoutMoneyRequestsCreatedInput
-  forEntity?: Prisma.BudgetEntityCreateNestedOneWithoutMoneyRequestsForInput
-  allocation?: Prisma.EntityBudgetAllocationCreateNestedOneWithoutMoneyRequestsInput
+  forEntity?: Prisma.EntityCreateNestedOneWithoutMoneyRequestsForInput
+  budgetAccount?: Prisma.BudgetAccountCreateNestedOneWithoutMoneyRequestsInput
   transaction?: Prisma.TransactionCreateNestedOneWithoutMoneyRequestInput
   approvedBy?: Prisma.UserCreateNestedOneWithoutMoneyRequestsApprovedInput
   rejectedBy?: Prisma.UserCreateNestedOneWithoutMoneyRequestsRejectedInput
@@ -532,7 +532,7 @@ export type MoneyRequestUncheckedCreateInput = {
   requestedAt?: Date | string
   forEntityId?: string | null
   forName?: string | null
-  allocationId?: string | null
+  budgetAccountId?: string | null
   date: Date | string
   reason: string
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -570,8 +570,8 @@ export type MoneyRequestUpdateInput = {
   lastReminderAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   family?: Prisma.FamilyUpdateOneRequiredWithoutMoneyRequestsNestedInput
   createdBy?: Prisma.UserUpdateOneRequiredWithoutMoneyRequestsCreatedNestedInput
-  forEntity?: Prisma.BudgetEntityUpdateOneWithoutMoneyRequestsForNestedInput
-  allocation?: Prisma.EntityBudgetAllocationUpdateOneWithoutMoneyRequestsNestedInput
+  forEntity?: Prisma.EntityUpdateOneWithoutMoneyRequestsForNestedInput
+  budgetAccount?: Prisma.BudgetAccountUpdateOneWithoutMoneyRequestsNestedInput
   transaction?: Prisma.TransactionUpdateOneWithoutMoneyRequestNestedInput
   approvedBy?: Prisma.UserUpdateOneWithoutMoneyRequestsApprovedNestedInput
   rejectedBy?: Prisma.UserUpdateOneWithoutMoneyRequestsRejectedNestedInput
@@ -584,7 +584,7 @@ export type MoneyRequestUncheckedUpdateInput = {
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   forEntityId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   forName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  allocationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  budgetAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   date?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -610,7 +610,7 @@ export type MoneyRequestCreateManyInput = {
   requestedAt?: Date | string
   forEntityId?: string | null
   forName?: string | null
-  allocationId?: string | null
+  budgetAccountId?: string | null
   date: Date | string
   reason: string
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -655,7 +655,7 @@ export type MoneyRequestUncheckedUpdateManyInput = {
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   forEntityId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   forName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  allocationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  budgetAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   date?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -701,7 +701,7 @@ export type MoneyRequestCountOrderByAggregateInput = {
   requestedAt?: Prisma.SortOrder
   forEntityId?: Prisma.SortOrder
   forName?: Prisma.SortOrder
-  allocationId?: Prisma.SortOrder
+  budgetAccountId?: Prisma.SortOrder
   date?: Prisma.SortOrder
   reason?: Prisma.SortOrder
   amount?: Prisma.SortOrder
@@ -731,7 +731,7 @@ export type MoneyRequestMaxOrderByAggregateInput = {
   requestedAt?: Prisma.SortOrder
   forEntityId?: Prisma.SortOrder
   forName?: Prisma.SortOrder
-  allocationId?: Prisma.SortOrder
+  budgetAccountId?: Prisma.SortOrder
   date?: Prisma.SortOrder
   reason?: Prisma.SortOrder
   amount?: Prisma.SortOrder
@@ -757,7 +757,7 @@ export type MoneyRequestMinOrderByAggregateInput = {
   requestedAt?: Prisma.SortOrder
   forEntityId?: Prisma.SortOrder
   forName?: Prisma.SortOrder
-  allocationId?: Prisma.SortOrder
+  budgetAccountId?: Prisma.SortOrder
   date?: Prisma.SortOrder
   reason?: Prisma.SortOrder
   amount?: Prisma.SortOrder
@@ -990,45 +990,45 @@ export type MoneyRequestUncheckedUpdateManyWithoutForEntityNestedInput = {
   deleteMany?: Prisma.MoneyRequestScalarWhereInput | Prisma.MoneyRequestScalarWhereInput[]
 }
 
-export type MoneyRequestCreateNestedManyWithoutAllocationInput = {
-  create?: Prisma.XOR<Prisma.MoneyRequestCreateWithoutAllocationInput, Prisma.MoneyRequestUncheckedCreateWithoutAllocationInput> | Prisma.MoneyRequestCreateWithoutAllocationInput[] | Prisma.MoneyRequestUncheckedCreateWithoutAllocationInput[]
-  connectOrCreate?: Prisma.MoneyRequestCreateOrConnectWithoutAllocationInput | Prisma.MoneyRequestCreateOrConnectWithoutAllocationInput[]
-  createMany?: Prisma.MoneyRequestCreateManyAllocationInputEnvelope
+export type MoneyRequestCreateNestedManyWithoutBudgetAccountInput = {
+  create?: Prisma.XOR<Prisma.MoneyRequestCreateWithoutBudgetAccountInput, Prisma.MoneyRequestUncheckedCreateWithoutBudgetAccountInput> | Prisma.MoneyRequestCreateWithoutBudgetAccountInput[] | Prisma.MoneyRequestUncheckedCreateWithoutBudgetAccountInput[]
+  connectOrCreate?: Prisma.MoneyRequestCreateOrConnectWithoutBudgetAccountInput | Prisma.MoneyRequestCreateOrConnectWithoutBudgetAccountInput[]
+  createMany?: Prisma.MoneyRequestCreateManyBudgetAccountInputEnvelope
   connect?: Prisma.MoneyRequestWhereUniqueInput | Prisma.MoneyRequestWhereUniqueInput[]
 }
 
-export type MoneyRequestUncheckedCreateNestedManyWithoutAllocationInput = {
-  create?: Prisma.XOR<Prisma.MoneyRequestCreateWithoutAllocationInput, Prisma.MoneyRequestUncheckedCreateWithoutAllocationInput> | Prisma.MoneyRequestCreateWithoutAllocationInput[] | Prisma.MoneyRequestUncheckedCreateWithoutAllocationInput[]
-  connectOrCreate?: Prisma.MoneyRequestCreateOrConnectWithoutAllocationInput | Prisma.MoneyRequestCreateOrConnectWithoutAllocationInput[]
-  createMany?: Prisma.MoneyRequestCreateManyAllocationInputEnvelope
+export type MoneyRequestUncheckedCreateNestedManyWithoutBudgetAccountInput = {
+  create?: Prisma.XOR<Prisma.MoneyRequestCreateWithoutBudgetAccountInput, Prisma.MoneyRequestUncheckedCreateWithoutBudgetAccountInput> | Prisma.MoneyRequestCreateWithoutBudgetAccountInput[] | Prisma.MoneyRequestUncheckedCreateWithoutBudgetAccountInput[]
+  connectOrCreate?: Prisma.MoneyRequestCreateOrConnectWithoutBudgetAccountInput | Prisma.MoneyRequestCreateOrConnectWithoutBudgetAccountInput[]
+  createMany?: Prisma.MoneyRequestCreateManyBudgetAccountInputEnvelope
   connect?: Prisma.MoneyRequestWhereUniqueInput | Prisma.MoneyRequestWhereUniqueInput[]
 }
 
-export type MoneyRequestUpdateManyWithoutAllocationNestedInput = {
-  create?: Prisma.XOR<Prisma.MoneyRequestCreateWithoutAllocationInput, Prisma.MoneyRequestUncheckedCreateWithoutAllocationInput> | Prisma.MoneyRequestCreateWithoutAllocationInput[] | Prisma.MoneyRequestUncheckedCreateWithoutAllocationInput[]
-  connectOrCreate?: Prisma.MoneyRequestCreateOrConnectWithoutAllocationInput | Prisma.MoneyRequestCreateOrConnectWithoutAllocationInput[]
-  upsert?: Prisma.MoneyRequestUpsertWithWhereUniqueWithoutAllocationInput | Prisma.MoneyRequestUpsertWithWhereUniqueWithoutAllocationInput[]
-  createMany?: Prisma.MoneyRequestCreateManyAllocationInputEnvelope
+export type MoneyRequestUpdateManyWithoutBudgetAccountNestedInput = {
+  create?: Prisma.XOR<Prisma.MoneyRequestCreateWithoutBudgetAccountInput, Prisma.MoneyRequestUncheckedCreateWithoutBudgetAccountInput> | Prisma.MoneyRequestCreateWithoutBudgetAccountInput[] | Prisma.MoneyRequestUncheckedCreateWithoutBudgetAccountInput[]
+  connectOrCreate?: Prisma.MoneyRequestCreateOrConnectWithoutBudgetAccountInput | Prisma.MoneyRequestCreateOrConnectWithoutBudgetAccountInput[]
+  upsert?: Prisma.MoneyRequestUpsertWithWhereUniqueWithoutBudgetAccountInput | Prisma.MoneyRequestUpsertWithWhereUniqueWithoutBudgetAccountInput[]
+  createMany?: Prisma.MoneyRequestCreateManyBudgetAccountInputEnvelope
   set?: Prisma.MoneyRequestWhereUniqueInput | Prisma.MoneyRequestWhereUniqueInput[]
   disconnect?: Prisma.MoneyRequestWhereUniqueInput | Prisma.MoneyRequestWhereUniqueInput[]
   delete?: Prisma.MoneyRequestWhereUniqueInput | Prisma.MoneyRequestWhereUniqueInput[]
   connect?: Prisma.MoneyRequestWhereUniqueInput | Prisma.MoneyRequestWhereUniqueInput[]
-  update?: Prisma.MoneyRequestUpdateWithWhereUniqueWithoutAllocationInput | Prisma.MoneyRequestUpdateWithWhereUniqueWithoutAllocationInput[]
-  updateMany?: Prisma.MoneyRequestUpdateManyWithWhereWithoutAllocationInput | Prisma.MoneyRequestUpdateManyWithWhereWithoutAllocationInput[]
+  update?: Prisma.MoneyRequestUpdateWithWhereUniqueWithoutBudgetAccountInput | Prisma.MoneyRequestUpdateWithWhereUniqueWithoutBudgetAccountInput[]
+  updateMany?: Prisma.MoneyRequestUpdateManyWithWhereWithoutBudgetAccountInput | Prisma.MoneyRequestUpdateManyWithWhereWithoutBudgetAccountInput[]
   deleteMany?: Prisma.MoneyRequestScalarWhereInput | Prisma.MoneyRequestScalarWhereInput[]
 }
 
-export type MoneyRequestUncheckedUpdateManyWithoutAllocationNestedInput = {
-  create?: Prisma.XOR<Prisma.MoneyRequestCreateWithoutAllocationInput, Prisma.MoneyRequestUncheckedCreateWithoutAllocationInput> | Prisma.MoneyRequestCreateWithoutAllocationInput[] | Prisma.MoneyRequestUncheckedCreateWithoutAllocationInput[]
-  connectOrCreate?: Prisma.MoneyRequestCreateOrConnectWithoutAllocationInput | Prisma.MoneyRequestCreateOrConnectWithoutAllocationInput[]
-  upsert?: Prisma.MoneyRequestUpsertWithWhereUniqueWithoutAllocationInput | Prisma.MoneyRequestUpsertWithWhereUniqueWithoutAllocationInput[]
-  createMany?: Prisma.MoneyRequestCreateManyAllocationInputEnvelope
+export type MoneyRequestUncheckedUpdateManyWithoutBudgetAccountNestedInput = {
+  create?: Prisma.XOR<Prisma.MoneyRequestCreateWithoutBudgetAccountInput, Prisma.MoneyRequestUncheckedCreateWithoutBudgetAccountInput> | Prisma.MoneyRequestCreateWithoutBudgetAccountInput[] | Prisma.MoneyRequestUncheckedCreateWithoutBudgetAccountInput[]
+  connectOrCreate?: Prisma.MoneyRequestCreateOrConnectWithoutBudgetAccountInput | Prisma.MoneyRequestCreateOrConnectWithoutBudgetAccountInput[]
+  upsert?: Prisma.MoneyRequestUpsertWithWhereUniqueWithoutBudgetAccountInput | Prisma.MoneyRequestUpsertWithWhereUniqueWithoutBudgetAccountInput[]
+  createMany?: Prisma.MoneyRequestCreateManyBudgetAccountInputEnvelope
   set?: Prisma.MoneyRequestWhereUniqueInput | Prisma.MoneyRequestWhereUniqueInput[]
   disconnect?: Prisma.MoneyRequestWhereUniqueInput | Prisma.MoneyRequestWhereUniqueInput[]
   delete?: Prisma.MoneyRequestWhereUniqueInput | Prisma.MoneyRequestWhereUniqueInput[]
   connect?: Prisma.MoneyRequestWhereUniqueInput | Prisma.MoneyRequestWhereUniqueInput[]
-  update?: Prisma.MoneyRequestUpdateWithWhereUniqueWithoutAllocationInput | Prisma.MoneyRequestUpdateWithWhereUniqueWithoutAllocationInput[]
-  updateMany?: Prisma.MoneyRequestUpdateManyWithWhereWithoutAllocationInput | Prisma.MoneyRequestUpdateManyWithWhereWithoutAllocationInput[]
+  update?: Prisma.MoneyRequestUpdateWithWhereUniqueWithoutBudgetAccountInput | Prisma.MoneyRequestUpdateWithWhereUniqueWithoutBudgetAccountInput[]
+  updateMany?: Prisma.MoneyRequestUpdateManyWithWhereWithoutBudgetAccountInput | Prisma.MoneyRequestUpdateManyWithWhereWithoutBudgetAccountInput[]
   deleteMany?: Prisma.MoneyRequestScalarWhereInput | Prisma.MoneyRequestScalarWhereInput[]
 }
 
@@ -1082,8 +1082,8 @@ export type MoneyRequestCreateWithoutCreatedByInput = {
   updatedAt?: Date | string
   lastReminderAt?: Date | string | null
   family: Prisma.FamilyCreateNestedOneWithoutMoneyRequestsInput
-  forEntity?: Prisma.BudgetEntityCreateNestedOneWithoutMoneyRequestsForInput
-  allocation?: Prisma.EntityBudgetAllocationCreateNestedOneWithoutMoneyRequestsInput
+  forEntity?: Prisma.EntityCreateNestedOneWithoutMoneyRequestsForInput
+  budgetAccount?: Prisma.BudgetAccountCreateNestedOneWithoutMoneyRequestsInput
   transaction?: Prisma.TransactionCreateNestedOneWithoutMoneyRequestInput
   approvedBy?: Prisma.UserCreateNestedOneWithoutMoneyRequestsApprovedInput
   rejectedBy?: Prisma.UserCreateNestedOneWithoutMoneyRequestsRejectedInput
@@ -1095,7 +1095,7 @@ export type MoneyRequestUncheckedCreateWithoutCreatedByInput = {
   requestedAt?: Date | string
   forEntityId?: string | null
   forName?: string | null
-  allocationId?: string | null
+  budgetAccountId?: string | null
   date: Date | string
   reason: string
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1142,8 +1142,8 @@ export type MoneyRequestCreateWithoutApprovedByInput = {
   lastReminderAt?: Date | string | null
   family: Prisma.FamilyCreateNestedOneWithoutMoneyRequestsInput
   createdBy: Prisma.UserCreateNestedOneWithoutMoneyRequestsCreatedInput
-  forEntity?: Prisma.BudgetEntityCreateNestedOneWithoutMoneyRequestsForInput
-  allocation?: Prisma.EntityBudgetAllocationCreateNestedOneWithoutMoneyRequestsInput
+  forEntity?: Prisma.EntityCreateNestedOneWithoutMoneyRequestsForInput
+  budgetAccount?: Prisma.BudgetAccountCreateNestedOneWithoutMoneyRequestsInput
   transaction?: Prisma.TransactionCreateNestedOneWithoutMoneyRequestInput
   rejectedBy?: Prisma.UserCreateNestedOneWithoutMoneyRequestsRejectedInput
 }
@@ -1155,7 +1155,7 @@ export type MoneyRequestUncheckedCreateWithoutApprovedByInput = {
   requestedAt?: Date | string
   forEntityId?: string | null
   forName?: string | null
-  allocationId?: string | null
+  budgetAccountId?: string | null
   date: Date | string
   reason: string
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1201,8 +1201,8 @@ export type MoneyRequestCreateWithoutRejectedByInput = {
   lastReminderAt?: Date | string | null
   family: Prisma.FamilyCreateNestedOneWithoutMoneyRequestsInput
   createdBy: Prisma.UserCreateNestedOneWithoutMoneyRequestsCreatedInput
-  forEntity?: Prisma.BudgetEntityCreateNestedOneWithoutMoneyRequestsForInput
-  allocation?: Prisma.EntityBudgetAllocationCreateNestedOneWithoutMoneyRequestsInput
+  forEntity?: Prisma.EntityCreateNestedOneWithoutMoneyRequestsForInput
+  budgetAccount?: Prisma.BudgetAccountCreateNestedOneWithoutMoneyRequestsInput
   transaction?: Prisma.TransactionCreateNestedOneWithoutMoneyRequestInput
   approvedBy?: Prisma.UserCreateNestedOneWithoutMoneyRequestsApprovedInput
 }
@@ -1214,7 +1214,7 @@ export type MoneyRequestUncheckedCreateWithoutRejectedByInput = {
   requestedAt?: Date | string
   forEntityId?: string | null
   forName?: string | null
-  allocationId?: string | null
+  budgetAccountId?: string | null
   date: Date | string
   reason: string
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1267,7 +1267,7 @@ export type MoneyRequestScalarWhereInput = {
   requestedAt?: Prisma.DateTimeFilter<"MoneyRequest"> | Date | string
   forEntityId?: Prisma.StringNullableFilter<"MoneyRequest"> | string | null
   forName?: Prisma.StringNullableFilter<"MoneyRequest"> | string | null
-  allocationId?: Prisma.StringNullableFilter<"MoneyRequest"> | string | null
+  budgetAccountId?: Prisma.StringNullableFilter<"MoneyRequest"> | string | null
   date?: Prisma.DateTimeFilter<"MoneyRequest"> | Date | string
   reason?: Prisma.StringFilter<"MoneyRequest"> | string
   amount?: Prisma.DecimalFilter<"MoneyRequest"> | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1336,8 +1336,8 @@ export type MoneyRequestCreateWithoutFamilyInput = {
   updatedAt?: Date | string
   lastReminderAt?: Date | string | null
   createdBy: Prisma.UserCreateNestedOneWithoutMoneyRequestsCreatedInput
-  forEntity?: Prisma.BudgetEntityCreateNestedOneWithoutMoneyRequestsForInput
-  allocation?: Prisma.EntityBudgetAllocationCreateNestedOneWithoutMoneyRequestsInput
+  forEntity?: Prisma.EntityCreateNestedOneWithoutMoneyRequestsForInput
+  budgetAccount?: Prisma.BudgetAccountCreateNestedOneWithoutMoneyRequestsInput
   transaction?: Prisma.TransactionCreateNestedOneWithoutMoneyRequestInput
   approvedBy?: Prisma.UserCreateNestedOneWithoutMoneyRequestsApprovedInput
   rejectedBy?: Prisma.UserCreateNestedOneWithoutMoneyRequestsRejectedInput
@@ -1349,7 +1349,7 @@ export type MoneyRequestUncheckedCreateWithoutFamilyInput = {
   requestedAt?: Date | string
   forEntityId?: string | null
   forName?: string | null
-  allocationId?: string | null
+  budgetAccountId?: string | null
   date: Date | string
   reason: string
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1412,7 +1412,7 @@ export type MoneyRequestCreateWithoutForEntityInput = {
   lastReminderAt?: Date | string | null
   family: Prisma.FamilyCreateNestedOneWithoutMoneyRequestsInput
   createdBy: Prisma.UserCreateNestedOneWithoutMoneyRequestsCreatedInput
-  allocation?: Prisma.EntityBudgetAllocationCreateNestedOneWithoutMoneyRequestsInput
+  budgetAccount?: Prisma.BudgetAccountCreateNestedOneWithoutMoneyRequestsInput
   transaction?: Prisma.TransactionCreateNestedOneWithoutMoneyRequestInput
   approvedBy?: Prisma.UserCreateNestedOneWithoutMoneyRequestsApprovedInput
   rejectedBy?: Prisma.UserCreateNestedOneWithoutMoneyRequestsRejectedInput
@@ -1424,7 +1424,7 @@ export type MoneyRequestUncheckedCreateWithoutForEntityInput = {
   createdByUserId: string
   requestedAt?: Date | string
   forName?: string | null
-  allocationId?: string | null
+  budgetAccountId?: string | null
   date: Date | string
   reason: string
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1468,7 +1468,7 @@ export type MoneyRequestUpdateManyWithWhereWithoutForEntityInput = {
   data: Prisma.XOR<Prisma.MoneyRequestUpdateManyMutationInput, Prisma.MoneyRequestUncheckedUpdateManyWithoutForEntityInput>
 }
 
-export type MoneyRequestCreateWithoutAllocationInput = {
+export type MoneyRequestCreateWithoutBudgetAccountInput = {
   id?: string
   requestedAt?: Date | string
   forName?: string | null
@@ -1487,13 +1487,13 @@ export type MoneyRequestCreateWithoutAllocationInput = {
   lastReminderAt?: Date | string | null
   family: Prisma.FamilyCreateNestedOneWithoutMoneyRequestsInput
   createdBy: Prisma.UserCreateNestedOneWithoutMoneyRequestsCreatedInput
-  forEntity?: Prisma.BudgetEntityCreateNestedOneWithoutMoneyRequestsForInput
+  forEntity?: Prisma.EntityCreateNestedOneWithoutMoneyRequestsForInput
   transaction?: Prisma.TransactionCreateNestedOneWithoutMoneyRequestInput
   approvedBy?: Prisma.UserCreateNestedOneWithoutMoneyRequestsApprovedInput
   rejectedBy?: Prisma.UserCreateNestedOneWithoutMoneyRequestsRejectedInput
 }
 
-export type MoneyRequestUncheckedCreateWithoutAllocationInput = {
+export type MoneyRequestUncheckedCreateWithoutBudgetAccountInput = {
   id?: string
   familyId: string
   createdByUserId: string
@@ -1518,29 +1518,29 @@ export type MoneyRequestUncheckedCreateWithoutAllocationInput = {
   lastReminderAt?: Date | string | null
 }
 
-export type MoneyRequestCreateOrConnectWithoutAllocationInput = {
+export type MoneyRequestCreateOrConnectWithoutBudgetAccountInput = {
   where: Prisma.MoneyRequestWhereUniqueInput
-  create: Prisma.XOR<Prisma.MoneyRequestCreateWithoutAllocationInput, Prisma.MoneyRequestUncheckedCreateWithoutAllocationInput>
+  create: Prisma.XOR<Prisma.MoneyRequestCreateWithoutBudgetAccountInput, Prisma.MoneyRequestUncheckedCreateWithoutBudgetAccountInput>
 }
 
-export type MoneyRequestCreateManyAllocationInputEnvelope = {
-  data: Prisma.MoneyRequestCreateManyAllocationInput | Prisma.MoneyRequestCreateManyAllocationInput[]
+export type MoneyRequestCreateManyBudgetAccountInputEnvelope = {
+  data: Prisma.MoneyRequestCreateManyBudgetAccountInput | Prisma.MoneyRequestCreateManyBudgetAccountInput[]
 }
 
-export type MoneyRequestUpsertWithWhereUniqueWithoutAllocationInput = {
+export type MoneyRequestUpsertWithWhereUniqueWithoutBudgetAccountInput = {
   where: Prisma.MoneyRequestWhereUniqueInput
-  update: Prisma.XOR<Prisma.MoneyRequestUpdateWithoutAllocationInput, Prisma.MoneyRequestUncheckedUpdateWithoutAllocationInput>
-  create: Prisma.XOR<Prisma.MoneyRequestCreateWithoutAllocationInput, Prisma.MoneyRequestUncheckedCreateWithoutAllocationInput>
+  update: Prisma.XOR<Prisma.MoneyRequestUpdateWithoutBudgetAccountInput, Prisma.MoneyRequestUncheckedUpdateWithoutBudgetAccountInput>
+  create: Prisma.XOR<Prisma.MoneyRequestCreateWithoutBudgetAccountInput, Prisma.MoneyRequestUncheckedCreateWithoutBudgetAccountInput>
 }
 
-export type MoneyRequestUpdateWithWhereUniqueWithoutAllocationInput = {
+export type MoneyRequestUpdateWithWhereUniqueWithoutBudgetAccountInput = {
   where: Prisma.MoneyRequestWhereUniqueInput
-  data: Prisma.XOR<Prisma.MoneyRequestUpdateWithoutAllocationInput, Prisma.MoneyRequestUncheckedUpdateWithoutAllocationInput>
+  data: Prisma.XOR<Prisma.MoneyRequestUpdateWithoutBudgetAccountInput, Prisma.MoneyRequestUncheckedUpdateWithoutBudgetAccountInput>
 }
 
-export type MoneyRequestUpdateManyWithWhereWithoutAllocationInput = {
+export type MoneyRequestUpdateManyWithWhereWithoutBudgetAccountInput = {
   where: Prisma.MoneyRequestScalarWhereInput
-  data: Prisma.XOR<Prisma.MoneyRequestUpdateManyMutationInput, Prisma.MoneyRequestUncheckedUpdateManyWithoutAllocationInput>
+  data: Prisma.XOR<Prisma.MoneyRequestUpdateManyMutationInput, Prisma.MoneyRequestUncheckedUpdateManyWithoutBudgetAccountInput>
 }
 
 export type MoneyRequestCreateWithoutTransactionInput = {
@@ -1562,8 +1562,8 @@ export type MoneyRequestCreateWithoutTransactionInput = {
   lastReminderAt?: Date | string | null
   family: Prisma.FamilyCreateNestedOneWithoutMoneyRequestsInput
   createdBy: Prisma.UserCreateNestedOneWithoutMoneyRequestsCreatedInput
-  forEntity?: Prisma.BudgetEntityCreateNestedOneWithoutMoneyRequestsForInput
-  allocation?: Prisma.EntityBudgetAllocationCreateNestedOneWithoutMoneyRequestsInput
+  forEntity?: Prisma.EntityCreateNestedOneWithoutMoneyRequestsForInput
+  budgetAccount?: Prisma.BudgetAccountCreateNestedOneWithoutMoneyRequestsInput
   approvedBy?: Prisma.UserCreateNestedOneWithoutMoneyRequestsApprovedInput
   rejectedBy?: Prisma.UserCreateNestedOneWithoutMoneyRequestsRejectedInput
 }
@@ -1575,7 +1575,7 @@ export type MoneyRequestUncheckedCreateWithoutTransactionInput = {
   requestedAt?: Date | string
   forEntityId?: string | null
   forName?: string | null
-  allocationId?: string | null
+  budgetAccountId?: string | null
   date: Date | string
   reason: string
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1628,8 +1628,8 @@ export type MoneyRequestUpdateWithoutTransactionInput = {
   lastReminderAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   family?: Prisma.FamilyUpdateOneRequiredWithoutMoneyRequestsNestedInput
   createdBy?: Prisma.UserUpdateOneRequiredWithoutMoneyRequestsCreatedNestedInput
-  forEntity?: Prisma.BudgetEntityUpdateOneWithoutMoneyRequestsForNestedInput
-  allocation?: Prisma.EntityBudgetAllocationUpdateOneWithoutMoneyRequestsNestedInput
+  forEntity?: Prisma.EntityUpdateOneWithoutMoneyRequestsForNestedInput
+  budgetAccount?: Prisma.BudgetAccountUpdateOneWithoutMoneyRequestsNestedInput
   approvedBy?: Prisma.UserUpdateOneWithoutMoneyRequestsApprovedNestedInput
   rejectedBy?: Prisma.UserUpdateOneWithoutMoneyRequestsRejectedNestedInput
 }
@@ -1641,7 +1641,7 @@ export type MoneyRequestUncheckedUpdateWithoutTransactionInput = {
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   forEntityId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   forName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  allocationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  budgetAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   date?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1665,7 +1665,7 @@ export type MoneyRequestCreateManyCreatedByInput = {
   requestedAt?: Date | string
   forEntityId?: string | null
   forName?: string | null
-  allocationId?: string | null
+  budgetAccountId?: string | null
   date: Date | string
   reason: string
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1691,7 +1691,7 @@ export type MoneyRequestCreateManyApprovedByInput = {
   requestedAt?: Date | string
   forEntityId?: string | null
   forName?: string | null
-  allocationId?: string | null
+  budgetAccountId?: string | null
   date: Date | string
   reason: string
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1716,7 +1716,7 @@ export type MoneyRequestCreateManyRejectedByInput = {
   requestedAt?: Date | string
   forEntityId?: string | null
   forName?: string | null
-  allocationId?: string | null
+  budgetAccountId?: string | null
   date: Date | string
   reason: string
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1752,8 +1752,8 @@ export type MoneyRequestUpdateWithoutCreatedByInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastReminderAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   family?: Prisma.FamilyUpdateOneRequiredWithoutMoneyRequestsNestedInput
-  forEntity?: Prisma.BudgetEntityUpdateOneWithoutMoneyRequestsForNestedInput
-  allocation?: Prisma.EntityBudgetAllocationUpdateOneWithoutMoneyRequestsNestedInput
+  forEntity?: Prisma.EntityUpdateOneWithoutMoneyRequestsForNestedInput
+  budgetAccount?: Prisma.BudgetAccountUpdateOneWithoutMoneyRequestsNestedInput
   transaction?: Prisma.TransactionUpdateOneWithoutMoneyRequestNestedInput
   approvedBy?: Prisma.UserUpdateOneWithoutMoneyRequestsApprovedNestedInput
   rejectedBy?: Prisma.UserUpdateOneWithoutMoneyRequestsRejectedNestedInput
@@ -1765,7 +1765,7 @@ export type MoneyRequestUncheckedUpdateWithoutCreatedByInput = {
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   forEntityId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   forName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  allocationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  budgetAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   date?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1790,7 +1790,7 @@ export type MoneyRequestUncheckedUpdateManyWithoutCreatedByInput = {
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   forEntityId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   forName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  allocationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  budgetAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   date?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1828,8 +1828,8 @@ export type MoneyRequestUpdateWithoutApprovedByInput = {
   lastReminderAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   family?: Prisma.FamilyUpdateOneRequiredWithoutMoneyRequestsNestedInput
   createdBy?: Prisma.UserUpdateOneRequiredWithoutMoneyRequestsCreatedNestedInput
-  forEntity?: Prisma.BudgetEntityUpdateOneWithoutMoneyRequestsForNestedInput
-  allocation?: Prisma.EntityBudgetAllocationUpdateOneWithoutMoneyRequestsNestedInput
+  forEntity?: Prisma.EntityUpdateOneWithoutMoneyRequestsForNestedInput
+  budgetAccount?: Prisma.BudgetAccountUpdateOneWithoutMoneyRequestsNestedInput
   transaction?: Prisma.TransactionUpdateOneWithoutMoneyRequestNestedInput
   rejectedBy?: Prisma.UserUpdateOneWithoutMoneyRequestsRejectedNestedInput
 }
@@ -1841,7 +1841,7 @@ export type MoneyRequestUncheckedUpdateWithoutApprovedByInput = {
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   forEntityId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   forName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  allocationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  budgetAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   date?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1866,7 +1866,7 @@ export type MoneyRequestUncheckedUpdateManyWithoutApprovedByInput = {
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   forEntityId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   forName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  allocationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  budgetAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   date?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1903,8 +1903,8 @@ export type MoneyRequestUpdateWithoutRejectedByInput = {
   lastReminderAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   family?: Prisma.FamilyUpdateOneRequiredWithoutMoneyRequestsNestedInput
   createdBy?: Prisma.UserUpdateOneRequiredWithoutMoneyRequestsCreatedNestedInput
-  forEntity?: Prisma.BudgetEntityUpdateOneWithoutMoneyRequestsForNestedInput
-  allocation?: Prisma.EntityBudgetAllocationUpdateOneWithoutMoneyRequestsNestedInput
+  forEntity?: Prisma.EntityUpdateOneWithoutMoneyRequestsForNestedInput
+  budgetAccount?: Prisma.BudgetAccountUpdateOneWithoutMoneyRequestsNestedInput
   transaction?: Prisma.TransactionUpdateOneWithoutMoneyRequestNestedInput
   approvedBy?: Prisma.UserUpdateOneWithoutMoneyRequestsApprovedNestedInput
 }
@@ -1916,7 +1916,7 @@ export type MoneyRequestUncheckedUpdateWithoutRejectedByInput = {
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   forEntityId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   forName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  allocationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  budgetAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   date?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1941,7 +1941,7 @@ export type MoneyRequestUncheckedUpdateManyWithoutRejectedByInput = {
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   forEntityId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   forName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  allocationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  budgetAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   date?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -1965,7 +1965,7 @@ export type MoneyRequestCreateManyFamilyInput = {
   requestedAt?: Date | string
   forEntityId?: string | null
   forName?: string | null
-  allocationId?: string | null
+  budgetAccountId?: string | null
   date: Date | string
   reason: string
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -2002,8 +2002,8 @@ export type MoneyRequestUpdateWithoutFamilyInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   lastReminderAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdBy?: Prisma.UserUpdateOneRequiredWithoutMoneyRequestsCreatedNestedInput
-  forEntity?: Prisma.BudgetEntityUpdateOneWithoutMoneyRequestsForNestedInput
-  allocation?: Prisma.EntityBudgetAllocationUpdateOneWithoutMoneyRequestsNestedInput
+  forEntity?: Prisma.EntityUpdateOneWithoutMoneyRequestsForNestedInput
+  budgetAccount?: Prisma.BudgetAccountUpdateOneWithoutMoneyRequestsNestedInput
   transaction?: Prisma.TransactionUpdateOneWithoutMoneyRequestNestedInput
   approvedBy?: Prisma.UserUpdateOneWithoutMoneyRequestsApprovedNestedInput
   rejectedBy?: Prisma.UserUpdateOneWithoutMoneyRequestsRejectedNestedInput
@@ -2015,7 +2015,7 @@ export type MoneyRequestUncheckedUpdateWithoutFamilyInput = {
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   forEntityId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   forName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  allocationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  budgetAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   date?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -2040,7 +2040,7 @@ export type MoneyRequestUncheckedUpdateManyWithoutFamilyInput = {
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   forEntityId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   forName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  allocationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  budgetAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   date?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -2065,7 +2065,7 @@ export type MoneyRequestCreateManyForEntityInput = {
   createdByUserId: string
   requestedAt?: Date | string
   forName?: string | null
-  allocationId?: string | null
+  budgetAccountId?: string | null
   date: Date | string
   reason: string
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -2103,7 +2103,7 @@ export type MoneyRequestUpdateWithoutForEntityInput = {
   lastReminderAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   family?: Prisma.FamilyUpdateOneRequiredWithoutMoneyRequestsNestedInput
   createdBy?: Prisma.UserUpdateOneRequiredWithoutMoneyRequestsCreatedNestedInput
-  allocation?: Prisma.EntityBudgetAllocationUpdateOneWithoutMoneyRequestsNestedInput
+  budgetAccount?: Prisma.BudgetAccountUpdateOneWithoutMoneyRequestsNestedInput
   transaction?: Prisma.TransactionUpdateOneWithoutMoneyRequestNestedInput
   approvedBy?: Prisma.UserUpdateOneWithoutMoneyRequestsApprovedNestedInput
   rejectedBy?: Prisma.UserUpdateOneWithoutMoneyRequestsRejectedNestedInput
@@ -2115,7 +2115,7 @@ export type MoneyRequestUncheckedUpdateWithoutForEntityInput = {
   createdByUserId?: Prisma.StringFieldUpdateOperationsInput | string
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   forName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  allocationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  budgetAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   date?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -2140,7 +2140,7 @@ export type MoneyRequestUncheckedUpdateManyWithoutForEntityInput = {
   createdByUserId?: Prisma.StringFieldUpdateOperationsInput | string
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   forName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  allocationId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  budgetAccountId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   date?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   reason?: Prisma.StringFieldUpdateOperationsInput | string
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -2159,7 +2159,7 @@ export type MoneyRequestUncheckedUpdateManyWithoutForEntityInput = {
   lastReminderAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
-export type MoneyRequestCreateManyAllocationInput = {
+export type MoneyRequestCreateManyBudgetAccountInput = {
   id?: string
   familyId: string
   createdByUserId: string
@@ -2184,7 +2184,7 @@ export type MoneyRequestCreateManyAllocationInput = {
   lastReminderAt?: Date | string | null
 }
 
-export type MoneyRequestUpdateWithoutAllocationInput = {
+export type MoneyRequestUpdateWithoutBudgetAccountInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   requestedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   forName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -2203,13 +2203,13 @@ export type MoneyRequestUpdateWithoutAllocationInput = {
   lastReminderAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   family?: Prisma.FamilyUpdateOneRequiredWithoutMoneyRequestsNestedInput
   createdBy?: Prisma.UserUpdateOneRequiredWithoutMoneyRequestsCreatedNestedInput
-  forEntity?: Prisma.BudgetEntityUpdateOneWithoutMoneyRequestsForNestedInput
+  forEntity?: Prisma.EntityUpdateOneWithoutMoneyRequestsForNestedInput
   transaction?: Prisma.TransactionUpdateOneWithoutMoneyRequestNestedInput
   approvedBy?: Prisma.UserUpdateOneWithoutMoneyRequestsApprovedNestedInput
   rejectedBy?: Prisma.UserUpdateOneWithoutMoneyRequestsRejectedNestedInput
 }
 
-export type MoneyRequestUncheckedUpdateWithoutAllocationInput = {
+export type MoneyRequestUncheckedUpdateWithoutBudgetAccountInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   familyId?: Prisma.StringFieldUpdateOperationsInput | string
   createdByUserId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2234,7 +2234,7 @@ export type MoneyRequestUncheckedUpdateWithoutAllocationInput = {
   lastReminderAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
-export type MoneyRequestUncheckedUpdateManyWithoutAllocationInput = {
+export type MoneyRequestUncheckedUpdateManyWithoutBudgetAccountInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   familyId?: Prisma.StringFieldUpdateOperationsInput | string
   createdByUserId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -2268,7 +2268,7 @@ export type MoneyRequestSelect<ExtArgs extends runtime.Types.Extensions.Internal
   requestedAt?: boolean
   forEntityId?: boolean
   forName?: boolean
-  allocationId?: boolean
+  budgetAccountId?: boolean
   date?: boolean
   reason?: boolean
   amount?: boolean
@@ -2288,7 +2288,7 @@ export type MoneyRequestSelect<ExtArgs extends runtime.Types.Extensions.Internal
   family?: boolean | Prisma.FamilyDefaultArgs<ExtArgs>
   createdBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   forEntity?: boolean | Prisma.MoneyRequest$forEntityArgs<ExtArgs>
-  allocation?: boolean | Prisma.MoneyRequest$allocationArgs<ExtArgs>
+  budgetAccount?: boolean | Prisma.MoneyRequest$budgetAccountArgs<ExtArgs>
   transaction?: boolean | Prisma.MoneyRequest$transactionArgs<ExtArgs>
   approvedBy?: boolean | Prisma.MoneyRequest$approvedByArgs<ExtArgs>
   rejectedBy?: boolean | Prisma.MoneyRequest$rejectedByArgs<ExtArgs>
@@ -2301,7 +2301,7 @@ export type MoneyRequestSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   requestedAt?: boolean
   forEntityId?: boolean
   forName?: boolean
-  allocationId?: boolean
+  budgetAccountId?: boolean
   date?: boolean
   reason?: boolean
   amount?: boolean
@@ -2321,7 +2321,7 @@ export type MoneyRequestSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   family?: boolean | Prisma.FamilyDefaultArgs<ExtArgs>
   createdBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   forEntity?: boolean | Prisma.MoneyRequest$forEntityArgs<ExtArgs>
-  allocation?: boolean | Prisma.MoneyRequest$allocationArgs<ExtArgs>
+  budgetAccount?: boolean | Prisma.MoneyRequest$budgetAccountArgs<ExtArgs>
   transaction?: boolean | Prisma.MoneyRequest$transactionArgs<ExtArgs>
   approvedBy?: boolean | Prisma.MoneyRequest$approvedByArgs<ExtArgs>
   rejectedBy?: boolean | Prisma.MoneyRequest$rejectedByArgs<ExtArgs>
@@ -2334,7 +2334,7 @@ export type MoneyRequestSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   requestedAt?: boolean
   forEntityId?: boolean
   forName?: boolean
-  allocationId?: boolean
+  budgetAccountId?: boolean
   date?: boolean
   reason?: boolean
   amount?: boolean
@@ -2354,7 +2354,7 @@ export type MoneyRequestSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   family?: boolean | Prisma.FamilyDefaultArgs<ExtArgs>
   createdBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   forEntity?: boolean | Prisma.MoneyRequest$forEntityArgs<ExtArgs>
-  allocation?: boolean | Prisma.MoneyRequest$allocationArgs<ExtArgs>
+  budgetAccount?: boolean | Prisma.MoneyRequest$budgetAccountArgs<ExtArgs>
   transaction?: boolean | Prisma.MoneyRequest$transactionArgs<ExtArgs>
   approvedBy?: boolean | Prisma.MoneyRequest$approvedByArgs<ExtArgs>
   rejectedBy?: boolean | Prisma.MoneyRequest$rejectedByArgs<ExtArgs>
@@ -2367,7 +2367,7 @@ export type MoneyRequestSelectScalar = {
   requestedAt?: boolean
   forEntityId?: boolean
   forName?: boolean
-  allocationId?: boolean
+  budgetAccountId?: boolean
   date?: boolean
   reason?: boolean
   amount?: boolean
@@ -2386,12 +2386,12 @@ export type MoneyRequestSelectScalar = {
   lastReminderAt?: boolean
 }
 
-export type MoneyRequestOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "familyId" | "createdByUserId" | "requestedAt" | "forEntityId" | "forName" | "allocationId" | "date" | "reason" | "amount" | "currency" | "status" | "transactionId" | "registrationCode" | "outboundMessageSid" | "approvedAt" | "approvedByUserId" | "rejectedAt" | "rejectedByUserId" | "deliveredAt" | "createdAt" | "updatedAt" | "lastReminderAt", ExtArgs["result"]["moneyRequest"]>
+export type MoneyRequestOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "familyId" | "createdByUserId" | "requestedAt" | "forEntityId" | "forName" | "budgetAccountId" | "date" | "reason" | "amount" | "currency" | "status" | "transactionId" | "registrationCode" | "outboundMessageSid" | "approvedAt" | "approvedByUserId" | "rejectedAt" | "rejectedByUserId" | "deliveredAt" | "createdAt" | "updatedAt" | "lastReminderAt", ExtArgs["result"]["moneyRequest"]>
 export type MoneyRequestInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   family?: boolean | Prisma.FamilyDefaultArgs<ExtArgs>
   createdBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   forEntity?: boolean | Prisma.MoneyRequest$forEntityArgs<ExtArgs>
-  allocation?: boolean | Prisma.MoneyRequest$allocationArgs<ExtArgs>
+  budgetAccount?: boolean | Prisma.MoneyRequest$budgetAccountArgs<ExtArgs>
   transaction?: boolean | Prisma.MoneyRequest$transactionArgs<ExtArgs>
   approvedBy?: boolean | Prisma.MoneyRequest$approvedByArgs<ExtArgs>
   rejectedBy?: boolean | Prisma.MoneyRequest$rejectedByArgs<ExtArgs>
@@ -2400,7 +2400,7 @@ export type MoneyRequestIncludeCreateManyAndReturn<ExtArgs extends runtime.Types
   family?: boolean | Prisma.FamilyDefaultArgs<ExtArgs>
   createdBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   forEntity?: boolean | Prisma.MoneyRequest$forEntityArgs<ExtArgs>
-  allocation?: boolean | Prisma.MoneyRequest$allocationArgs<ExtArgs>
+  budgetAccount?: boolean | Prisma.MoneyRequest$budgetAccountArgs<ExtArgs>
   transaction?: boolean | Prisma.MoneyRequest$transactionArgs<ExtArgs>
   approvedBy?: boolean | Prisma.MoneyRequest$approvedByArgs<ExtArgs>
   rejectedBy?: boolean | Prisma.MoneyRequest$rejectedByArgs<ExtArgs>
@@ -2409,7 +2409,7 @@ export type MoneyRequestIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types
   family?: boolean | Prisma.FamilyDefaultArgs<ExtArgs>
   createdBy?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   forEntity?: boolean | Prisma.MoneyRequest$forEntityArgs<ExtArgs>
-  allocation?: boolean | Prisma.MoneyRequest$allocationArgs<ExtArgs>
+  budgetAccount?: boolean | Prisma.MoneyRequest$budgetAccountArgs<ExtArgs>
   transaction?: boolean | Prisma.MoneyRequest$transactionArgs<ExtArgs>
   approvedBy?: boolean | Prisma.MoneyRequest$approvedByArgs<ExtArgs>
   rejectedBy?: boolean | Prisma.MoneyRequest$rejectedByArgs<ExtArgs>
@@ -2420,8 +2420,8 @@ export type $MoneyRequestPayload<ExtArgs extends runtime.Types.Extensions.Intern
   objects: {
     family: Prisma.$FamilyPayload<ExtArgs>
     createdBy: Prisma.$UserPayload<ExtArgs>
-    forEntity: Prisma.$BudgetEntityPayload<ExtArgs> | null
-    allocation: Prisma.$EntityBudgetAllocationPayload<ExtArgs> | null
+    forEntity: Prisma.$EntityPayload<ExtArgs> | null
+    budgetAccount: Prisma.$BudgetAccountPayload<ExtArgs> | null
     transaction: Prisma.$TransactionPayload<ExtArgs> | null
     approvedBy: Prisma.$UserPayload<ExtArgs> | null
     rejectedBy: Prisma.$UserPayload<ExtArgs> | null
@@ -2433,7 +2433,7 @@ export type $MoneyRequestPayload<ExtArgs extends runtime.Types.Extensions.Intern
     requestedAt: Date
     forEntityId: string | null
     forName: string | null
-    allocationId: string | null
+    budgetAccountId: string | null
     date: Date
     reason: string
     amount: runtime.Decimal
@@ -2846,8 +2846,8 @@ export interface Prisma__MoneyRequestClient<T, Null = never, ExtArgs extends run
   readonly [Symbol.toStringTag]: "PrismaPromise"
   family<T extends Prisma.FamilyDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.FamilyDefaultArgs<ExtArgs>>): Prisma.Prisma__FamilyClient<runtime.Types.Result.GetResult<Prisma.$FamilyPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   createdBy<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-  forEntity<T extends Prisma.MoneyRequest$forEntityArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.MoneyRequest$forEntityArgs<ExtArgs>>): Prisma.Prisma__BudgetEntityClient<runtime.Types.Result.GetResult<Prisma.$BudgetEntityPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
-  allocation<T extends Prisma.MoneyRequest$allocationArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.MoneyRequest$allocationArgs<ExtArgs>>): Prisma.Prisma__EntityBudgetAllocationClient<runtime.Types.Result.GetResult<Prisma.$EntityBudgetAllocationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  forEntity<T extends Prisma.MoneyRequest$forEntityArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.MoneyRequest$forEntityArgs<ExtArgs>>): Prisma.Prisma__EntityClient<runtime.Types.Result.GetResult<Prisma.$EntityPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  budgetAccount<T extends Prisma.MoneyRequest$budgetAccountArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.MoneyRequest$budgetAccountArgs<ExtArgs>>): Prisma.Prisma__BudgetAccountClient<runtime.Types.Result.GetResult<Prisma.$BudgetAccountPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   transaction<T extends Prisma.MoneyRequest$transactionArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.MoneyRequest$transactionArgs<ExtArgs>>): Prisma.Prisma__TransactionClient<runtime.Types.Result.GetResult<Prisma.$TransactionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   approvedBy<T extends Prisma.MoneyRequest$approvedByArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.MoneyRequest$approvedByArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   rejectedBy<T extends Prisma.MoneyRequest$rejectedByArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.MoneyRequest$rejectedByArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
@@ -2886,7 +2886,7 @@ export interface MoneyRequestFieldRefs {
   readonly requestedAt: Prisma.FieldRef<"MoneyRequest", 'DateTime'>
   readonly forEntityId: Prisma.FieldRef<"MoneyRequest", 'String'>
   readonly forName: Prisma.FieldRef<"MoneyRequest", 'String'>
-  readonly allocationId: Prisma.FieldRef<"MoneyRequest", 'String'>
+  readonly budgetAccountId: Prisma.FieldRef<"MoneyRequest", 'String'>
   readonly date: Prisma.FieldRef<"MoneyRequest", 'DateTime'>
   readonly reason: Prisma.FieldRef<"MoneyRequest", 'String'>
   readonly amount: Prisma.FieldRef<"MoneyRequest", 'Decimal'>
@@ -3301,37 +3301,37 @@ export type MoneyRequestDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.
  */
 export type MoneyRequest$forEntityArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
-   * Select specific fields to fetch from the BudgetEntity
+   * Select specific fields to fetch from the Entity
    */
-  select?: Prisma.BudgetEntitySelect<ExtArgs> | null
+  select?: Prisma.EntitySelect<ExtArgs> | null
   /**
-   * Omit specific fields from the BudgetEntity
+   * Omit specific fields from the Entity
    */
-  omit?: Prisma.BudgetEntityOmit<ExtArgs> | null
+  omit?: Prisma.EntityOmit<ExtArgs> | null
   /**
    * Choose, which related nodes to fetch as well
    */
-  include?: Prisma.BudgetEntityInclude<ExtArgs> | null
-  where?: Prisma.BudgetEntityWhereInput
+  include?: Prisma.EntityInclude<ExtArgs> | null
+  where?: Prisma.EntityWhereInput
 }
 
 /**
- * MoneyRequest.allocation
+ * MoneyRequest.budgetAccount
  */
-export type MoneyRequest$allocationArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+export type MoneyRequest$budgetAccountArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
-   * Select specific fields to fetch from the EntityBudgetAllocation
+   * Select specific fields to fetch from the BudgetAccount
    */
-  select?: Prisma.EntityBudgetAllocationSelect<ExtArgs> | null
+  select?: Prisma.BudgetAccountSelect<ExtArgs> | null
   /**
-   * Omit specific fields from the EntityBudgetAllocation
+   * Omit specific fields from the BudgetAccount
    */
-  omit?: Prisma.EntityBudgetAllocationOmit<ExtArgs> | null
+  omit?: Prisma.BudgetAccountOmit<ExtArgs> | null
   /**
    * Choose, which related nodes to fetch as well
    */
-  include?: Prisma.EntityBudgetAllocationInclude<ExtArgs> | null
-  where?: Prisma.EntityBudgetAllocationWhereInput
+  include?: Prisma.BudgetAccountInclude<ExtArgs> | null
+  where?: Prisma.BudgetAccountWhereInput
 }
 
 /**

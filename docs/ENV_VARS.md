@@ -54,6 +54,19 @@ Referencia de variables usadas en el proyecto. En producción (VPS) se configura
 
 ---
 
+## SendGrid (correo: envío + Inbound Parse)
+
+| Variable | Descripción | Obligatoria si… |
+|----------|-------------|------------------|
+| `SENDGRID_API_KEY` | API Key de SendGrid | Envías correos o usas Inbound Parse |
+| `SENDGRID_FROM_EMAIL` | Email remitente (ej. noreply@domus-fam.com) | Envías correos |
+| `SENDGRID_FROM_NAME` | Nombre remitente (ej. Domus) | Opcional |
+| `SENDGRID_INBOUND_PARSE_WEBHOOK_SECRET` | Token para validar POST del Inbound Parse | Recomendado en producción |
+
+Ver `docs/DISENO_EMAIL_SENDGRID_ESCUELAS_Y_REGISTRO_PAGOS.md` para configuración del webhook y dominio.
+
+---
+
 ## Opcionales
 
 | Variable | Descripción |

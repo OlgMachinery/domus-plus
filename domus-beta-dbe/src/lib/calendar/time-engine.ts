@@ -57,7 +57,7 @@ export async function getCalendarEvents(
         date: true,
         amount: true,
         description: true,
-        allocation: { select: { category: { select: { name: true } }, entity: { select: { name: true } } } },
+        budgetAccount: { select: { service: { select: { name: true } }, entity: { select: { name: true } } } },
       },
       orderBy: { date: 'asc' },
     }),
@@ -95,7 +95,7 @@ export async function getCalendarEvents(
     events.push({
       id: evtId('tx', t.id, t.id),
       type: 'payment',
-      title: t.description || t.allocation?.category?.name || 'Gasto',
+      title: t.description || t.budgetAccount?.service?.name || 'Gasto',
       date: dateStr,
       amount: Number(t.amount),
       status: 'completed',

@@ -28,7 +28,11 @@ export async function POST(req: NextRequest) {
       `DOMUS prueba: Hola${user.name ? ` ${user.name}` : ''}, si recibes esto Twilio está configurado correctamente.`
     )
     if (!result.ok) {
-      return jsonError(result.error || 'No se pudo enviar (revisa TWILIO_* en el servidor)', 500)
+      const err = result.error || 'No se pudo enviar (revisa TWILIO_* en el servidor)'
+      const hint = (err.includes('63016') || /sandbox|not.*opt/i.test(err))
+        ? ' En modo sandbox de Twilio, el contacto debe enviar primero el código de activación al número de WhatsApp de Twilio (consola Twilio → WhatsApp → Sandbox).'
+        : ''
+      return jsonError(err + hint, 500)
     }
     return NextResponse.json({ ok: true }, { status: 200 })
   } catch (e: any) {

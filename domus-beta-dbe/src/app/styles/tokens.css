@@ -8,17 +8,21 @@
   --space-8: 8px;
   --space-12: 12px;
   --space-16: 16px;
+  --space-20: 20px;
   --space-24: 24px;
   --space-32: 32px;
-  /* SAP-Family color tokens — pulida tipo Apple */
+  /* SAP-Family color tokens — estilo iOS: alegre, intuitivo, profesional */
   --sap-bg: #F2F2F7;
+  --sap-bg-warm: #F5F5FA;
   --sap-card: #FFFFFF;
   --sap-text: #1D1D1F;
+  --sap-text-secondary: #6E6E73;
   --sap-muted: #8E8E93;
   --sap-border: #E5E5EA;
   --sap-border-strong: #C6C6C8;
   --sap-primary: #007AFF;
-  --sap-primary-hover: #0051D5;
+  --sap-primary-hover: #0056D2;
+  --sap-primary-light: rgba(0, 122, 255, 0.12);
   --sap-secondary: #007AFF;
   --sap-success: #34C759;
   --sap-apple-green: #34C759;
@@ -26,22 +30,25 @@
   --sap-warning: #FF9500;
   --sap-danger: #FF3B30;
   --sap-danger-hover: #D32F2F;
-  --sap-success-bg: rgba(52, 199, 89, 0.12);
-  --sap-warning-bg: rgba(255, 149, 0, 0.12);
+  --sap-success-bg: rgba(52, 199, 89, 0.14);
+  --sap-warning-bg: rgba(255, 149, 0, 0.14);
   --sap-danger-bg: rgba(255, 59, 48, 0.12);
-  /* Sombras sutiles — pulida */
+  /* Sombras tipo iOS — suaves y profundidad */
   --sap-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
-  --sap-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  --sap-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --sap-ring: 0 0 0 2px rgba(0, 122, 255, 0.3);
-  --sap-radius: 12px;
-  --sap-radius-sm: 8px;
-  /* Typography — hierarchy (pulida Apple) */
-  --font-page-title: 1.25rem;
-  --font-section-title: 1.0625rem;
+  --sap-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  --sap-shadow-md: 0 4px 20px rgba(0, 0, 0, 0.08);
+  --sap-shadow-card: 0 4px 24px rgba(0, 0, 0, 0.06);
+  --sap-ring: 0 0 0 2px rgba(0, 122, 255, 0.35);
+  --sap-radius: 14px;
+  --sap-radius-sm: 10px;
+  --sap-radius-lg: 20px;
+  /* Typography — jerarquía tipo iOS (Large Title, body legible) */
+  --font-large-title: 1.75rem;
+  --font-page-title: 1.375rem;
+  --font-section-title: 1.125rem;
   --font-label: 0.8125rem;
-  --font-body: 0.875rem;
-  --font-body-mobile: 0.9375rem;
+  --font-body: 0.9375rem;
+  --font-body-mobile: 1rem;
   --font-numeric: 600 20px/1.2 system-ui, ui-sans-serif, sans-serif;
   --line-height-tight: 1.25;
   --line-height-body: 1.5;

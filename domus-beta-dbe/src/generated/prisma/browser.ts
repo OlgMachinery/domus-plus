@@ -23,10 +23,35 @@ export * from './enums';
  */
 export type User = Prisma.UserModel
 /**
+ * Model UserDocument
+ * 
+ */
+export type UserDocument = Prisma.UserDocumentModel
+/**
+ * Model UserThing
+ * 
+ */
+export type UserThing = Prisma.UserThingModel
+/**
+ * Model UserThingMaintenanceRecord
+ * 
+ */
+export type UserThingMaintenanceRecord = Prisma.UserThingMaintenanceRecordModel
+/**
  * Model Family
  * 
  */
 export type Family = Prisma.FamilyModel
+/**
+ * Model FamilyAsset
+ * 
+ */
+export type FamilyAsset = Prisma.FamilyAssetModel
+/**
+ * Model FamilyAssetMedia
+ * 
+ */
+export type FamilyAssetMedia = Prisma.FamilyAssetMediaModel
 /**
  * Model FamilyMember
  * 
@@ -43,15 +68,40 @@ export type FamilyInvite = Prisma.FamilyInviteModel
  */
 export type PasswordResetToken = Prisma.PasswordResetTokenModel
 /**
- * Model BudgetEntity
+ * Model FamilyEntityType
  * 
  */
-export type BudgetEntity = Prisma.BudgetEntityModel
+export type FamilyEntityType = Prisma.FamilyEntityTypeModel
 /**
- * Model BudgetEntityOwner
+ * Model Entity
+ * Entidad base unificada (Familia raíz + personas + activos + mascotas).
+ */
+export type Entity = Prisma.EntityModel
+/**
+ * Model EntityOwner
  * 
  */
-export type BudgetEntityOwner = Prisma.BudgetEntityOwnerModel
+export type EntityOwner = Prisma.EntityOwnerModel
+/**
+ * Model Service
+ * Catálogo global de servicios (sin texto libre como destino).
+ */
+export type Service = Prisma.ServiceModel
+/**
+ * Model EntityService
+ * Servicio habilitado para una entidad dentro de una familia.
+ */
+export type EntityService = Prisma.EntityServiceModel
+/**
+ * Model BudgetAccount
+ * Destino presupuestal = entidad + servicio (cuenta con límite mensual).
+ */
+export type BudgetAccount = Prisma.BudgetAccountModel
+/**
+ * Model UserEntityPermission
+ * Permisos por usuario sobre entidades (vista / gastar / mover).
+ */
+export type UserEntityPermission = Prisma.UserEntityPermissionModel
 /**
  * Model BudgetCategory
  * 
@@ -62,11 +112,6 @@ export type BudgetCategory = Prisma.BudgetCategoryModel
  * 
  */
 export type FamilyCategoryPreference = Prisma.FamilyCategoryPreferenceModel
-/**
- * Model EntityBudgetAllocation
- * 
- */
-export type EntityBudgetAllocation = Prisma.EntityBudgetAllocationModel
 /**
  * Model CategorySuggestion
  * 

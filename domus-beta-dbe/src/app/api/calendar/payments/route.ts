@@ -55,10 +55,10 @@ export async function GET(req: NextRequest) {
           amount: true,
           description: true,
           registrationCode: true,
-          allocationId: true,
-          allocation: {
+          budgetAccountId: true,
+          budgetAccount: {
             select: {
-              category: { select: { name: true } },
+              service: { select: { name: true } },
               entity: { select: { name: true } },
             },
           },
@@ -95,10 +95,14 @@ export async function GET(req: NextRequest) {
       addEvent(events, {
         type: 'payment',
         date: dateStr,
-        label: t.description || t.allocation?.category?.name || 'Gasto',
+        label: t.description || t.budgetAccount?.service?.name || 'Gasto',
         amount: String(t.amount),
         id: t.id,
-        meta: { registrationCode: t.registrationCode, categoryName: t.allocation?.category?.name, entityName: t.allocation?.entity?.name },
+        meta: {
+          registrationCode: t.registrationCode,
+          categoryName: t.budgetAccount?.service?.name,
+          entityName: t.budgetAccount?.entity?.name,
+        },
       })
     }
 
@@ -187,8 +191,8 @@ export async function GET(req: NextRequest) {
         amount: String(t.amount),
         description: t.description,
         registrationCode: t.registrationCode,
-        categoryName: t.allocation?.category?.name ?? null,
-        entityName: t.allocation?.entity?.name ?? null,
+        categoryName: t.budgetAccount?.service?.name ?? null,
+        entityName: t.budgetAccount?.entity?.name ?? null,
       })),
       upcoming,
       recurring: recurringAll,

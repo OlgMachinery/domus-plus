@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
       orderBy: { createdAt: 'asc' },
     })
 
-    const entities = await prisma.budgetEntity.findMany({
+    const entities = await prisma.entity.findMany({
       where: { familyId },
       select: { id: true, familyId: true, type: true, name: true, isActive: true, participatesInBudget: true, participatesInReports: true, createdAt: true, updatedAt: true },
       orderBy: { createdAt: 'asc' },
@@ -93,9 +93,9 @@ export async function POST(req: NextRequest) {
       orderBy: { createdAt: 'asc' },
     })
 
-    const allocations = await prisma.entityBudgetAllocation.findMany({
+    const allocations = await prisma.budgetAccount.findMany({
       where: { familyId },
-      select: { id: true, familyId: true, entityId: true, categoryId: true, monthlyLimit: true, isActive: true, createdAt: true, updatedAt: true },
+      select: { id: true, familyId: true, entityId: true, serviceId: true, monthlyLimit: true, isActive: true, createdAt: true, updatedAt: true },
       orderBy: { createdAt: 'asc' },
     })
 
@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
         id: true,
         familyId: true,
         userId: true,
-        allocationId: true,
+        budgetAccountId: true,
         amount: true,
         date: true,
         description: true,

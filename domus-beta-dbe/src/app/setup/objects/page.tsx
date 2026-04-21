@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
@@ -37,11 +38,17 @@ export default function SetupObjectsPage() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [seeding, setSeeding] = useState(false)
+  const [clearingFakeData, setClearingFakeData] = useState(false)
   const [savingId, setSavingId] = useState<string | null>(null)
   const [demoUsers, setDemoUsers] = useState<any[] | null>(null)
 
   const [name, setName] = useState('')
   const [type, setType] = useState<EntityType>('PERSON')
+  const [customTypeId, setCustomTypeId] = useState<string | null>(null)
+  const [customTypes, setCustomTypes] = useState<{ id: string; name: string }[]>([])
+  const [customTypeCreateOpen, setCustomTypeCreateOpen] = useState(false)
+  const [customTypeNewName, setCustomTypeNewName] = useState('')
+  const [customTypeCreating, setCustomTypeCreating] = useState(false)
   const [participatesInBudget, setParticipatesInBudget] = useState(true)
   const [participatesInReports, setParticipatesInReports] = useState(true)
 
@@ -76,6 +83,41 @@ export default function SetupObjectsPage() {
     setEntities(data.entities || [])
   }
 
+  async function refreshCustomTypes() {
+    const res = await fetch('/api/budget/custom-types', { credentials: 'include' })
+    const data = await res.json().catch(() => ({}))
+    setCustomTypes(Array.isArray(data?.types) ? data.types : [])
+  }
+
+  async function createCustomType() {
+    if (!customTypeNewName.trim() || customTypeCreating) return
+    setCustomTypeCreating(true)
+    setMessage('')
+    try {
+      const res = await fetch('/api/budget/custom-types', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name: customTypeNewName.trim() }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.detail || 'No se pudo crear el tipo')
+      const newType = data?.type
+      if (newType?.id) {
+        setCustomTypes((prev) => [...prev, { id: newType.id, name: newType.name }].sort((a, b) => a.name.localeCompare(b.name)))
+        setType('OTHER')
+        setCustomTypeId(newType.id)
+        setCustomTypeNewName('')
+        setCustomTypeCreateOpen(false)
+        setMessage(`Tipo "${newType.name}" creado. Escribe el nombre del objeto y pulsa Crear.`)
+      }
+    } catch (e: any) {
+      setMessage(e?.message || 'No se pudo crear el tipo')
+    } finally {
+      setCustomTypeCreating(false)
+    }
+  }
+
   useEffect(() => {
     refreshMe()
   }, [])
@@ -83,6 +125,7 @@ export default function SetupObjectsPage() {
   useEffect(() => {
     if (!meOk?.activeFamily?.id) return
     refreshEntities()
+    refreshCustomTypes()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [meOk?.activeFamily?.id])
 
@@ -93,20 +136,24 @@ export default function SetupObjectsPage() {
         setMessage('Nombre requerido')
         return
       }
+      const payload: { name: string; type: EntityType; participatesInBudget: boolean; participatesInReports: boolean; customTypeId?: string } = {
+        name,
+        type: customTypeId ? 'OTHER' : type,
+        participatesInBudget,
+        participatesInReports,
+      }
+      if (customTypeId) payload.customTypeId = customTypeId
       const res = await fetch('/api/budget/entities', {
         method: 'POST',
         credentials: 'include',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          type,
-          participatesInBudget,
-          participatesInReports,
-        }),
+        body: JSON.stringify(payload),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.detail || 'No se pudo crear el objeto')
       setName('')
+      setCustomTypeId(null)
+      setType('PERSON')
       setParticipatesInBudget(true)
       setParticipatesInReports(true)
       await refreshEntities()
@@ -184,6 +231,37 @@ export default function SetupObjectsPage() {
     }
   }
 
+  async function clearFakeData() {
+    if (clearingFakeData) return
+    if (meOk?.user?.email !== 'gonzalomail@me.com') {
+      setMessage('Solo el super administrador puede eliminar datos ficticios.')
+      return
+    }
+    try {
+      setClearingFakeData(true)
+      setMessage('')
+      const res = await fetch('/api/dev/clear-fake-data', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.detail || 'No se pudieron eliminar los datos ficticios')
+      setDemoUsers(null)
+      await refreshEntities()
+      const d = data.deleted || {}
+      const msg = data.message || (d.users > 0
+        ? `Eliminados ${d.users} usuarios demo, ${d.transactions ?? 0} transacciones, ${d.receipts ?? 0} recibos. Listo para producción.`
+        : 'No había datos ficticios.')
+      setMessage(msg)
+    } catch (e: any) {
+      setMessage(e?.message || 'No se pudieron eliminar los datos ficticios')
+    } finally {
+      setClearingFakeData(false)
+    }
+  }
+
   return (
     <main className="sapRoot">
       <div className="sapHeader setupObjectsHeader">
@@ -199,21 +277,37 @@ export default function SetupObjectsPage() {
         </div>
       </div>
 
-      <div className="sapBody">
-        <aside className="sapSidebar">
-          <div className="muted" style={{ fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: 12 }}>
-            Setup
-          </div>
-          <div className="spacer8" />
-          <button className="sapNavItem sapNavItemActive" type="button">
-            Objetos presupuestales
-          </button>
+      <div className="sapBody setupObjectsBody">
+        <aside className="sapSidebar setupSidebar">
+          <nav aria-label="Presupuesto">
+            <div className="setupBreadcrumb muted" style={{ fontSize: 12, marginBottom: 12 }}>
+              <Link href="/ui" className="setupBreadcrumbLink">Presupuesto</Link>
+              <span aria-hidden> › </span>
+              <span>Destinos</span>
+            </div>
+            <button className="sapNavItem sapNavItemActive" type="button">
+              Destinos
+            </button>
+          </nav>
           <div className="spacer16" />
           <div className="muted" style={{ fontSize: 13 }}>
-            Debes crear al menos <b>1 objeto activo</b> para continuar.
+            La configuración principal está en <Link href="/ui" className="setupBreadcrumbLink">/ui → Presupuesto</Link>. Esta página es opcional: al menos <b>1 destino activo</b> para usar presupuesto.
           </div>
           <div className="spacer8" />
           <span className={`pill ${activeCount >= 1 ? 'pillOk' : 'pillWarn'}`}>Activos: {activeCount}</span>
+          <div className="spacer24" />
+          <div className="setupSidebarActions">
+            <button
+              className="btn btnPrimary"
+              style={{ width: '100%', justifyContent: 'center', minHeight: 44 }}
+              onClick={() => router.push('/onboarding')}
+            >
+              Asistente de configuración
+            </button>
+            <p className="muted" style={{ fontSize: 12, marginTop: 6, marginBottom: 0 }}>
+              Wizard: integrantes, mascotas, vehículos, electrodomésticos, categorías.
+            </p>
+          </div>
           <div className="spacer16" />
           <button
             className="btn btnGhost btnSm"
@@ -223,17 +317,32 @@ export default function SetupObjectsPage() {
           >
             {seeding ? 'Cargando…' : 'Cargar datos ficticios'}
           </button>
+          {meOk?.user?.email === 'gonzalomail@me.com' && (
+            <button
+              className="btn btnGhost btnSm"
+              style={{ width: '100%', justifyContent: 'center', marginTop: 8 }}
+              onClick={clearFakeData}
+              disabled={clearingFakeData}
+            >
+              {clearingFakeData ? 'Eliminando…' : 'Eliminar datos ficticios'}
+            </button>
+          )}
         </aside>
 
         <section className="sapContent">
           <div className="pageHead">
             <div>
-              <h1 className="pageTitle">Setup / Objetos presupuestales</h1>
-              <p className="pageSubtitle">Crea el primer objeto (Persona, Casa, Mascota, Vehículo, etc.).</p>
+              <p className="muted setupBreadcrumbInContent" style={{ fontSize: 12, marginBottom: 4 }}>
+                <Link href="/ui" className="setupBreadcrumbLink">Presupuesto</Link>
+                <span aria-hidden> › </span>
+                <span>Destinos</span>
+              </p>
+              <h1 className="pageTitle">Destinos</h1>
+              <p className="pageSubtitle">Crea y edita destinos presupuestales (Persona, Casa, Mascota, Vehículo, etc.). Lo habitual es hacerlo desde /ui → Presupuesto.</p>
             </div>
             <div className="sectionRow">
-              <button className="btn btnPrimary btnSm" onClick={() => router.push('/ui')} disabled={activeCount < 1}>
-                Continuar
+              <button className="btn btnGhost btnSm" onClick={() => router.push('/ui')}>
+                Volver a inicio
               </button>
             </div>
           </div>
@@ -275,17 +384,76 @@ export default function SetupObjectsPage() {
                   <div className="fieldGrid">
                     <label>
                       Nombre
-                      <input className="input" placeholder="Ej. Casa, Pelusa, Auto, Fondo Ahorro..." value={name} onChange={(e) => setName(e.target.value)} />
+                      <input
+                        className="input"
+                        placeholder={type === 'OTHER' ? 'Ej. Electrodoméstico, Negocio, ...' : 'Ej. Casa, Pelusa, Auto, Fondo Ahorro...'}
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                      />
                     </label>
                     <label>
                       Tipo
-                      <select className="select" value={type} onChange={(e) => setType(e.target.value as EntityType)}>
+                      <select
+                        className="select"
+                        value={customTypeId ? `custom:${customTypeId}` : type}
+                        onChange={(e) => {
+                          const v = e.target.value
+                          if (v.startsWith('custom:')) {
+                            setType('OTHER')
+                            setCustomTypeId(v.slice(7))
+                          } else {
+                            setType(v as EntityType)
+                            setCustomTypeId(null)
+                          }
+                        }}
+                      >
                         {ENTITY_TYPE_OPTIONS.map((o) => (
                           <option key={o.value} value={o.value}>
                             {o.label}
                           </option>
                         ))}
+                        {customTypes.length > 0 ? (
+                          <>
+                            <option disabled>—</option>
+                            {customTypes.map((t) => (
+                              <option key={t.id} value={`custom:${t.id}`}>
+                                {t.name}
+                              </option>
+                            ))}
+                          </>
+                        ) : null}
                       </select>
+                      {type === 'OTHER' && !customTypeId ? (
+                        <p className="muted" style={{ fontSize: 12, marginTop: 6, marginBottom: 0 }}>
+                          <strong>Otro</strong> es la excepción: escribe en <strong>Nombre</strong> el detalle o crea un tipo abajo.
+                        </p>
+                      ) : null}
+                      {meOk?.isFamilyAdmin ? (
+                        <div style={{ marginTop: 8 }}>
+                          {!customTypeCreateOpen ? (
+                            <button type="button" className="btn btnGhost btnSm" onClick={() => setCustomTypeCreateOpen(true)}>
+                              + Crear tipo
+                            </button>
+                          ) : (
+                            <div className="sectionRow" style={{ flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                              <input
+                                className="input"
+                                placeholder="Nombre del tipo (ej. Electrodoméstico)"
+                                value={customTypeNewName}
+                                onChange={(e) => setCustomTypeNewName(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), createCustomType())}
+                                style={{ maxWidth: 220 }}
+                              />
+                              <button type="button" className="btn btnPrimary btnSm" onClick={createCustomType} disabled={!customTypeNewName.trim() || customTypeCreating}>
+                                {customTypeCreating ? 'Creando…' : 'Crear tipo'}
+                              </button>
+                              <button type="button" className="btn btnGhost btnSm" onClick={() => { setCustomTypeCreateOpen(false); setCustomTypeNewName(''); setMessage(''); }}>
+                                Cancelar
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ) : null}
                     </label>
                     <label className="checkboxRow">
                       <input type="checkbox" checked={participatesInBudget} onChange={(e) => setParticipatesInBudget(e.target.checked)} />
@@ -324,7 +492,7 @@ export default function SetupObjectsPage() {
                       <tbody>
                         {entities.map((e: any) => (
                           <tr key={e.id}>
-                            <td>{e.type}</td>
+                            <td>{e.customType?.name || e.type}</td>
                             <td style={{ fontWeight: 900 }}>{e.name}</td>
                             <td className="muted">
                               {meOk.isFamilyAdmin ? (

@@ -305,44 +305,272 @@
   }
 }
 
-/* Budget studio */
+/* Budget studio — rediseño Apple: jerarquía clara, segmented control, cards suaves */
 .budgetStudioPanel {
   width: 100%;
   height: 100dvh;
   max-height: none;
   overflow: hidden;
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto 1fr;
   border-radius: 0;
   border: 0;
   box-shadow: none;
-  background: var(--bg);
-  padding: var(--space-24);
+  background: var(--sap-bg);
+  padding: var(--space-20);
+}
+
+/* Barra superior en flujo (flex): evita dos "Cerrar" superpuestos con el toolbar / pastillas */
+.budgetStudioTopBar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  padding-top: max(0px, env(safe-area-inset-top, 0));
+  margin: calc(-1 * var(--space-4)) 0 var(--space-8);
+  position: relative;
+  z-index: 12;
+}
+
+.budgetStudioTopBar .modalMenuBtn,
+.budgetStudioTopBar .modalClose {
+  position: static;
+  top: auto;
+  right: auto;
+  left: auto;
+  padding: var(--space-10) var(--space-16);
+  font-size: var(--font-body);
+  font-weight: 600;
+  color: var(--sap-primary);
+  border-radius: var(--sap-radius-sm);
+  min-height: 44px;
+  flex: 0 0 auto;
+}
+.budgetStudioTopBar .modalClose {
+  color: var(--sap-text-secondary);
+  font-weight: 500;
+  margin-left: auto;
+}
+.budgetStudioTopBar .modalClose:hover {
+  color: var(--sap-text);
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .budgetStudioToolbar {
-  background: rgba(255, 255, 255, 0.86);
-  backdrop-filter: blur(10px);
+  background: var(--sap-card);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  border: none;
+  border-radius: var(--sap-radius-lg);
+  /* Cerrar está en budgetStudioTopBar; padding simétrico */
+  padding: var(--space-20);
+  margin-bottom: var(--space-20);
+  box-shadow: var(--sap-shadow-card);
+}
+
+/* Sobre components.css (.budgetStudioPanel .modalToolbar { padding-left: 52px } para el antiguo Menú absoluto) */
+.budgetStudioPanel .modalToolbar.budgetStudioToolbar {
+  padding-left: var(--space-20);
+}
+
+.budgetStudioToolbar .cardTitle {
+  font-size: var(--font-large-title);
+  font-weight: 700;
+  color: var(--sap-text);
+  letter-spacing: -0.02em;
+  margin: 0 0 var(--space-6);
+}
+.budgetStudioToolbar .muted {
+  font-size: var(--font-body);
+  color: var(--sap-text-secondary);
+  line-height: 1.45;
+  max-width: 520px;
+}
+
+/* Tabs por frecuencia: uso frecuente (Cuentas, Montos) primero; configuración (Partidas, Categorías) después */
+.budgetStudioToolbar .budgetTabsByFrequency {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.budgetStudioToolbar .budgetTabGroupSep {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sap-text-secondary);
+  opacity: 0.85;
+  margin-left: 4px;
+}
+.budgetStudioToolbar .tabRow.tabRowConfig .tabBtn {
+  font-weight: 500;
+}
+
+/* Prefijo $ en inputs de monto (Presupuesto) */
+.budgetAmountInputWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.budgetAmountInputWrap .input {
+  min-width: 100px;
+}
+.budgetAmountPrefix {
+  font-weight: 700;
+  color: var(--sap-text);
+  font-size: var(--font-body);
+}
+
+/* Ejemplo ilustrado: más espacio, flechas y explicación por bloque */
+.budgetExampleInstructivo {
+  margin-top: 14px;
+  padding: 14px;
+  background: var(--sap-bg);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: var(--space-12) var(--space-16);
-  margin-bottom: var(--space-12);
-  box-shadow: var(--sap-shadow);
-  padding-bottom: var(--space-12);
+  border-radius: 10px;
+  font-size: 12px;
+}
+.budgetExampleTitle {
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--sap-text-secondary);
+  margin-bottom: 12px;
+}
+.budgetExampleFlow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 0;
+}
+.budgetExampleBlock {
+  flex: 1;
+  min-width: 120px;
+  max-width: 160px;
+  padding: 10px 12px;
+  background: var(--sap-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  text-align: center;
+}
+.budgetExampleBlockResult {
+  background: var(--sap-highlight);
+  border-color: var(--sap-brand);
+}
+.budgetExampleBlockLabel {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--sap-text-secondary);
+  margin-bottom: 6px;
+}
+.budgetExampleBlockValue {
+  font-weight: 700;
+  color: var(--sap-text);
+  font-size: 13px;
+  line-height: 1.3;
+}
+.budgetExampleArrow {
+  margin: 6px 0 4px;
+  font-size: 14px;
+  color: var(--sap-text-secondary);
+  line-height: 1;
+}
+.budgetExampleDesc {
+  font-size: 11px;
+  color: var(--sap-text-secondary);
+  line-height: 1.35;
+  font-weight: 500;
+}
+.budgetExampleArrowRight {
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--sap-brand);
+  align-self: center;
+  flex-shrink: 0;
+}
+.budgetExampleShare {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.budgetExampleShareLink {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sap-brand);
+  text-decoration: none;
+}
+.budgetExampleShareLink:hover {
+  text-decoration: underline;
+}
+
+/* Tabs tipo iOS segmented control */
+.budgetStudioToolbar .tabRow {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 0;
+  padding: 4px;
+  border-radius: 10px;
+  border: none;
+  background: var(--sap-bg);
+}
+
+.budgetStudioToolbar .tabBtn {
+  padding: var(--space-8) var(--space-16);
+  font-size: var(--font-body);
+  font-weight: 500;
+  color: var(--sap-text-secondary);
+  border: none;
+  border-radius: 8px;
+  min-height: 36px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.budgetStudioToolbar .tabBtn:hover {
+  color: var(--sap-text);
+}
+.budgetStudioToolbar .tabBtnActive {
+  background: var(--sap-card);
+  color: var(--sap-text);
+  box-shadow: var(--sap-shadow-sm);
+}
+
+.budgetStudioToolbar .sectionRow .pill {
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: 500;
+  background: var(--sap-bg);
+  color: var(--sap-text-secondary);
+  border: none;
+}
+.budgetStudioToolbar .pill.pillOk {
+  background: var(--sap-success-bg);
+  color: var(--sap-success);
+}
+.budgetStudioToolbar .pill.pillWarn {
+  background: var(--sap-warning-bg);
+  color: var(--sap-warning);
 }
 
 .budgetStudioBody {
   min-height: 0;
   overflow: auto;
   padding-right: var(--space-8);
+  padding-bottom: max(var(--space-24), env(safe-area-inset-bottom, 0));
   display: grid;
-  gap: var(--space-16);
+  gap: var(--space-20);
   align-content: start;
 }
 
 .budgetManageGrid {
   display: grid;
-  gap: var(--space-12);
+  gap: var(--space-20);
   align-items: start;
   grid-template-columns: 1.1fr 0.9fr;
 }
@@ -352,12 +580,111 @@
   }
 }
 
+.budgetStudioPanel .chartBox {
+  background: var(--sap-card);
+  border: none;
+  border-radius: var(--sap-radius);
+  box-shadow: var(--sap-shadow-card);
+  padding: var(--space-24);
+}
+.budgetStudioPanel .chartTitle {
+  font-size: var(--font-section-title);
+  font-weight: 700;
+  color: var(--sap-text);
+  margin: 0 0 var(--space-8);
+}
+
 .budgetListScroll {
   max-height: min(56vh, 560px);
   overflow: auto;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: rgba(15, 23, 42, 0.02);
+  border: none;
+  border-radius: var(--sap-radius-sm);
+  background: var(--sap-bg);
+  -webkit-overflow-scrolling: touch;
+}
+
+.budgetStudioPanel .budgetListScroll .table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.budgetStudioPanel .budgetListScroll .table th {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--sap-muted);
+  padding: var(--space-12) var(--space-16);
+  border-bottom: 1px solid var(--sap-border);
+  background: var(--sap-bg);
+}
+.budgetStudioPanel .budgetListScroll .table td {
+  padding: var(--space-12) var(--space-16);
+  border-bottom: 1px solid var(--sap-border);
+  font-size: var(--font-body);
+}
+.budgetStudioPanel .budgetListScroll .table tbody tr {
+  transition: background 0.15s ease;
+}
+.budgetStudioPanel .budgetListScroll .table tbody tr:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+.budgetStudioPanel .budgetListScroll .table tbody tr.budgetAccountRowSelected {
+  background: var(--sap-primary-light);
+}
+.budgetStudioPanel .budgetListScroll .table tbody tr.allocRowHighlight {
+  background: var(--sap-success-bg, rgba(0, 160, 80, 0.12));
+  animation: allocRowHighlightFade 3s ease-out forwards;
+}
+
+/* Destinos: responsables visibles; select de nueva asignación agrupado */
+.budgetStudioPanel .budgetDestOwnersCol {
+  min-width: 120px;
+  max-width: 200px;
+}
+.budgetStudioPanel .budgetDestOwnersCell {
+  font-size: 12px;
+  line-height: 1.35;
+  vertical-align: middle;
+}
+.budgetStudioPanel button.budgetDestOwnersMissing {
+  font: inherit;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: var(--sap-radius-sm);
+  border: 1px dashed var(--sap-warning, #b8860b);
+  background: var(--sap-warning-bg, rgba(255, 193, 7, 0.12));
+  color: var(--sap-text);
+  cursor: pointer;
+  white-space: normal;
+  text-align: left;
+}
+.budgetStudioPanel button.budgetDestOwnersMissing:hover {
+  border-style: solid;
+}
+.budgetNuevaAsignHint {
+  max-width: 52rem;
+  line-height: 1.45;
+}
+.budgetEntitySelect optgroup {
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--sap-muted);
+}
+.budgetEntitySelect option {
+  font-weight: 450;
+  color: var(--sap-text);
+  padding: 4px 0;
+}
+@keyframes allocRowHighlightFade {
+  0% { background: var(--sap-success-bg, rgba(0, 160, 80, 0.2)); }
+  100% { background: transparent; }
+}
+.budgetStudioPanel .budgetManageGrid label .input {
+  border-radius: var(--sap-radius-sm);
+  border-color: var(--sap-border);
+}
+.budgetStudioPanel .budgetManageGrid .muted {
+  color: var(--sap-text-secondary);
 }
 
 /* People studio (presupuesto por integrante) */

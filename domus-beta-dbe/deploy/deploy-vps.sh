@@ -98,6 +98,7 @@ cd "$REMOTE_PATH"
 npm ci
 npm run build
 $([ -n "$CHOWN_USER" ] && echo "chown -R ${CHOWN_USER}:${CHOWN_USER} ." || true)
+$([ -n "$CHOWN_USER" ] && echo "sudo -u ${CHOWN_USER} npx tsx scripts/migrate-sqlite-transactions-budget-account.ts" || true)
 $([ -n "$CHOWN_USER" ] && echo "sudo -u ${CHOWN_USER} npx prisma db push --accept-data-loss" || true)
 systemctl restart "$SERVICE"
 EOF

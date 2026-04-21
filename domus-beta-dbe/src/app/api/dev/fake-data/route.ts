@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { jsonError, requireMembership } from '@/lib/auth/session'
 import { prisma } from '@/lib/db/prisma'
-import { EntityType } from '@/generated/prisma/client'
+import { EntityKind } from '@/generated/prisma/client'
+import { getOrCreateServiceFromBudgetCategoryName } from '@/lib/budget/legacy-category-to-service'
 import { hashPassword } from '@/lib/auth/password'
 import { uploadToSpaces } from '@/lib/storage/spaces'
 import { generateRegistrationCode, type PrismaLike } from '@/lib/registration-code'
@@ -69,45 +70,43 @@ const DEMO_USERS: { key: string; name: string; isFamilyAdmin: boolean }[] = [
 
 const SEED_ENTITIES: {
   name: string
-  type: EntityType
+  type: EntityKind
+  subtype: string | null
   participatesInBudget: boolean
   participatesInReports: boolean
 }[] = [
-  { name: 'Mamá', type: EntityType.PERSON, participatesInBudget: true, participatesInReports: true },
-  { name: 'Papá', type: EntityType.PERSON, participatesInBudget: true, participatesInReports: true },
-  { name: 'Laura', type: EntityType.PERSON, participatesInBudget: true, participatesInReports: true },
-  { name: 'Sofía', type: EntityType.PERSON, participatesInBudget: true, participatesInReports: true },
-  { name: 'Mateo', type: EntityType.PERSON, participatesInBudget: true, participatesInReports: true },
-  { name: 'Diego', type: EntityType.PERSON, participatesInBudget: true, participatesInReports: true },
-  { name: 'Valeria', type: EntityType.PERSON, participatesInBudget: true, participatesInReports: true },
-  { name: 'Emilia', type: EntityType.PERSON, participatesInBudget: true, participatesInReports: true },
-  { name: 'Sebastián', type: EntityType.PERSON, participatesInBudget: true, participatesInReports: true },
-  { name: 'Daniela', type: EntityType.PERSON, participatesInBudget: true, participatesInReports: true },
-  { name: 'Andrés', type: EntityType.PERSON, participatesInBudget: true, participatesInReports: true },
-  { name: 'Casa', type: EntityType.HOUSE, participatesInBudget: true, participatesInReports: true },
-  // Compartido entre todos (comida)
-  { name: 'Comida (Familia)', type: EntityType.GROUP, participatesInBudget: true, participatesInReports: true },
-  { name: 'Auto', type: EntityType.VEHICLE, participatesInBudget: true, participatesInReports: true },
-  // Objeto "personal" (sigue siendo Compartido por regla del sistema, pero con 1 responsable)
-  { name: 'Auto (Mamá)', type: EntityType.VEHICLE, participatesInBudget: true, participatesInReports: true },
-  { name: 'Moto', type: EntityType.VEHICLE, participatesInBudget: true, participatesInReports: true },
-  { name: 'Camioneta', type: EntityType.VEHICLE, participatesInBudget: true, participatesInReports: true },
-  { name: 'Bici familiar', type: EntityType.VEHICLE, participatesInBudget: true, participatesInReports: true },
-  { name: 'Pelusa', type: EntityType.PET, participatesInBudget: true, participatesInReports: false },
-  { name: 'Luna', type: EntityType.PET, participatesInBudget: true, participatesInReports: false },
-  { name: 'Max', type: EntityType.PET, participatesInBudget: true, participatesInReports: false },
-  { name: 'Nala', type: EntityType.PET, participatesInBudget: true, participatesInReports: false },
-  { name: 'Rocky', type: EntityType.PET, participatesInBudget: true, participatesInReports: false },
-  { name: 'Coco', type: EntityType.PET, participatesInBudget: true, participatesInReports: false },
-  { name: 'Fondo de emergencia', type: EntityType.FUND, participatesInBudget: true, participatesInReports: true },
-  // Varios tipos de ahorro (objetivos)
-  { name: 'Retiro', type: EntityType.FUND, participatesInBudget: true, participatesInReports: true },
-  { name: 'Educación (Sofía)', type: EntityType.FUND, participatesInBudget: true, participatesInReports: true },
-  { name: 'Educación (Mateo)', type: EntityType.FUND, participatesInBudget: true, participatesInReports: true },
-  { name: 'Inversión', type: EntityType.FUND, participatesInBudget: true, participatesInReports: true },
-  { name: 'Ahorro Navidad', type: EntityType.FUND, participatesInBudget: true, participatesInReports: true },
-  { name: 'Ahorro carro nuevo', type: EntityType.FUND, participatesInBudget: true, participatesInReports: true },
-  { name: 'Vacaciones', type: EntityType.PROJECT, participatesInBudget: true, participatesInReports: true },
+  { name: 'Mamá', type: EntityKind.PERSON, subtype: null, participatesInBudget: true, participatesInReports: true },
+  { name: 'Papá', type: EntityKind.PERSON, subtype: null, participatesInBudget: true, participatesInReports: true },
+  { name: 'Laura', type: EntityKind.PERSON, subtype: null, participatesInBudget: true, participatesInReports: true },
+  { name: 'Sofía', type: EntityKind.PERSON, subtype: null, participatesInBudget: true, participatesInReports: true },
+  { name: 'Mateo', type: EntityKind.PERSON, subtype: null, participatesInBudget: true, participatesInReports: true },
+  { name: 'Diego', type: EntityKind.PERSON, subtype: null, participatesInBudget: true, participatesInReports: true },
+  { name: 'Valeria', type: EntityKind.PERSON, subtype: null, participatesInBudget: true, participatesInReports: true },
+  { name: 'Emilia', type: EntityKind.PERSON, subtype: null, participatesInBudget: true, participatesInReports: true },
+  { name: 'Sebastián', type: EntityKind.PERSON, subtype: null, participatesInBudget: true, participatesInReports: true },
+  { name: 'Daniela', type: EntityKind.PERSON, subtype: null, participatesInBudget: true, participatesInReports: true },
+  { name: 'Andrés', type: EntityKind.PERSON, subtype: null, participatesInBudget: true, participatesInReports: true },
+  { name: 'Casa', type: EntityKind.ASSET, subtype: 'casa', participatesInBudget: true, participatesInReports: true },
+  { name: 'Comida (Familia)', type: EntityKind.ASSET, subtype: 'familia', participatesInBudget: true, participatesInReports: true },
+  { name: 'Auto', type: EntityKind.ASSET, subtype: 'auto', participatesInBudget: true, participatesInReports: true },
+  { name: 'Auto (Mamá)', type: EntityKind.ASSET, subtype: 'auto', participatesInBudget: true, participatesInReports: true },
+  { name: 'Moto', type: EntityKind.ASSET, subtype: 'auto', participatesInBudget: true, participatesInReports: true },
+  { name: 'Camioneta', type: EntityKind.ASSET, subtype: 'auto', participatesInBudget: true, participatesInReports: true },
+  { name: 'Bici familiar', type: EntityKind.ASSET, subtype: 'auto', participatesInBudget: true, participatesInReports: true },
+  { name: 'Pelusa', type: EntityKind.PET, subtype: null, participatesInBudget: true, participatesInReports: false },
+  { name: 'Luna', type: EntityKind.PET, subtype: null, participatesInBudget: true, participatesInReports: false },
+  { name: 'Max', type: EntityKind.PET, subtype: null, participatesInBudget: true, participatesInReports: false },
+  { name: 'Nala', type: EntityKind.PET, subtype: null, participatesInBudget: true, participatesInReports: false },
+  { name: 'Rocky', type: EntityKind.PET, subtype: null, participatesInBudget: true, participatesInReports: false },
+  { name: 'Coco', type: EntityKind.PET, subtype: null, participatesInBudget: true, participatesInReports: false },
+  { name: 'Fondo de emergencia', type: EntityKind.ASSET, subtype: 'fondo', participatesInBudget: true, participatesInReports: true },
+  { name: 'Retiro', type: EntityKind.ASSET, subtype: 'fondo', participatesInBudget: true, participatesInReports: true },
+  { name: 'Educación (Sofía)', type: EntityKind.ASSET, subtype: 'fondo', participatesInBudget: true, participatesInReports: true },
+  { name: 'Educación (Mateo)', type: EntityKind.ASSET, subtype: 'fondo', participatesInBudget: true, participatesInReports: true },
+  { name: 'Inversión', type: EntityKind.ASSET, subtype: 'fondo', participatesInBudget: true, participatesInReports: true },
+  { name: 'Ahorro Navidad', type: EntityKind.ASSET, subtype: 'fondo', participatesInBudget: true, participatesInReports: true },
+  { name: 'Ahorro carro nuevo', type: EntityKind.ASSET, subtype: 'fondo', participatesInBudget: true, participatesInReports: true },
+  { name: 'Vacaciones', type: EntityKind.ASSET, subtype: 'proyecto', participatesInBudget: true, participatesInReports: true },
 ]
 
 const SEED_CATEGORIES: { name: string; type: string }[] = [
@@ -511,7 +510,7 @@ export async function POST(req: NextRequest) {
         demoUserIdByKey.set(key, id)
       }
 
-      const existingEntities = await tx.budgetEntity.findMany({
+      const existingEntities = await tx.entity.findMany({
         where: { familyId },
         select: { id: true, name: true, type: true },
         orderBy: { createdAt: 'asc' },
@@ -522,7 +521,7 @@ export async function POST(req: NextRequest) {
         orderBy: { createdAt: 'asc' },
       })
 
-      const entityByName = new Map<string, { id: string; name: string; type: EntityType }>()
+      const entityByName = new Map<string, { id: string; name: string; type: EntityKind }>()
       for (const e of existingEntities) entityByName.set(norm(e.name), { id: e.id, name: e.name, type: e.type })
 
       const categoryByName = new Map<string, { id: string; name: string; type: string }>()
@@ -531,11 +530,12 @@ export async function POST(req: NextRequest) {
       let createdEntities = 0
       for (const e of SEED_ENTITIES) {
         if (entityByName.has(norm(e.name))) continue
-        const created = await tx.budgetEntity.create({
+        const created = await tx.entity.create({
           data: {
             familyId,
             name: e.name,
             type: e.type,
+            subtype: e.subtype,
             isActive: true,
             participatesInBudget: e.participatesInBudget,
             participatesInReports: e.participatesInReports,
@@ -567,7 +567,7 @@ export async function POST(req: NextRequest) {
       for (const spec of SEED_ENTITY_OWNERS) {
         const e = entityByName.get(norm(spec.entityName))
         if (!e) continue
-        if (e.type === EntityType.PERSON) continue
+        if (e.type === EntityKind.PERSON) continue
 
         const desired = (spec.owners || [])
           .map((o) => {
@@ -602,7 +602,7 @@ export async function POST(req: NextRequest) {
           cleanDesired.push(d)
         }
 
-        const existingOwners = await tx.budgetEntityOwner.findMany({
+        const existingOwners = await tx.entityOwner.findMany({
           where: { entityId: e.id },
           select: { userId: true },
         })
@@ -612,9 +612,9 @@ export async function POST(req: NextRequest) {
           continue
         }
 
-        await tx.budgetEntityOwner.deleteMany({ where: { entityId: e.id } })
+        await tx.entityOwner.deleteMany({ where: { entityId: e.id } })
         if (cleanDesired.length) {
-          await tx.budgetEntityOwner.createMany({
+          await tx.entityOwner.createMany({
             data: cleanDesired.map((d) => ({
               familyId,
               entityId: e.id,
@@ -627,16 +627,22 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      const allocByKey = new Map<string, string>() // key -> allocationId
+      const allocByKey = new Map<string, string>() // key -> budgetAccountId
       let createdAllocations = 0
       for (const a of SEED_ALLOCATIONS) {
         const e = entityByName.get(norm(a.entityName))
         const c = categoryByName.get(norm(a.categoryName))
         if (!e || !c) continue
-        const key = `${e.id}::${c.id}`
+        const svc = await getOrCreateServiceFromBudgetCategoryName(tx, c.name)
+        await tx.entityService.upsert({
+          where: { entityId_serviceId: { entityId: e.id, serviceId: svc.id } },
+          create: { familyId, entityId: e.id, serviceId: svc.id, isActive: true },
+          update: { isActive: true },
+        })
+        const key = `${e.id}::${svc.id}`
 
-        const existingAlloc = await tx.entityBudgetAllocation.findFirst({
-          where: { familyId, entityId: e.id, categoryId: c.id },
+        const existingAlloc = await tx.budgetAccount.findFirst({
+          where: { familyId, entityId: e.id, serviceId: svc.id },
           select: { id: true },
         })
         if (existingAlloc) {
@@ -644,11 +650,11 @@ export async function POST(req: NextRequest) {
           continue
         }
 
-        const created = await tx.entityBudgetAllocation.create({
+        const created = await tx.budgetAccount.create({
           data: {
             familyId,
             entityId: e.id,
-            categoryId: c.id,
+            serviceId: svc.id,
             monthlyLimit: a.monthlyLimit,
             isActive: true,
           },
@@ -668,11 +674,12 @@ export async function POST(req: NextRequest) {
         const e = entityByName.get(norm(t.entityName))
         const c = categoryByName.get(norm(t.categoryName))
         if (!e || !c) continue
-        const key = `${e.id}::${c.id}`
-        const allocationId = allocByKey.get(key)
-        if (!allocationId) continue
+        const svc = await getOrCreateServiceFromBudgetCategoryName(tx, c.name)
+        const key = `${e.id}::${svc.id}`
+        const budgetAccountId = allocByKey.get(key)
+        if (!budgetAccountId) continue
         const existingTx = await tx.transaction.findFirst({
-          where: { familyId, allocationId, description: t.description },
+          where: { familyId, budgetAccountId, description: t.description },
           select: { id: true },
         })
         if (existingTx) {
@@ -685,7 +692,7 @@ export async function POST(req: NextRequest) {
           data: {
             familyId,
             userId: txUserId,
-            allocationId,
+            budgetAccountId,
             amount: t.amount,
             date: t.date,
             description: t.description,
@@ -707,14 +714,15 @@ export async function POST(req: NextRequest) {
           skipped12MNoAlloc += 1
           continue
         }
-        const key = `${e.id}::${c.id}`
-        const allocationId = allocByKey.get(key)
-        if (!allocationId) {
+        const svc12 = await getOrCreateServiceFromBudgetCategoryName(tx, c.name)
+        const key = `${e.id}::${svc12.id}`
+        const budgetAccountId12 = allocByKey.get(key)
+        if (!budgetAccountId12) {
           skipped12MNoAlloc += 1
           continue
         }
         const existingTx = await tx.transaction.findFirst({
-          where: { familyId, allocationId, description: t.description },
+          where: { familyId, budgetAccountId: budgetAccountId12, description: t.description },
           select: { id: true },
         })
         if (existingTx) {
@@ -728,7 +736,7 @@ export async function POST(req: NextRequest) {
           data: {
             familyId,
             userId: txUserId,
-            allocationId,
+            budgetAccountId: budgetAccountId12,
             amount: t.amount,
             date: t.date,
             description: t.description,
@@ -747,11 +755,12 @@ export async function POST(req: NextRequest) {
         const e = entityByName.get(norm(t.entityName))
         const c = categoryByName.get(norm(t.categoryName))
         if (!e || !c) continue
-        const key = `${e.id}::${c.id}`
-        const allocationId = allocByKey.get(key)
-        if (!allocationId) continue
+        const svc = await getOrCreateServiceFromBudgetCategoryName(tx, c.name)
+        const key = `${e.id}::${svc.id}`
+        const budgetAccountId = allocByKey.get(key)
+        if (!budgetAccountId) continue
         const existingTx = await tx.transaction.findFirst({
-          where: { familyId, allocationId, description: t.description },
+          where: { familyId, budgetAccountId, description: t.description },
           select: { id: true },
         })
         if (existingTx) {
@@ -764,7 +773,7 @@ export async function POST(req: NextRequest) {
           data: {
             familyId,
             userId: txUserId,
-            allocationId,
+            budgetAccountId,
             amount: t.amount,
             date: t.date,
             description: t.description,

@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      { source: '/', destination: '/ui', permanent: false },
       { source: '/diagram', destination: '/ui/system-architecture', permanent: true },
       { source: '/diagrama', destination: '/ui/system-architecture', permanent: true },
       { source: '/ui/system-a', destination: '/ui/system-architecture', permanent: true },

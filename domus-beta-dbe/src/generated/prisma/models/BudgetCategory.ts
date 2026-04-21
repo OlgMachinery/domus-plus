@@ -20,16 +20,30 @@ export type BudgetCategoryModel = runtime.Types.Result.DefaultSelection<Prisma.$
 
 export type AggregateBudgetCategory = {
   _count: BudgetCategoryCountAggregateOutputType | null
+  _avg: BudgetCategoryAvgAggregateOutputType | null
+  _sum: BudgetCategorySumAggregateOutputType | null
   _min: BudgetCategoryMinAggregateOutputType | null
   _max: BudgetCategoryMaxAggregateOutputType | null
+}
+
+export type BudgetCategoryAvgAggregateOutputType = {
+  sortOrder: number | null
+}
+
+export type BudgetCategorySumAggregateOutputType = {
+  sortOrder: number | null
 }
 
 export type BudgetCategoryMinAggregateOutputType = {
   id: string | null
   familyId: string | null
+  userId: string | null
   type: string | null
   name: string | null
+  code: string | null
+  parentId: string | null
   isActive: boolean | null
+  sortOrder: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -37,9 +51,13 @@ export type BudgetCategoryMinAggregateOutputType = {
 export type BudgetCategoryMaxAggregateOutputType = {
   id: string | null
   familyId: string | null
+  userId: string | null
   type: string | null
   name: string | null
+  code: string | null
+  parentId: string | null
   isActive: boolean | null
+  sortOrder: number | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -47,21 +65,37 @@ export type BudgetCategoryMaxAggregateOutputType = {
 export type BudgetCategoryCountAggregateOutputType = {
   id: number
   familyId: number
+  userId: number
   type: number
   name: number
+  code: number
+  parentId: number
   isActive: number
+  sortOrder: number
   createdAt: number
   updatedAt: number
   _all: number
 }
 
 
+export type BudgetCategoryAvgAggregateInputType = {
+  sortOrder?: true
+}
+
+export type BudgetCategorySumAggregateInputType = {
+  sortOrder?: true
+}
+
 export type BudgetCategoryMinAggregateInputType = {
   id?: true
   familyId?: true
+  userId?: true
   type?: true
   name?: true
+  code?: true
+  parentId?: true
   isActive?: true
+  sortOrder?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -69,9 +103,13 @@ export type BudgetCategoryMinAggregateInputType = {
 export type BudgetCategoryMaxAggregateInputType = {
   id?: true
   familyId?: true
+  userId?: true
   type?: true
   name?: true
+  code?: true
+  parentId?: true
   isActive?: true
+  sortOrder?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -79,9 +117,13 @@ export type BudgetCategoryMaxAggregateInputType = {
 export type BudgetCategoryCountAggregateInputType = {
   id?: true
   familyId?: true
+  userId?: true
   type?: true
   name?: true
+  code?: true
+  parentId?: true
   isActive?: true
+  sortOrder?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -125,6 +167,18 @@ export type BudgetCategoryAggregateArgs<ExtArgs extends runtime.Types.Extensions
   /**
    * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
    * 
+   * Select which fields to average
+  **/
+  _avg?: BudgetCategoryAvgAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
+   * Select which fields to sum
+  **/
+  _sum?: BudgetCategorySumAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
    * Select which fields to find the minimum value
   **/
   _min?: BudgetCategoryMinAggregateInputType
@@ -155,6 +209,8 @@ export type BudgetCategoryGroupByArgs<ExtArgs extends runtime.Types.Extensions.I
   take?: number
   skip?: number
   _count?: BudgetCategoryCountAggregateInputType | true
+  _avg?: BudgetCategoryAvgAggregateInputType
+  _sum?: BudgetCategorySumAggregateInputType
   _min?: BudgetCategoryMinAggregateInputType
   _max?: BudgetCategoryMaxAggregateInputType
 }
@@ -162,12 +218,18 @@ export type BudgetCategoryGroupByArgs<ExtArgs extends runtime.Types.Extensions.I
 export type BudgetCategoryGroupByOutputType = {
   id: string
   familyId: string
+  userId: string | null
   type: string
   name: string
+  code: string | null
+  parentId: string | null
   isActive: boolean
+  sortOrder: number
   createdAt: Date
   updatedAt: Date
   _count: BudgetCategoryCountAggregateOutputType | null
+  _avg: BudgetCategoryAvgAggregateOutputType | null
+  _sum: BudgetCategorySumAggregateOutputType | null
   _min: BudgetCategoryMinAggregateOutputType | null
   _max: BudgetCategoryMaxAggregateOutputType | null
 }
@@ -193,56 +255,81 @@ export type BudgetCategoryWhereInput = {
   NOT?: Prisma.BudgetCategoryWhereInput | Prisma.BudgetCategoryWhereInput[]
   id?: Prisma.StringFilter<"BudgetCategory"> | string
   familyId?: Prisma.StringFilter<"BudgetCategory"> | string
+  userId?: Prisma.StringNullableFilter<"BudgetCategory"> | string | null
   type?: Prisma.StringFilter<"BudgetCategory"> | string
   name?: Prisma.StringFilter<"BudgetCategory"> | string
+  code?: Prisma.StringNullableFilter<"BudgetCategory"> | string | null
+  parentId?: Prisma.StringNullableFilter<"BudgetCategory"> | string | null
   isActive?: Prisma.BoolFilter<"BudgetCategory"> | boolean
+  sortOrder?: Prisma.IntFilter<"BudgetCategory"> | number
   createdAt?: Prisma.DateTimeFilter<"BudgetCategory"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"BudgetCategory"> | Date | string
   family?: Prisma.XOR<Prisma.FamilyScalarRelationFilter, Prisma.FamilyWhereInput>
-  allocations?: Prisma.EntityBudgetAllocationListRelationFilter
+  user?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
+  parent?: Prisma.XOR<Prisma.BudgetCategoryNullableScalarRelationFilter, Prisma.BudgetCategoryWhereInput> | null
+  children?: Prisma.BudgetCategoryListRelationFilter
   preferences?: Prisma.FamilyCategoryPreferenceListRelationFilter
 }
 
 export type BudgetCategoryOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   familyId?: Prisma.SortOrder
+  userId?: Prisma.SortOrderInput | Prisma.SortOrder
   type?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  code?: Prisma.SortOrderInput | Prisma.SortOrder
+  parentId?: Prisma.SortOrderInput | Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  sortOrder?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   family?: Prisma.FamilyOrderByWithRelationInput
-  allocations?: Prisma.EntityBudgetAllocationOrderByRelationAggregateInput
+  user?: Prisma.UserOrderByWithRelationInput
+  parent?: Prisma.BudgetCategoryOrderByWithRelationInput
+  children?: Prisma.BudgetCategoryOrderByRelationAggregateInput
   preferences?: Prisma.FamilyCategoryPreferenceOrderByRelationAggregateInput
 }
 
 export type BudgetCategoryWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  familyId_userId_code?: Prisma.BudgetCategoryFamilyIdUserIdCodeCompoundUniqueInput
   AND?: Prisma.BudgetCategoryWhereInput | Prisma.BudgetCategoryWhereInput[]
   OR?: Prisma.BudgetCategoryWhereInput[]
   NOT?: Prisma.BudgetCategoryWhereInput | Prisma.BudgetCategoryWhereInput[]
   familyId?: Prisma.StringFilter<"BudgetCategory"> | string
+  userId?: Prisma.StringNullableFilter<"BudgetCategory"> | string | null
   type?: Prisma.StringFilter<"BudgetCategory"> | string
   name?: Prisma.StringFilter<"BudgetCategory"> | string
+  code?: Prisma.StringNullableFilter<"BudgetCategory"> | string | null
+  parentId?: Prisma.StringNullableFilter<"BudgetCategory"> | string | null
   isActive?: Prisma.BoolFilter<"BudgetCategory"> | boolean
+  sortOrder?: Prisma.IntFilter<"BudgetCategory"> | number
   createdAt?: Prisma.DateTimeFilter<"BudgetCategory"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"BudgetCategory"> | Date | string
   family?: Prisma.XOR<Prisma.FamilyScalarRelationFilter, Prisma.FamilyWhereInput>
-  allocations?: Prisma.EntityBudgetAllocationListRelationFilter
+  user?: Prisma.XOR<Prisma.UserNullableScalarRelationFilter, Prisma.UserWhereInput> | null
+  parent?: Prisma.XOR<Prisma.BudgetCategoryNullableScalarRelationFilter, Prisma.BudgetCategoryWhereInput> | null
+  children?: Prisma.BudgetCategoryListRelationFilter
   preferences?: Prisma.FamilyCategoryPreferenceListRelationFilter
-}, "id">
+}, "id" | "familyId_userId_code">
 
 export type BudgetCategoryOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   familyId?: Prisma.SortOrder
+  userId?: Prisma.SortOrderInput | Prisma.SortOrder
   type?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  code?: Prisma.SortOrderInput | Prisma.SortOrder
+  parentId?: Prisma.SortOrderInput | Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  sortOrder?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.BudgetCategoryCountOrderByAggregateInput
+  _avg?: Prisma.BudgetCategoryAvgOrderByAggregateInput
   _max?: Prisma.BudgetCategoryMaxOrderByAggregateInput
   _min?: Prisma.BudgetCategoryMinOrderByAggregateInput
+  _sum?: Prisma.BudgetCategorySumOrderByAggregateInput
 }
 
 export type BudgetCategoryScalarWhereWithAggregatesInput = {
@@ -251,9 +338,13 @@ export type BudgetCategoryScalarWhereWithAggregatesInput = {
   NOT?: Prisma.BudgetCategoryScalarWhereWithAggregatesInput | Prisma.BudgetCategoryScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"BudgetCategory"> | string
   familyId?: Prisma.StringWithAggregatesFilter<"BudgetCategory"> | string
+  userId?: Prisma.StringNullableWithAggregatesFilter<"BudgetCategory"> | string | null
   type?: Prisma.StringWithAggregatesFilter<"BudgetCategory"> | string
   name?: Prisma.StringWithAggregatesFilter<"BudgetCategory"> | string
+  code?: Prisma.StringNullableWithAggregatesFilter<"BudgetCategory"> | string | null
+  parentId?: Prisma.StringNullableWithAggregatesFilter<"BudgetCategory"> | string | null
   isActive?: Prisma.BoolWithAggregatesFilter<"BudgetCategory"> | boolean
+  sortOrder?: Prisma.IntWithAggregatesFilter<"BudgetCategory"> | number
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"BudgetCategory"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"BudgetCategory"> | Date | string
 }
@@ -262,23 +353,31 @@ export type BudgetCategoryCreateInput = {
   id?: string
   type: string
   name: string
+  code?: string | null
   isActive?: boolean
+  sortOrder?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   family: Prisma.FamilyCreateNestedOneWithoutBudgetCategoriesInput
-  allocations?: Prisma.EntityBudgetAllocationCreateNestedManyWithoutCategoryInput
+  user?: Prisma.UserCreateNestedOneWithoutBudgetCategoriesInput
+  parent?: Prisma.BudgetCategoryCreateNestedOneWithoutChildrenInput
+  children?: Prisma.BudgetCategoryCreateNestedManyWithoutParentInput
   preferences?: Prisma.FamilyCategoryPreferenceCreateNestedManyWithoutCategoryInput
 }
 
 export type BudgetCategoryUncheckedCreateInput = {
   id?: string
   familyId: string
+  userId?: string | null
   type: string
   name: string
+  code?: string | null
+  parentId?: string | null
   isActive?: boolean
+  sortOrder?: number
   createdAt?: Date | string
   updatedAt?: Date | string
-  allocations?: Prisma.EntityBudgetAllocationUncheckedCreateNestedManyWithoutCategoryInput
+  children?: Prisma.BudgetCategoryUncheckedCreateNestedManyWithoutParentInput
   preferences?: Prisma.FamilyCategoryPreferenceUncheckedCreateNestedManyWithoutCategoryInput
 }
 
@@ -286,32 +385,44 @@ export type BudgetCategoryUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   family?: Prisma.FamilyUpdateOneRequiredWithoutBudgetCategoriesNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUpdateManyWithoutCategoryNestedInput
+  user?: Prisma.UserUpdateOneWithoutBudgetCategoriesNestedInput
+  parent?: Prisma.BudgetCategoryUpdateOneWithoutChildrenNestedInput
+  children?: Prisma.BudgetCategoryUpdateManyWithoutParentNestedInput
   preferences?: Prisma.FamilyCategoryPreferenceUpdateManyWithoutCategoryNestedInput
 }
 
 export type BudgetCategoryUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   familyId?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  allocations?: Prisma.EntityBudgetAllocationUncheckedUpdateManyWithoutCategoryNestedInput
+  children?: Prisma.BudgetCategoryUncheckedUpdateManyWithoutParentNestedInput
   preferences?: Prisma.FamilyCategoryPreferenceUncheckedUpdateManyWithoutCategoryNestedInput
 }
 
 export type BudgetCategoryCreateManyInput = {
   id?: string
   familyId: string
+  userId?: string | null
   type: string
   name: string
+  code?: string | null
+  parentId?: string | null
   isActive?: boolean
+  sortOrder?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -320,7 +431,9 @@ export type BudgetCategoryUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -328,9 +441,13 @@ export type BudgetCategoryUpdateManyMutationInput = {
 export type BudgetCategoryUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   familyId?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -345,22 +462,45 @@ export type BudgetCategoryOrderByRelationAggregateInput = {
   _count?: Prisma.SortOrder
 }
 
+export type BudgetCategoryNullableScalarRelationFilter = {
+  is?: Prisma.BudgetCategoryWhereInput | null
+  isNot?: Prisma.BudgetCategoryWhereInput | null
+}
+
+export type BudgetCategoryFamilyIdUserIdCodeCompoundUniqueInput = {
+  familyId: string
+  userId: string
+  code: string
+}
+
 export type BudgetCategoryCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   familyId?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
   type?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  code?: Prisma.SortOrder
+  parentId?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  sortOrder?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+}
+
+export type BudgetCategoryAvgOrderByAggregateInput = {
+  sortOrder?: Prisma.SortOrder
 }
 
 export type BudgetCategoryMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   familyId?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
   type?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  code?: Prisma.SortOrder
+  parentId?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  sortOrder?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -368,16 +508,66 @@ export type BudgetCategoryMaxOrderByAggregateInput = {
 export type BudgetCategoryMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   familyId?: Prisma.SortOrder
+  userId?: Prisma.SortOrder
   type?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  code?: Prisma.SortOrder
+  parentId?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  sortOrder?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+}
+
+export type BudgetCategorySumOrderByAggregateInput = {
+  sortOrder?: Prisma.SortOrder
 }
 
 export type BudgetCategoryScalarRelationFilter = {
   is?: Prisma.BudgetCategoryWhereInput
   isNot?: Prisma.BudgetCategoryWhereInput
+}
+
+export type BudgetCategoryCreateNestedManyWithoutUserInput = {
+  create?: Prisma.XOR<Prisma.BudgetCategoryCreateWithoutUserInput, Prisma.BudgetCategoryUncheckedCreateWithoutUserInput> | Prisma.BudgetCategoryCreateWithoutUserInput[] | Prisma.BudgetCategoryUncheckedCreateWithoutUserInput[]
+  connectOrCreate?: Prisma.BudgetCategoryCreateOrConnectWithoutUserInput | Prisma.BudgetCategoryCreateOrConnectWithoutUserInput[]
+  createMany?: Prisma.BudgetCategoryCreateManyUserInputEnvelope
+  connect?: Prisma.BudgetCategoryWhereUniqueInput | Prisma.BudgetCategoryWhereUniqueInput[]
+}
+
+export type BudgetCategoryUncheckedCreateNestedManyWithoutUserInput = {
+  create?: Prisma.XOR<Prisma.BudgetCategoryCreateWithoutUserInput, Prisma.BudgetCategoryUncheckedCreateWithoutUserInput> | Prisma.BudgetCategoryCreateWithoutUserInput[] | Prisma.BudgetCategoryUncheckedCreateWithoutUserInput[]
+  connectOrCreate?: Prisma.BudgetCategoryCreateOrConnectWithoutUserInput | Prisma.BudgetCategoryCreateOrConnectWithoutUserInput[]
+  createMany?: Prisma.BudgetCategoryCreateManyUserInputEnvelope
+  connect?: Prisma.BudgetCategoryWhereUniqueInput | Prisma.BudgetCategoryWhereUniqueInput[]
+}
+
+export type BudgetCategoryUpdateManyWithoutUserNestedInput = {
+  create?: Prisma.XOR<Prisma.BudgetCategoryCreateWithoutUserInput, Prisma.BudgetCategoryUncheckedCreateWithoutUserInput> | Prisma.BudgetCategoryCreateWithoutUserInput[] | Prisma.BudgetCategoryUncheckedCreateWithoutUserInput[]
+  connectOrCreate?: Prisma.BudgetCategoryCreateOrConnectWithoutUserInput | Prisma.BudgetCategoryCreateOrConnectWithoutUserInput[]
+  upsert?: Prisma.BudgetCategoryUpsertWithWhereUniqueWithoutUserInput | Prisma.BudgetCategoryUpsertWithWhereUniqueWithoutUserInput[]
+  createMany?: Prisma.BudgetCategoryCreateManyUserInputEnvelope
+  set?: Prisma.BudgetCategoryWhereUniqueInput | Prisma.BudgetCategoryWhereUniqueInput[]
+  disconnect?: Prisma.BudgetCategoryWhereUniqueInput | Prisma.BudgetCategoryWhereUniqueInput[]
+  delete?: Prisma.BudgetCategoryWhereUniqueInput | Prisma.BudgetCategoryWhereUniqueInput[]
+  connect?: Prisma.BudgetCategoryWhereUniqueInput | Prisma.BudgetCategoryWhereUniqueInput[]
+  update?: Prisma.BudgetCategoryUpdateWithWhereUniqueWithoutUserInput | Prisma.BudgetCategoryUpdateWithWhereUniqueWithoutUserInput[]
+  updateMany?: Prisma.BudgetCategoryUpdateManyWithWhereWithoutUserInput | Prisma.BudgetCategoryUpdateManyWithWhereWithoutUserInput[]
+  deleteMany?: Prisma.BudgetCategoryScalarWhereInput | Prisma.BudgetCategoryScalarWhereInput[]
+}
+
+export type BudgetCategoryUncheckedUpdateManyWithoutUserNestedInput = {
+  create?: Prisma.XOR<Prisma.BudgetCategoryCreateWithoutUserInput, Prisma.BudgetCategoryUncheckedCreateWithoutUserInput> | Prisma.BudgetCategoryCreateWithoutUserInput[] | Prisma.BudgetCategoryUncheckedCreateWithoutUserInput[]
+  connectOrCreate?: Prisma.BudgetCategoryCreateOrConnectWithoutUserInput | Prisma.BudgetCategoryCreateOrConnectWithoutUserInput[]
+  upsert?: Prisma.BudgetCategoryUpsertWithWhereUniqueWithoutUserInput | Prisma.BudgetCategoryUpsertWithWhereUniqueWithoutUserInput[]
+  createMany?: Prisma.BudgetCategoryCreateManyUserInputEnvelope
+  set?: Prisma.BudgetCategoryWhereUniqueInput | Prisma.BudgetCategoryWhereUniqueInput[]
+  disconnect?: Prisma.BudgetCategoryWhereUniqueInput | Prisma.BudgetCategoryWhereUniqueInput[]
+  delete?: Prisma.BudgetCategoryWhereUniqueInput | Prisma.BudgetCategoryWhereUniqueInput[]
+  connect?: Prisma.BudgetCategoryWhereUniqueInput | Prisma.BudgetCategoryWhereUniqueInput[]
+  update?: Prisma.BudgetCategoryUpdateWithWhereUniqueWithoutUserInput | Prisma.BudgetCategoryUpdateWithWhereUniqueWithoutUserInput[]
+  updateMany?: Prisma.BudgetCategoryUpdateManyWithWhereWithoutUserInput | Prisma.BudgetCategoryUpdateManyWithWhereWithoutUserInput[]
+  deleteMany?: Prisma.BudgetCategoryScalarWhereInput | Prisma.BudgetCategoryScalarWhereInput[]
 }
 
 export type BudgetCategoryCreateNestedManyWithoutFamilyInput = {
@@ -422,6 +612,64 @@ export type BudgetCategoryUncheckedUpdateManyWithoutFamilyNestedInput = {
   deleteMany?: Prisma.BudgetCategoryScalarWhereInput | Prisma.BudgetCategoryScalarWhereInput[]
 }
 
+export type BudgetCategoryCreateNestedOneWithoutChildrenInput = {
+  create?: Prisma.XOR<Prisma.BudgetCategoryCreateWithoutChildrenInput, Prisma.BudgetCategoryUncheckedCreateWithoutChildrenInput>
+  connectOrCreate?: Prisma.BudgetCategoryCreateOrConnectWithoutChildrenInput
+  connect?: Prisma.BudgetCategoryWhereUniqueInput
+}
+
+export type BudgetCategoryCreateNestedManyWithoutParentInput = {
+  create?: Prisma.XOR<Prisma.BudgetCategoryCreateWithoutParentInput, Prisma.BudgetCategoryUncheckedCreateWithoutParentInput> | Prisma.BudgetCategoryCreateWithoutParentInput[] | Prisma.BudgetCategoryUncheckedCreateWithoutParentInput[]
+  connectOrCreate?: Prisma.BudgetCategoryCreateOrConnectWithoutParentInput | Prisma.BudgetCategoryCreateOrConnectWithoutParentInput[]
+  createMany?: Prisma.BudgetCategoryCreateManyParentInputEnvelope
+  connect?: Prisma.BudgetCategoryWhereUniqueInput | Prisma.BudgetCategoryWhereUniqueInput[]
+}
+
+export type BudgetCategoryUncheckedCreateNestedManyWithoutParentInput = {
+  create?: Prisma.XOR<Prisma.BudgetCategoryCreateWithoutParentInput, Prisma.BudgetCategoryUncheckedCreateWithoutParentInput> | Prisma.BudgetCategoryCreateWithoutParentInput[] | Prisma.BudgetCategoryUncheckedCreateWithoutParentInput[]
+  connectOrCreate?: Prisma.BudgetCategoryCreateOrConnectWithoutParentInput | Prisma.BudgetCategoryCreateOrConnectWithoutParentInput[]
+  createMany?: Prisma.BudgetCategoryCreateManyParentInputEnvelope
+  connect?: Prisma.BudgetCategoryWhereUniqueInput | Prisma.BudgetCategoryWhereUniqueInput[]
+}
+
+export type BudgetCategoryUpdateOneWithoutChildrenNestedInput = {
+  create?: Prisma.XOR<Prisma.BudgetCategoryCreateWithoutChildrenInput, Prisma.BudgetCategoryUncheckedCreateWithoutChildrenInput>
+  connectOrCreate?: Prisma.BudgetCategoryCreateOrConnectWithoutChildrenInput
+  upsert?: Prisma.BudgetCategoryUpsertWithoutChildrenInput
+  disconnect?: Prisma.BudgetCategoryWhereInput | boolean
+  delete?: Prisma.BudgetCategoryWhereInput | boolean
+  connect?: Prisma.BudgetCategoryWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.BudgetCategoryUpdateToOneWithWhereWithoutChildrenInput, Prisma.BudgetCategoryUpdateWithoutChildrenInput>, Prisma.BudgetCategoryUncheckedUpdateWithoutChildrenInput>
+}
+
+export type BudgetCategoryUpdateManyWithoutParentNestedInput = {
+  create?: Prisma.XOR<Prisma.BudgetCategoryCreateWithoutParentInput, Prisma.BudgetCategoryUncheckedCreateWithoutParentInput> | Prisma.BudgetCategoryCreateWithoutParentInput[] | Prisma.BudgetCategoryUncheckedCreateWithoutParentInput[]
+  connectOrCreate?: Prisma.BudgetCategoryCreateOrConnectWithoutParentInput | Prisma.BudgetCategoryCreateOrConnectWithoutParentInput[]
+  upsert?: Prisma.BudgetCategoryUpsertWithWhereUniqueWithoutParentInput | Prisma.BudgetCategoryUpsertWithWhereUniqueWithoutParentInput[]
+  createMany?: Prisma.BudgetCategoryCreateManyParentInputEnvelope
+  set?: Prisma.BudgetCategoryWhereUniqueInput | Prisma.BudgetCategoryWhereUniqueInput[]
+  disconnect?: Prisma.BudgetCategoryWhereUniqueInput | Prisma.BudgetCategoryWhereUniqueInput[]
+  delete?: Prisma.BudgetCategoryWhereUniqueInput | Prisma.BudgetCategoryWhereUniqueInput[]
+  connect?: Prisma.BudgetCategoryWhereUniqueInput | Prisma.BudgetCategoryWhereUniqueInput[]
+  update?: Prisma.BudgetCategoryUpdateWithWhereUniqueWithoutParentInput | Prisma.BudgetCategoryUpdateWithWhereUniqueWithoutParentInput[]
+  updateMany?: Prisma.BudgetCategoryUpdateManyWithWhereWithoutParentInput | Prisma.BudgetCategoryUpdateManyWithWhereWithoutParentInput[]
+  deleteMany?: Prisma.BudgetCategoryScalarWhereInput | Prisma.BudgetCategoryScalarWhereInput[]
+}
+
+export type BudgetCategoryUncheckedUpdateManyWithoutParentNestedInput = {
+  create?: Prisma.XOR<Prisma.BudgetCategoryCreateWithoutParentInput, Prisma.BudgetCategoryUncheckedCreateWithoutParentInput> | Prisma.BudgetCategoryCreateWithoutParentInput[] | Prisma.BudgetCategoryUncheckedCreateWithoutParentInput[]
+  connectOrCreate?: Prisma.BudgetCategoryCreateOrConnectWithoutParentInput | Prisma.BudgetCategoryCreateOrConnectWithoutParentInput[]
+  upsert?: Prisma.BudgetCategoryUpsertWithWhereUniqueWithoutParentInput | Prisma.BudgetCategoryUpsertWithWhereUniqueWithoutParentInput[]
+  createMany?: Prisma.BudgetCategoryCreateManyParentInputEnvelope
+  set?: Prisma.BudgetCategoryWhereUniqueInput | Prisma.BudgetCategoryWhereUniqueInput[]
+  disconnect?: Prisma.BudgetCategoryWhereUniqueInput | Prisma.BudgetCategoryWhereUniqueInput[]
+  delete?: Prisma.BudgetCategoryWhereUniqueInput | Prisma.BudgetCategoryWhereUniqueInput[]
+  connect?: Prisma.BudgetCategoryWhereUniqueInput | Prisma.BudgetCategoryWhereUniqueInput[]
+  update?: Prisma.BudgetCategoryUpdateWithWhereUniqueWithoutParentInput | Prisma.BudgetCategoryUpdateWithWhereUniqueWithoutParentInput[]
+  updateMany?: Prisma.BudgetCategoryUpdateManyWithWhereWithoutParentInput | Prisma.BudgetCategoryUpdateManyWithWhereWithoutParentInput[]
+  deleteMany?: Prisma.BudgetCategoryScalarWhereInput | Prisma.BudgetCategoryScalarWhereInput[]
+}
+
 export type BudgetCategoryCreateNestedOneWithoutPreferencesInput = {
   create?: Prisma.XOR<Prisma.BudgetCategoryCreateWithoutPreferencesInput, Prisma.BudgetCategoryUncheckedCreateWithoutPreferencesInput>
   connectOrCreate?: Prisma.BudgetCategoryCreateOrConnectWithoutPreferencesInput
@@ -436,39 +684,105 @@ export type BudgetCategoryUpdateOneRequiredWithoutPreferencesNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.BudgetCategoryUpdateToOneWithWhereWithoutPreferencesInput, Prisma.BudgetCategoryUpdateWithoutPreferencesInput>, Prisma.BudgetCategoryUncheckedUpdateWithoutPreferencesInput>
 }
 
-export type BudgetCategoryCreateNestedOneWithoutAllocationsInput = {
-  create?: Prisma.XOR<Prisma.BudgetCategoryCreateWithoutAllocationsInput, Prisma.BudgetCategoryUncheckedCreateWithoutAllocationsInput>
-  connectOrCreate?: Prisma.BudgetCategoryCreateOrConnectWithoutAllocationsInput
-  connect?: Prisma.BudgetCategoryWhereUniqueInput
+export type BudgetCategoryCreateWithoutUserInput = {
+  id?: string
+  type: string
+  name: string
+  code?: string | null
+  isActive?: boolean
+  sortOrder?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  family: Prisma.FamilyCreateNestedOneWithoutBudgetCategoriesInput
+  parent?: Prisma.BudgetCategoryCreateNestedOneWithoutChildrenInput
+  children?: Prisma.BudgetCategoryCreateNestedManyWithoutParentInput
+  preferences?: Prisma.FamilyCategoryPreferenceCreateNestedManyWithoutCategoryInput
 }
 
-export type BudgetCategoryUpdateOneRequiredWithoutAllocationsNestedInput = {
-  create?: Prisma.XOR<Prisma.BudgetCategoryCreateWithoutAllocationsInput, Prisma.BudgetCategoryUncheckedCreateWithoutAllocationsInput>
-  connectOrCreate?: Prisma.BudgetCategoryCreateOrConnectWithoutAllocationsInput
-  upsert?: Prisma.BudgetCategoryUpsertWithoutAllocationsInput
-  connect?: Prisma.BudgetCategoryWhereUniqueInput
-  update?: Prisma.XOR<Prisma.XOR<Prisma.BudgetCategoryUpdateToOneWithWhereWithoutAllocationsInput, Prisma.BudgetCategoryUpdateWithoutAllocationsInput>, Prisma.BudgetCategoryUncheckedUpdateWithoutAllocationsInput>
+export type BudgetCategoryUncheckedCreateWithoutUserInput = {
+  id?: string
+  familyId: string
+  type: string
+  name: string
+  code?: string | null
+  parentId?: string | null
+  isActive?: boolean
+  sortOrder?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  children?: Prisma.BudgetCategoryUncheckedCreateNestedManyWithoutParentInput
+  preferences?: Prisma.FamilyCategoryPreferenceUncheckedCreateNestedManyWithoutCategoryInput
+}
+
+export type BudgetCategoryCreateOrConnectWithoutUserInput = {
+  where: Prisma.BudgetCategoryWhereUniqueInput
+  create: Prisma.XOR<Prisma.BudgetCategoryCreateWithoutUserInput, Prisma.BudgetCategoryUncheckedCreateWithoutUserInput>
+}
+
+export type BudgetCategoryCreateManyUserInputEnvelope = {
+  data: Prisma.BudgetCategoryCreateManyUserInput | Prisma.BudgetCategoryCreateManyUserInput[]
+}
+
+export type BudgetCategoryUpsertWithWhereUniqueWithoutUserInput = {
+  where: Prisma.BudgetCategoryWhereUniqueInput
+  update: Prisma.XOR<Prisma.BudgetCategoryUpdateWithoutUserInput, Prisma.BudgetCategoryUncheckedUpdateWithoutUserInput>
+  create: Prisma.XOR<Prisma.BudgetCategoryCreateWithoutUserInput, Prisma.BudgetCategoryUncheckedCreateWithoutUserInput>
+}
+
+export type BudgetCategoryUpdateWithWhereUniqueWithoutUserInput = {
+  where: Prisma.BudgetCategoryWhereUniqueInput
+  data: Prisma.XOR<Prisma.BudgetCategoryUpdateWithoutUserInput, Prisma.BudgetCategoryUncheckedUpdateWithoutUserInput>
+}
+
+export type BudgetCategoryUpdateManyWithWhereWithoutUserInput = {
+  where: Prisma.BudgetCategoryScalarWhereInput
+  data: Prisma.XOR<Prisma.BudgetCategoryUpdateManyMutationInput, Prisma.BudgetCategoryUncheckedUpdateManyWithoutUserInput>
+}
+
+export type BudgetCategoryScalarWhereInput = {
+  AND?: Prisma.BudgetCategoryScalarWhereInput | Prisma.BudgetCategoryScalarWhereInput[]
+  OR?: Prisma.BudgetCategoryScalarWhereInput[]
+  NOT?: Prisma.BudgetCategoryScalarWhereInput | Prisma.BudgetCategoryScalarWhereInput[]
+  id?: Prisma.StringFilter<"BudgetCategory"> | string
+  familyId?: Prisma.StringFilter<"BudgetCategory"> | string
+  userId?: Prisma.StringNullableFilter<"BudgetCategory"> | string | null
+  type?: Prisma.StringFilter<"BudgetCategory"> | string
+  name?: Prisma.StringFilter<"BudgetCategory"> | string
+  code?: Prisma.StringNullableFilter<"BudgetCategory"> | string | null
+  parentId?: Prisma.StringNullableFilter<"BudgetCategory"> | string | null
+  isActive?: Prisma.BoolFilter<"BudgetCategory"> | boolean
+  sortOrder?: Prisma.IntFilter<"BudgetCategory"> | number
+  createdAt?: Prisma.DateTimeFilter<"BudgetCategory"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"BudgetCategory"> | Date | string
 }
 
 export type BudgetCategoryCreateWithoutFamilyInput = {
   id?: string
   type: string
   name: string
+  code?: string | null
   isActive?: boolean
+  sortOrder?: number
   createdAt?: Date | string
   updatedAt?: Date | string
-  allocations?: Prisma.EntityBudgetAllocationCreateNestedManyWithoutCategoryInput
+  user?: Prisma.UserCreateNestedOneWithoutBudgetCategoriesInput
+  parent?: Prisma.BudgetCategoryCreateNestedOneWithoutChildrenInput
+  children?: Prisma.BudgetCategoryCreateNestedManyWithoutParentInput
   preferences?: Prisma.FamilyCategoryPreferenceCreateNestedManyWithoutCategoryInput
 }
 
 export type BudgetCategoryUncheckedCreateWithoutFamilyInput = {
   id?: string
+  userId?: string | null
   type: string
   name: string
+  code?: string | null
+  parentId?: string | null
   isActive?: boolean
+  sortOrder?: number
   createdAt?: Date | string
   updatedAt?: Date | string
-  allocations?: Prisma.EntityBudgetAllocationUncheckedCreateNestedManyWithoutCategoryInput
+  children?: Prisma.BudgetCategoryUncheckedCreateNestedManyWithoutParentInput
   preferences?: Prisma.FamilyCategoryPreferenceUncheckedCreateNestedManyWithoutCategoryInput
 }
 
@@ -497,39 +811,165 @@ export type BudgetCategoryUpdateManyWithWhereWithoutFamilyInput = {
   data: Prisma.XOR<Prisma.BudgetCategoryUpdateManyMutationInput, Prisma.BudgetCategoryUncheckedUpdateManyWithoutFamilyInput>
 }
 
-export type BudgetCategoryScalarWhereInput = {
-  AND?: Prisma.BudgetCategoryScalarWhereInput | Prisma.BudgetCategoryScalarWhereInput[]
-  OR?: Prisma.BudgetCategoryScalarWhereInput[]
-  NOT?: Prisma.BudgetCategoryScalarWhereInput | Prisma.BudgetCategoryScalarWhereInput[]
-  id?: Prisma.StringFilter<"BudgetCategory"> | string
-  familyId?: Prisma.StringFilter<"BudgetCategory"> | string
-  type?: Prisma.StringFilter<"BudgetCategory"> | string
-  name?: Prisma.StringFilter<"BudgetCategory"> | string
-  isActive?: Prisma.BoolFilter<"BudgetCategory"> | boolean
-  createdAt?: Prisma.DateTimeFilter<"BudgetCategory"> | Date | string
-  updatedAt?: Prisma.DateTimeFilter<"BudgetCategory"> | Date | string
+export type BudgetCategoryCreateWithoutChildrenInput = {
+  id?: string
+  type: string
+  name: string
+  code?: string | null
+  isActive?: boolean
+  sortOrder?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  family: Prisma.FamilyCreateNestedOneWithoutBudgetCategoriesInput
+  user?: Prisma.UserCreateNestedOneWithoutBudgetCategoriesInput
+  parent?: Prisma.BudgetCategoryCreateNestedOneWithoutChildrenInput
+  preferences?: Prisma.FamilyCategoryPreferenceCreateNestedManyWithoutCategoryInput
+}
+
+export type BudgetCategoryUncheckedCreateWithoutChildrenInput = {
+  id?: string
+  familyId: string
+  userId?: string | null
+  type: string
+  name: string
+  code?: string | null
+  parentId?: string | null
+  isActive?: boolean
+  sortOrder?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  preferences?: Prisma.FamilyCategoryPreferenceUncheckedCreateNestedManyWithoutCategoryInput
+}
+
+export type BudgetCategoryCreateOrConnectWithoutChildrenInput = {
+  where: Prisma.BudgetCategoryWhereUniqueInput
+  create: Prisma.XOR<Prisma.BudgetCategoryCreateWithoutChildrenInput, Prisma.BudgetCategoryUncheckedCreateWithoutChildrenInput>
+}
+
+export type BudgetCategoryCreateWithoutParentInput = {
+  id?: string
+  type: string
+  name: string
+  code?: string | null
+  isActive?: boolean
+  sortOrder?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  family: Prisma.FamilyCreateNestedOneWithoutBudgetCategoriesInput
+  user?: Prisma.UserCreateNestedOneWithoutBudgetCategoriesInput
+  children?: Prisma.BudgetCategoryCreateNestedManyWithoutParentInput
+  preferences?: Prisma.FamilyCategoryPreferenceCreateNestedManyWithoutCategoryInput
+}
+
+export type BudgetCategoryUncheckedCreateWithoutParentInput = {
+  id?: string
+  familyId: string
+  userId?: string | null
+  type: string
+  name: string
+  code?: string | null
+  isActive?: boolean
+  sortOrder?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  children?: Prisma.BudgetCategoryUncheckedCreateNestedManyWithoutParentInput
+  preferences?: Prisma.FamilyCategoryPreferenceUncheckedCreateNestedManyWithoutCategoryInput
+}
+
+export type BudgetCategoryCreateOrConnectWithoutParentInput = {
+  where: Prisma.BudgetCategoryWhereUniqueInput
+  create: Prisma.XOR<Prisma.BudgetCategoryCreateWithoutParentInput, Prisma.BudgetCategoryUncheckedCreateWithoutParentInput>
+}
+
+export type BudgetCategoryCreateManyParentInputEnvelope = {
+  data: Prisma.BudgetCategoryCreateManyParentInput | Prisma.BudgetCategoryCreateManyParentInput[]
+}
+
+export type BudgetCategoryUpsertWithoutChildrenInput = {
+  update: Prisma.XOR<Prisma.BudgetCategoryUpdateWithoutChildrenInput, Prisma.BudgetCategoryUncheckedUpdateWithoutChildrenInput>
+  create: Prisma.XOR<Prisma.BudgetCategoryCreateWithoutChildrenInput, Prisma.BudgetCategoryUncheckedCreateWithoutChildrenInput>
+  where?: Prisma.BudgetCategoryWhereInput
+}
+
+export type BudgetCategoryUpdateToOneWithWhereWithoutChildrenInput = {
+  where?: Prisma.BudgetCategoryWhereInput
+  data: Prisma.XOR<Prisma.BudgetCategoryUpdateWithoutChildrenInput, Prisma.BudgetCategoryUncheckedUpdateWithoutChildrenInput>
+}
+
+export type BudgetCategoryUpdateWithoutChildrenInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  family?: Prisma.FamilyUpdateOneRequiredWithoutBudgetCategoriesNestedInput
+  user?: Prisma.UserUpdateOneWithoutBudgetCategoriesNestedInput
+  parent?: Prisma.BudgetCategoryUpdateOneWithoutChildrenNestedInput
+  preferences?: Prisma.FamilyCategoryPreferenceUpdateManyWithoutCategoryNestedInput
+}
+
+export type BudgetCategoryUncheckedUpdateWithoutChildrenInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  familyId?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  preferences?: Prisma.FamilyCategoryPreferenceUncheckedUpdateManyWithoutCategoryNestedInput
+}
+
+export type BudgetCategoryUpsertWithWhereUniqueWithoutParentInput = {
+  where: Prisma.BudgetCategoryWhereUniqueInput
+  update: Prisma.XOR<Prisma.BudgetCategoryUpdateWithoutParentInput, Prisma.BudgetCategoryUncheckedUpdateWithoutParentInput>
+  create: Prisma.XOR<Prisma.BudgetCategoryCreateWithoutParentInput, Prisma.BudgetCategoryUncheckedCreateWithoutParentInput>
+}
+
+export type BudgetCategoryUpdateWithWhereUniqueWithoutParentInput = {
+  where: Prisma.BudgetCategoryWhereUniqueInput
+  data: Prisma.XOR<Prisma.BudgetCategoryUpdateWithoutParentInput, Prisma.BudgetCategoryUncheckedUpdateWithoutParentInput>
+}
+
+export type BudgetCategoryUpdateManyWithWhereWithoutParentInput = {
+  where: Prisma.BudgetCategoryScalarWhereInput
+  data: Prisma.XOR<Prisma.BudgetCategoryUpdateManyMutationInput, Prisma.BudgetCategoryUncheckedUpdateManyWithoutParentInput>
 }
 
 export type BudgetCategoryCreateWithoutPreferencesInput = {
   id?: string
   type: string
   name: string
+  code?: string | null
   isActive?: boolean
+  sortOrder?: number
   createdAt?: Date | string
   updatedAt?: Date | string
   family: Prisma.FamilyCreateNestedOneWithoutBudgetCategoriesInput
-  allocations?: Prisma.EntityBudgetAllocationCreateNestedManyWithoutCategoryInput
+  user?: Prisma.UserCreateNestedOneWithoutBudgetCategoriesInput
+  parent?: Prisma.BudgetCategoryCreateNestedOneWithoutChildrenInput
+  children?: Prisma.BudgetCategoryCreateNestedManyWithoutParentInput
 }
 
 export type BudgetCategoryUncheckedCreateWithoutPreferencesInput = {
   id?: string
   familyId: string
+  userId?: string | null
   type: string
   name: string
+  code?: string | null
+  parentId?: string | null
   isActive?: boolean
+  sortOrder?: number
   createdAt?: Date | string
   updatedAt?: Date | string
-  allocations?: Prisma.EntityBudgetAllocationUncheckedCreateNestedManyWithoutCategoryInput
+  children?: Prisma.BudgetCategoryUncheckedCreateNestedManyWithoutParentInput
 }
 
 export type BudgetCategoryCreateOrConnectWithoutPreferencesInput = {
@@ -552,89 +992,97 @@ export type BudgetCategoryUpdateWithoutPreferencesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   family?: Prisma.FamilyUpdateOneRequiredWithoutBudgetCategoriesNestedInput
-  allocations?: Prisma.EntityBudgetAllocationUpdateManyWithoutCategoryNestedInput
+  user?: Prisma.UserUpdateOneWithoutBudgetCategoriesNestedInput
+  parent?: Prisma.BudgetCategoryUpdateOneWithoutChildrenNestedInput
+  children?: Prisma.BudgetCategoryUpdateManyWithoutParentNestedInput
 }
 
 export type BudgetCategoryUncheckedUpdateWithoutPreferencesInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   familyId?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  allocations?: Prisma.EntityBudgetAllocationUncheckedUpdateManyWithoutCategoryNestedInput
+  children?: Prisma.BudgetCategoryUncheckedUpdateManyWithoutParentNestedInput
 }
 
-export type BudgetCategoryCreateWithoutAllocationsInput = {
-  id?: string
-  type: string
-  name: string
-  isActive?: boolean
-  createdAt?: Date | string
-  updatedAt?: Date | string
-  family: Prisma.FamilyCreateNestedOneWithoutBudgetCategoriesInput
-  preferences?: Prisma.FamilyCategoryPreferenceCreateNestedManyWithoutCategoryInput
-}
-
-export type BudgetCategoryUncheckedCreateWithoutAllocationsInput = {
+export type BudgetCategoryCreateManyUserInput = {
   id?: string
   familyId: string
   type: string
   name: string
+  code?: string | null
+  parentId?: string | null
   isActive?: boolean
+  sortOrder?: number
   createdAt?: Date | string
   updatedAt?: Date | string
-  preferences?: Prisma.FamilyCategoryPreferenceUncheckedCreateNestedManyWithoutCategoryInput
 }
 
-export type BudgetCategoryCreateOrConnectWithoutAllocationsInput = {
-  where: Prisma.BudgetCategoryWhereUniqueInput
-  create: Prisma.XOR<Prisma.BudgetCategoryCreateWithoutAllocationsInput, Prisma.BudgetCategoryUncheckedCreateWithoutAllocationsInput>
-}
-
-export type BudgetCategoryUpsertWithoutAllocationsInput = {
-  update: Prisma.XOR<Prisma.BudgetCategoryUpdateWithoutAllocationsInput, Prisma.BudgetCategoryUncheckedUpdateWithoutAllocationsInput>
-  create: Prisma.XOR<Prisma.BudgetCategoryCreateWithoutAllocationsInput, Prisma.BudgetCategoryUncheckedCreateWithoutAllocationsInput>
-  where?: Prisma.BudgetCategoryWhereInput
-}
-
-export type BudgetCategoryUpdateToOneWithWhereWithoutAllocationsInput = {
-  where?: Prisma.BudgetCategoryWhereInput
-  data: Prisma.XOR<Prisma.BudgetCategoryUpdateWithoutAllocationsInput, Prisma.BudgetCategoryUncheckedUpdateWithoutAllocationsInput>
-}
-
-export type BudgetCategoryUpdateWithoutAllocationsInput = {
+export type BudgetCategoryUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   family?: Prisma.FamilyUpdateOneRequiredWithoutBudgetCategoriesNestedInput
+  parent?: Prisma.BudgetCategoryUpdateOneWithoutChildrenNestedInput
+  children?: Prisma.BudgetCategoryUpdateManyWithoutParentNestedInput
   preferences?: Prisma.FamilyCategoryPreferenceUpdateManyWithoutCategoryNestedInput
 }
 
-export type BudgetCategoryUncheckedUpdateWithoutAllocationsInput = {
+export type BudgetCategoryUncheckedUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   familyId?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  children?: Prisma.BudgetCategoryUncheckedUpdateManyWithoutParentNestedInput
   preferences?: Prisma.FamilyCategoryPreferenceUncheckedUpdateManyWithoutCategoryNestedInput
+}
+
+export type BudgetCategoryUncheckedUpdateManyWithoutUserInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  familyId?: Prisma.StringFieldUpdateOperationsInput | string
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type BudgetCategoryCreateManyFamilyInput = {
   id?: string
+  userId?: string | null
   type: string
   name: string
+  code?: string | null
+  parentId?: string | null
   isActive?: boolean
+  sortOrder?: number
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -643,29 +1091,97 @@ export type BudgetCategoryUpdateWithoutFamilyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  allocations?: Prisma.EntityBudgetAllocationUpdateManyWithoutCategoryNestedInput
+  user?: Prisma.UserUpdateOneWithoutBudgetCategoriesNestedInput
+  parent?: Prisma.BudgetCategoryUpdateOneWithoutChildrenNestedInput
+  children?: Prisma.BudgetCategoryUpdateManyWithoutParentNestedInput
   preferences?: Prisma.FamilyCategoryPreferenceUpdateManyWithoutCategoryNestedInput
 }
 
 export type BudgetCategoryUncheckedUpdateWithoutFamilyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  allocations?: Prisma.EntityBudgetAllocationUncheckedUpdateManyWithoutCategoryNestedInput
+  children?: Prisma.BudgetCategoryUncheckedUpdateManyWithoutParentNestedInput
   preferences?: Prisma.FamilyCategoryPreferenceUncheckedUpdateManyWithoutCategoryNestedInput
 }
 
 export type BudgetCategoryUncheckedUpdateManyWithoutFamilyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  parentId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type BudgetCategoryCreateManyParentInput = {
+  id?: string
+  familyId: string
+  userId?: string | null
+  type: string
+  name: string
+  code?: string | null
+  isActive?: boolean
+  sortOrder?: number
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type BudgetCategoryUpdateWithoutParentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  family?: Prisma.FamilyUpdateOneRequiredWithoutBudgetCategoriesNestedInput
+  user?: Prisma.UserUpdateOneWithoutBudgetCategoriesNestedInput
+  children?: Prisma.BudgetCategoryUpdateManyWithoutParentNestedInput
+  preferences?: Prisma.FamilyCategoryPreferenceUpdateManyWithoutCategoryNestedInput
+}
+
+export type BudgetCategoryUncheckedUpdateWithoutParentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  familyId?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  children?: Prisma.BudgetCategoryUncheckedUpdateManyWithoutParentNestedInput
+  preferences?: Prisma.FamilyCategoryPreferenceUncheckedUpdateManyWithoutCategoryNestedInput
+}
+
+export type BudgetCategoryUncheckedUpdateManyWithoutParentInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  familyId?: Prisma.StringFieldUpdateOperationsInput | string
+  userId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  code?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -676,12 +1192,12 @@ export type BudgetCategoryUncheckedUpdateManyWithoutFamilyInput = {
  */
 
 export type BudgetCategoryCountOutputType = {
-  allocations: number
+  children: number
   preferences: number
 }
 
 export type BudgetCategoryCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  allocations?: boolean | BudgetCategoryCountOutputTypeCountAllocationsArgs
+  children?: boolean | BudgetCategoryCountOutputTypeCountChildrenArgs
   preferences?: boolean | BudgetCategoryCountOutputTypeCountPreferencesArgs
 }
 
@@ -698,8 +1214,8 @@ export type BudgetCategoryCountOutputTypeDefaultArgs<ExtArgs extends runtime.Typ
 /**
  * BudgetCategoryCountOutputType without action
  */
-export type BudgetCategoryCountOutputTypeCountAllocationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.EntityBudgetAllocationWhereInput
+export type BudgetCategoryCountOutputTypeCountChildrenArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.BudgetCategoryWhereInput
 }
 
 /**
@@ -713,13 +1229,19 @@ export type BudgetCategoryCountOutputTypeCountPreferencesArgs<ExtArgs extends ru
 export type BudgetCategorySelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   familyId?: boolean
+  userId?: boolean
   type?: boolean
   name?: boolean
+  code?: boolean
+  parentId?: boolean
   isActive?: boolean
+  sortOrder?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   family?: boolean | Prisma.FamilyDefaultArgs<ExtArgs>
-  allocations?: boolean | Prisma.BudgetCategory$allocationsArgs<ExtArgs>
+  user?: boolean | Prisma.BudgetCategory$userArgs<ExtArgs>
+  parent?: boolean | Prisma.BudgetCategory$parentArgs<ExtArgs>
+  children?: boolean | Prisma.BudgetCategory$childrenArgs<ExtArgs>
   preferences?: boolean | Prisma.BudgetCategory$preferencesArgs<ExtArgs>
   _count?: boolean | Prisma.BudgetCategoryCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["budgetCategory"]>
@@ -727,62 +1249,90 @@ export type BudgetCategorySelect<ExtArgs extends runtime.Types.Extensions.Intern
 export type BudgetCategorySelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   familyId?: boolean
+  userId?: boolean
   type?: boolean
   name?: boolean
+  code?: boolean
+  parentId?: boolean
   isActive?: boolean
+  sortOrder?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   family?: boolean | Prisma.FamilyDefaultArgs<ExtArgs>
+  user?: boolean | Prisma.BudgetCategory$userArgs<ExtArgs>
+  parent?: boolean | Prisma.BudgetCategory$parentArgs<ExtArgs>
 }, ExtArgs["result"]["budgetCategory"]>
 
 export type BudgetCategorySelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   familyId?: boolean
+  userId?: boolean
   type?: boolean
   name?: boolean
+  code?: boolean
+  parentId?: boolean
   isActive?: boolean
+  sortOrder?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   family?: boolean | Prisma.FamilyDefaultArgs<ExtArgs>
+  user?: boolean | Prisma.BudgetCategory$userArgs<ExtArgs>
+  parent?: boolean | Prisma.BudgetCategory$parentArgs<ExtArgs>
 }, ExtArgs["result"]["budgetCategory"]>
 
 export type BudgetCategorySelectScalar = {
   id?: boolean
   familyId?: boolean
+  userId?: boolean
   type?: boolean
   name?: boolean
+  code?: boolean
+  parentId?: boolean
   isActive?: boolean
+  sortOrder?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type BudgetCategoryOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "familyId" | "type" | "name" | "isActive" | "createdAt" | "updatedAt", ExtArgs["result"]["budgetCategory"]>
+export type BudgetCategoryOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "familyId" | "userId" | "type" | "name" | "code" | "parentId" | "isActive" | "sortOrder" | "createdAt" | "updatedAt", ExtArgs["result"]["budgetCategory"]>
 export type BudgetCategoryInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   family?: boolean | Prisma.FamilyDefaultArgs<ExtArgs>
-  allocations?: boolean | Prisma.BudgetCategory$allocationsArgs<ExtArgs>
+  user?: boolean | Prisma.BudgetCategory$userArgs<ExtArgs>
+  parent?: boolean | Prisma.BudgetCategory$parentArgs<ExtArgs>
+  children?: boolean | Prisma.BudgetCategory$childrenArgs<ExtArgs>
   preferences?: boolean | Prisma.BudgetCategory$preferencesArgs<ExtArgs>
   _count?: boolean | Prisma.BudgetCategoryCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type BudgetCategoryIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   family?: boolean | Prisma.FamilyDefaultArgs<ExtArgs>
+  user?: boolean | Prisma.BudgetCategory$userArgs<ExtArgs>
+  parent?: boolean | Prisma.BudgetCategory$parentArgs<ExtArgs>
 }
 export type BudgetCategoryIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   family?: boolean | Prisma.FamilyDefaultArgs<ExtArgs>
+  user?: boolean | Prisma.BudgetCategory$userArgs<ExtArgs>
+  parent?: boolean | Prisma.BudgetCategory$parentArgs<ExtArgs>
 }
 
 export type $BudgetCategoryPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "BudgetCategory"
   objects: {
     family: Prisma.$FamilyPayload<ExtArgs>
-    allocations: Prisma.$EntityBudgetAllocationPayload<ExtArgs>[]
+    user: Prisma.$UserPayload<ExtArgs> | null
+    parent: Prisma.$BudgetCategoryPayload<ExtArgs> | null
+    children: Prisma.$BudgetCategoryPayload<ExtArgs>[]
     preferences: Prisma.$FamilyCategoryPreferencePayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     familyId: string
+    userId: string | null
     type: string
     name: string
+    code: string | null
+    parentId: string | null
     isActive: boolean
+    sortOrder: number
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["budgetCategory"]>
@@ -1180,7 +1730,9 @@ readonly fields: BudgetCategoryFieldRefs;
 export interface Prisma__BudgetCategoryClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   family<T extends Prisma.FamilyDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.FamilyDefaultArgs<ExtArgs>>): Prisma.Prisma__FamilyClient<runtime.Types.Result.GetResult<Prisma.$FamilyPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-  allocations<T extends Prisma.BudgetCategory$allocationsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.BudgetCategory$allocationsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EntityBudgetAllocationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  user<T extends Prisma.BudgetCategory$userArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.BudgetCategory$userArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  parent<T extends Prisma.BudgetCategory$parentArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.BudgetCategory$parentArgs<ExtArgs>>): Prisma.Prisma__BudgetCategoryClient<runtime.Types.Result.GetResult<Prisma.$BudgetCategoryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  children<T extends Prisma.BudgetCategory$childrenArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.BudgetCategory$childrenArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BudgetCategoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   preferences<T extends Prisma.BudgetCategory$preferencesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.BudgetCategory$preferencesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FamilyCategoryPreferencePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -1213,9 +1765,13 @@ export interface Prisma__BudgetCategoryClient<T, Null = never, ExtArgs extends r
 export interface BudgetCategoryFieldRefs {
   readonly id: Prisma.FieldRef<"BudgetCategory", 'String'>
   readonly familyId: Prisma.FieldRef<"BudgetCategory", 'String'>
+  readonly userId: Prisma.FieldRef<"BudgetCategory", 'String'>
   readonly type: Prisma.FieldRef<"BudgetCategory", 'String'>
   readonly name: Prisma.FieldRef<"BudgetCategory", 'String'>
+  readonly code: Prisma.FieldRef<"BudgetCategory", 'String'>
+  readonly parentId: Prisma.FieldRef<"BudgetCategory", 'String'>
   readonly isActive: Prisma.FieldRef<"BudgetCategory", 'Boolean'>
+  readonly sortOrder: Prisma.FieldRef<"BudgetCategory", 'Int'>
   readonly createdAt: Prisma.FieldRef<"BudgetCategory", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"BudgetCategory", 'DateTime'>
 }
@@ -1612,27 +2168,65 @@ export type BudgetCategoryDeleteManyArgs<ExtArgs extends runtime.Types.Extension
 }
 
 /**
- * BudgetCategory.allocations
+ * BudgetCategory.user
  */
-export type BudgetCategory$allocationsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+export type BudgetCategory$userArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
-   * Select specific fields to fetch from the EntityBudgetAllocation
+   * Select specific fields to fetch from the User
    */
-  select?: Prisma.EntityBudgetAllocationSelect<ExtArgs> | null
+  select?: Prisma.UserSelect<ExtArgs> | null
   /**
-   * Omit specific fields from the EntityBudgetAllocation
+   * Omit specific fields from the User
    */
-  omit?: Prisma.EntityBudgetAllocationOmit<ExtArgs> | null
+  omit?: Prisma.UserOmit<ExtArgs> | null
   /**
    * Choose, which related nodes to fetch as well
    */
-  include?: Prisma.EntityBudgetAllocationInclude<ExtArgs> | null
-  where?: Prisma.EntityBudgetAllocationWhereInput
-  orderBy?: Prisma.EntityBudgetAllocationOrderByWithRelationInput | Prisma.EntityBudgetAllocationOrderByWithRelationInput[]
-  cursor?: Prisma.EntityBudgetAllocationWhereUniqueInput
+  include?: Prisma.UserInclude<ExtArgs> | null
+  where?: Prisma.UserWhereInput
+}
+
+/**
+ * BudgetCategory.parent
+ */
+export type BudgetCategory$parentArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the BudgetCategory
+   */
+  select?: Prisma.BudgetCategorySelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the BudgetCategory
+   */
+  omit?: Prisma.BudgetCategoryOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BudgetCategoryInclude<ExtArgs> | null
+  where?: Prisma.BudgetCategoryWhereInput
+}
+
+/**
+ * BudgetCategory.children
+ */
+export type BudgetCategory$childrenArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the BudgetCategory
+   */
+  select?: Prisma.BudgetCategorySelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the BudgetCategory
+   */
+  omit?: Prisma.BudgetCategoryOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BudgetCategoryInclude<ExtArgs> | null
+  where?: Prisma.BudgetCategoryWhereInput
+  orderBy?: Prisma.BudgetCategoryOrderByWithRelationInput | Prisma.BudgetCategoryOrderByWithRelationInput[]
+  cursor?: Prisma.BudgetCategoryWhereUniqueInput
   take?: number
   skip?: number
-  distinct?: Prisma.EntityBudgetAllocationScalarFieldEnum | Prisma.EntityBudgetAllocationScalarFieldEnum[]
+  distinct?: Prisma.BudgetCategoryScalarFieldEnum | Prisma.BudgetCategoryScalarFieldEnum[]
 }
 
 /**

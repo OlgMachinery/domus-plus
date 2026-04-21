@@ -9,15 +9,11 @@
 * 🟢 You can import this file directly.
 */
 
-export const EntityType = {
+export const EntityKind = {
+  FAMILY: 'FAMILY',
   PERSON: 'PERSON',
-  HOUSE: 'HOUSE',
-  PET: 'PET',
-  VEHICLE: 'VEHICLE',
-  PROJECT: 'PROJECT',
-  FUND: 'FUND',
-  GROUP: 'GROUP',
-  OTHER: 'OTHER'
+  ASSET: 'ASSET',
+  PET: 'PET'
 } as const
 
-export type EntityType = (typeof EntityType)[keyof typeof EntityType]
+export type EntityKind = (typeof EntityKind)[keyof typeof EntityKind]

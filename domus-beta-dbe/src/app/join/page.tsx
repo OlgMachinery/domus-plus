@@ -38,6 +38,7 @@ function JoinForm() {
   const [validating, setValidating] = useState(!!codeFromUrl)
   const [familyName, setFamilyName] = useState<string | null>(null)
   const [message, setMessage] = useState('')
+  const [whatsappContact, setWhatsappContact] = useState<{ display: string; link: string } | null>(null)
 
   useEffect(() => {
     if (!codeFromUrl) return
@@ -49,6 +50,17 @@ function JoinForm() {
       .catch(() => setFamilyName(null))
       .finally(() => setValidating(false))
   }, [codeFromUrl])
+
+  useEffect(() => {
+    fetch('/api/public/contact', { credentials: 'include' })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.whatsappDisplay && data?.whatsappLink) {
+          setWhatsappContact({ display: data.whatsappDisplay, link: data.whatsappLink })
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -175,6 +187,17 @@ function JoinForm() {
         </form>
         <p style={{ marginTop: 24, fontSize: 14 }}>
           <Link href="/ui">← Volver al inicio de sesión</Link>
+        </p>
+        {whatsappContact && (
+          <p style={{ marginTop: 16, fontSize: 13, color: 'var(--muted, #64748b)' }}>
+            ¿Dudas? Escríbenos por WhatsApp:{' '}
+            <a href={whatsappContact.link} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--primary, #2563eb)' }}>
+              {whatsappContact.display}
+            </a>
+          </p>
+        )}
+        <p style={{ marginTop: 12, fontSize: 12, color: 'var(--muted, #64748b)' }}>
+          Para que funcione necesitas el enlace con el código que te envió un administrador. Si el enlace caducó (7 días), pide uno nuevo.
         </p>
       </div>
     </main>

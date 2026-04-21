@@ -146,6 +146,13 @@ button.pill {
   line-height: var(--line-height-body);
 }
 
+/* Mensaje amable (éxito, aviso suave, copia): sin rojo, tono neutro/amigable */
+.alert.alertMessage {
+  border-color: rgba(59, 130, 246, 0.35);
+  background: #eff6ff;
+  color: #1e40af;
+}
+
 .card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -472,6 +479,8 @@ textarea:focus-visible {
 .btn:focus-visible {
   outline: none;
   box-shadow: var(--ring);
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .btn:active:not(:disabled) {
@@ -777,6 +786,12 @@ textarea:focus-visible {
 .modalOverlay.modalOverlayOpaque {
   background: var(--bg);
   opacity: 1;
+}
+
+/* Modal Presupuesto: overlay tipo iOS (fondo suave) */
+.modalOverlay.budgetModalOverlay {
+  z-index: 100;
+  background: var(--sap-bg);
 }
 
 .modalPanel {

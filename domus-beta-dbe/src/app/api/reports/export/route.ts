@@ -83,7 +83,7 @@ export async function GET(req: NextRequest) {
     })
     if (!family) return jsonError('Familia no encontrada', 404)
 
-    const includedEntities = await prisma.budgetEntity.findMany({
+    const includedEntities = await prisma.entity.findMany({
       where: {
         familyId,
         isActive: true,
@@ -102,18 +102,19 @@ export async function GET(req: NextRequest) {
     })
     const categoryIds = categories.map((c) => c.id)
 
-    const allocations = await prisma.entityBudgetAllocation.findMany({
+    const categoryNames = categories.map((c) => c.name)
+    const allocations = await prisma.budgetAccount.findMany({
       where: {
         familyId,
         isActive: true,
-        ...(includedEntityIds.length ? { entityId: { in: includedEntityIds } } : { entityId: '__none__' }),
-        ...(categoryIds.length ? { categoryId: { in: categoryIds } } : { categoryId: '__none__' }),
+        ...(includedEntityIds.length ? { entityId: { in: includedEntityIds } } : { id: { in: [] } }),
+        ...(categoryIds.length && categoryNames.length ? { service: { name: { in: categoryNames } } } : {}),
       },
       select: {
         id: true,
         monthlyLimit: true,
         entity: { select: { id: true, name: true, type: true } },
-        category: { select: { id: true, name: true, type: true } },
+        service: { select: { id: true, name: true } },
       },
       orderBy: { createdAt: 'asc' },
     })
@@ -125,9 +126,9 @@ export async function GET(req: NextRequest) {
     const txWhere: any = { familyId }
     if (from || to) txWhere.date = dateWhere
     if (userId) txWhere.userId = userId
-    txWhere.allocation = {
-      ...(includedEntityIds.length ? { entityId: { in: includedEntityIds } } : { entityId: '__none__' }),
-      ...(categoryIds.length ? { categoryId: { in: categoryIds } } : { categoryId: '__none__' }),
+    txWhere.budgetAccount = {
+      ...(includedEntityIds.length ? { entityId: { in: includedEntityIds } } : { id: { in: [] } }),
+      ...(categoryIds.length && categoryNames.length ? { service: { name: { in: categoryNames } } } : {}),
       entity: { isActive: true, participatesInReports: true },
     }
     if (receipt === 'with') txWhere.receipts = { some: {} }
@@ -141,11 +142,11 @@ export async function GET(req: NextRequest) {
         date: true,
         description: true,
         user: { select: { id: true, name: true, email: true } },
-        allocation: {
+        budgetAccount: {
           select: {
             id: true,
             entity: { select: { id: true, name: true, type: true } },
-            category: { select: { id: true, name: true, type: true } },
+            service: { select: { id: true, name: true } },
           },
         },
         receipts: { select: { id: true } },
@@ -160,7 +161,7 @@ export async function GET(req: NextRequest) {
 
     const spentByAlloc: Record<string, number> = {}
     for (const t of txs) {
-      const allocId = t.allocation?.id
+      const allocId = t.budgetAccount?.id
       if (!allocId) continue
       spentByAlloc[allocId] = (spentByAlloc[allocId] || 0) + (Number(t.amount) || 0)
     }
@@ -173,12 +174,12 @@ export async function GET(req: NextRequest) {
 
     const budgetByCat: Record<string, number> = {}
     for (const a of allocations) {
-      const id = a.category.id
+      const id = a.service.id
       budgetByCat[id] = (budgetByCat[id] || 0) + (Number(a.monthlyLimit) || 0)
     }
     const spentByCat: Record<string, number> = {}
     for (const t of txs) {
-      const id = t.allocation?.category?.id
+      const id = t.budgetAccount?.service?.id
       if (!id) continue
       spentByCat[id] = (spentByCat[id] || 0) + (Number(t.amount) || 0)
     }
@@ -199,7 +200,7 @@ export async function GET(req: NextRequest) {
     }
     const spentByEntity: Record<string, number> = {}
     for (const t of txs) {
-      const id = t.allocation?.entity?.id
+      const id = t.budgetAccount?.entity?.id
       if (!id) continue
       spentByEntity[id] = (spentByEntity[id] || 0) + (Number(t.amount) || 0)
     }

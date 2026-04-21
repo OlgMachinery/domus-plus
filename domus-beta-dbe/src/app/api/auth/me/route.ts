@@ -31,11 +31,21 @@ export async function GET(req: NextRequest) {
 
     const activeMembership = familyId ? memberships.find((m) => m.familyId === familyId) : null
 
+    let ownedEntityIds: string[] = []
+    if (familyId) {
+      const owners = await prisma.entityOwner.findMany({
+        where: { userId, familyId },
+        select: { entityId: true },
+      })
+      ownedEntityIds = owners.map((o) => o.entityId)
+    }
+
     return NextResponse.json({
       ok: true,
       user: { ...user, avatarUrl },
       activeFamily: activeMembership?.family ?? null,
       isFamilyAdmin: activeMembership?.isFamilyAdmin ?? false,
+      ownedEntityIds,
       families: memberships.map((m) => ({
         id: m.family.id,
         name: m.family.name,

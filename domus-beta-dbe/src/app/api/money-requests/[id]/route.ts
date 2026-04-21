@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { jsonError, requireMembership } from '@/lib/auth/session'
 import { prisma } from '@/lib/db/prisma'
+import { mapBudgetAccountToLegacyAllocationShape } from '@/lib/budget/transaction-allocation-compat'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,7 +21,7 @@ export async function GET(
         requestedAt: true,
         forEntityId: true,
         forName: true,
-        allocationId: true,
+        budgetAccountId: true,
         date: true,
         reason: true,
         amount: true,
@@ -38,21 +39,32 @@ export async function GET(
         updatedAt: true,
         createdBy: { select: { id: true, name: true, email: true } },
         forEntity: { select: { id: true, name: true, type: true } },
-        allocation: {
+        budgetAccount: {
           select: {
             id: true,
-            entity: { select: { id: true, name: true } },
-            category: { select: { id: true, name: true } },
+            entity: { select: { id: true, name: true, type: true } },
+            service: { select: { id: true, name: true } },
           },
         },
         transaction: { select: { id: true, amount: true, date: true, registrationCode: true } },
       },
     })
     if (!r) return jsonError('Solicitud no encontrada', 404)
+
+    const alloc =
+      r.budgetAccount?.entity && r.budgetAccount?.service
+        ? mapBudgetAccountToLegacyAllocationShape({
+            id: r.budgetAccount.id,
+            entity: r.budgetAccount.entity,
+            service: r.budgetAccount.service,
+          })
+        : null
+
     return NextResponse.json({
       ok: true,
       moneyRequest: {
         ...r,
+        allocationId: r.budgetAccountId,
         requestedAt: r.requestedAt.toISOString(),
         date: r.date.toISOString(),
         amount: r.amount.toString(),
@@ -61,6 +73,7 @@ export async function GET(
         deliveredAt: r.deliveredAt?.toISOString() ?? null,
         createdAt: r.createdAt.toISOString(),
         updatedAt: r.updatedAt.toISOString(),
+        allocation: alloc,
         transaction: r.transaction
           ? {
               ...r.transaction,
@@ -70,9 +83,10 @@ export async function GET(
           : null,
       },
     })
-  } catch (e: any) {
-    if (e?.message === 'No autenticado' || e?.message === 'No hay familia activa') return jsonError(e.message, 401)
-    return jsonError(e?.message || 'Error', 500)
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : ''
+    if (msg === 'No autenticado' || msg === 'No hay familia activa') return jsonError(msg, 401)
+    return jsonError(msg || 'Error', 500)
   }
 }
 
@@ -110,8 +124,9 @@ export async function PATCH(
       return NextResponse.json({ ok: true, status: 'REJECTED' })
     }
     return jsonError('Indica action: "approve" o "reject"', 400)
-  } catch (e: any) {
-    if (e?.message === 'No autenticado' || e?.message === 'No hay familia activa') return jsonError(e.message, 401)
-    return jsonError(e?.message || 'Error', 500)
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : ''
+    if (msg === 'No autenticado' || msg === 'No hay familia activa') return jsonError(msg, 401)
+    return jsonError(msg || 'Error', 500)
   }
 }

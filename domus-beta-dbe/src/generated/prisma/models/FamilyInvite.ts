@@ -381,10 +381,6 @@ export type FamilyInviteUncheckedUpdateManyWithoutFamilyNestedInput = {
   deleteMany?: Prisma.FamilyInviteScalarWhereInput | Prisma.FamilyInviteScalarWhereInput[]
 }
 
-export type NullableDateTimeFieldUpdateOperationsInput = {
-  set?: Date | string | null
-}
-
 export type FamilyInviteCreateWithoutFamilyInput = {
   id?: string
   code: string

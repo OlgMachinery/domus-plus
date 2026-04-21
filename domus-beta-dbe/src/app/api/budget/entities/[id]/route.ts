@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { jsonError, requireMembership } from '@/lib/auth/session'
 import { prisma } from '@/lib/db/prisma'
+import { EntityKind } from '@/generated/prisma/client'
+import { entityKindRequiresOwner } from '@/lib/budget/entity-kind-from-body'
 
 export async function PATCH(
   req: NextRequest,
@@ -24,6 +26,24 @@ export async function PATCH(
     const isActive = typeof body.isActive === 'boolean' ? body.isActive : undefined
     const participatesInBudget = typeof body.participatesInBudget === 'boolean' ? body.participatesInBudget : undefined
     const participatesInReports = typeof body.participatesInReports === 'boolean' ? body.participatesInReports : undefined
+    const subtype =
+      body.subtype !== undefined
+        ? typeof body.subtype === 'string' && body.subtype.trim()
+          ? body.subtype.trim().slice(0, 80)
+          : null
+        : undefined
+    const parentId =
+      body.parentId !== undefined
+        ? typeof body.parentId === 'string' && body.parentId.trim()
+          ? body.parentId.trim()
+          : null
+        : undefined
+    const ownerEntityId =
+      body.ownerEntityId !== undefined
+        ? typeof body.ownerEntityId === 'string' && body.ownerEntityId.trim()
+          ? body.ownerEntityId.trim()
+          : null
+        : undefined
     const wantsOwnersUpdate = Array.isArray(body.owners)
 
     if (
@@ -32,20 +52,23 @@ export async function PATCH(
       imageUrl === undefined &&
       isActive === undefined &&
       participatesInBudget === undefined &&
-      participatesInReports === undefined
+      participatesInReports === undefined &&
+      subtype === undefined &&
+      parentId === undefined &&
+      ownerEntityId === undefined
     )
       return jsonError('Nada que actualizar', 400)
 
-    const existing = await prisma.budgetEntity.findUnique({
+    const existing = await prisma.entity.findUnique({
       where: { id },
-      select: { familyId: true, type: true },
+      select: { familyId: true, type: true, subtype: true },
     })
     if (!existing) return jsonError('Entidad no encontrada', 404)
     if (existing.familyId !== familyId) return jsonError('No tienes acceso a esta entidad', 403)
 
     let ownersData: { userId: string; sharePct: number | null }[] | null = null
     if (wantsOwnersUpdate) {
-      if (String(existing.type || '') === 'PERSON') {
+      if (existing.type === EntityKind.PERSON) {
         return jsonError('Los responsables solo aplican a objetos (no Personas)', 400)
       }
 
@@ -90,13 +113,21 @@ export async function PATCH(
       } else {
         ownersData = ownersData.map((o) => ({ ...o, sharePct: null }))
       }
+
+      const sub = subtype !== undefined ? subtype : existing.subtype
+      if (ownersData.length === 0 && entityKindRequiresOwner(existing.type, sub)) {
+        return jsonError(
+          'Un activo que requiere responsable o una mascota debe tener al menos un dueño. No puedes dejar la lista vacía.',
+          400
+        )
+      }
     }
 
     const updated = await prisma.$transaction(async (tx) => {
       if (ownersData !== null) {
-        await tx.budgetEntityOwner.deleteMany({ where: { entityId: id } })
+        await tx.entityOwner.deleteMany({ where: { entityId: id } })
         if (ownersData.length) {
-          await tx.budgetEntityOwner.createMany({
+          await tx.entityOwner.createMany({
             data: ownersData.map((o) => ({
               familyId,
               entityId: id,
@@ -107,7 +138,7 @@ export async function PATCH(
         }
       }
 
-      return tx.budgetEntity.update({
+      return tx.entity.update({
         where: { id },
         data: {
           ...(name !== undefined ? { name } : {}),
@@ -115,10 +146,16 @@ export async function PATCH(
           ...(isActive !== undefined ? { isActive } : {}),
           ...(participatesInBudget !== undefined ? { participatesInBudget } : {}),
           ...(participatesInReports !== undefined ? { participatesInReports } : {}),
+          ...(subtype !== undefined ? { subtype } : {}),
+          ...(parentId !== undefined ? { parentId } : {}),
+          ...(ownerEntityId !== undefined ? { ownerEntityId } : {}),
         },
         select: {
           id: true,
           type: true,
+          subtype: true,
+          parentId: true,
+          ownerEntityId: true,
           name: true,
           imageUrl: true,
           isActive: true,
@@ -137,8 +174,9 @@ export async function PATCH(
     })
 
     return NextResponse.json({ ok: true, entity: updated }, { status: 200 })
-  } catch (e: any) {
-    return jsonError(e?.message || 'No se pudo actualizar la entidad', 500)
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : 'No se pudo actualizar la entidad'
+    return jsonError(msg, 500)
   }
 }
 
@@ -151,17 +189,18 @@ export async function DELETE(
     if (!isFamilyAdmin) return jsonError('Solo el administrador puede eliminar entidades', 403)
 
     const { id } = await params
-    const entity = await prisma.budgetEntity.findUnique({
+    const entity = await prisma.entity.findUnique({
       where: { id },
-      select: { familyId: true },
+      select: { familyId: true, type: true },
     })
     if (!entity) return jsonError('Entidad no encontrada', 404)
     if (entity.familyId !== familyId) return jsonError('No tienes acceso a esta entidad', 403)
+    if (entity.type === EntityKind.FAMILY) return jsonError('No se puede eliminar la entidad raíz Familia', 403)
 
-    await prisma.budgetEntity.delete({ where: { id } })
+    await prisma.entity.delete({ where: { id } })
     return NextResponse.json({ ok: true }, { status: 200 })
-  } catch (e: any) {
-    return jsonError(e?.message || 'No se pudo eliminar la entidad', 500)
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : 'No se pudo eliminar la entidad'
+    return jsonError(msg, 500)
   }
 }
-

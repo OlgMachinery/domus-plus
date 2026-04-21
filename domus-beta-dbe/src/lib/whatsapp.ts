@@ -24,6 +24,16 @@ export function normalizePhone(phone: string): string {
   return n
 }
 
+/** E.164 para México móvil: +521 + 10 dígitos. Usar al guardar teléfono para que Twilio WhatsApp funcione. */
+export function normalizePhoneForStorage(phone: string): string {
+  const digits = String(phone || '').replace(/\D/g, '')
+  if (digits.length === 10 && !digits.startsWith('52')) return '+521' + digits
+  if (digits.length === 12 && digits.startsWith('52')) return '+521' + digits.slice(2)
+  if (digits.length === 13 && digits.startsWith('521')) return '+' + digits
+  if (phone.startsWith('+') && digits.length >= 12) return '+' + (digits.startsWith('521') ? digits : '521' + digits.replace(/^52/, ''))
+  return phone.trim() || ''
+}
+
 export async function findUserByPhone(phone: string): Promise<{
   id: string
   name: string | null
@@ -77,17 +87,21 @@ export function createTwiMLResponseMultiple(messages: string[]): Response {
 }
 
 /**
- * Formato E.164 para Twilio WhatsApp: México móvil usa 52 + 1 + 10 dígitos (ej. 5216865690472).
- * Acepta: 10 dígitos locales (6865690472), +52 686..., +526865690472 o +52 1 686...
+ * Formato E.164 para Twilio WhatsApp: México móvil usa 52 + 1 + 10 dígitos (ej. 5218126333310).
+ * Acepta: 10 dígitos (8126333310), +52 81..., +52812..., +521812...
  */
 function toTwilioWhatsAppNumber(phone: string): string {
   let digits = String(phone || '').replace(/\D/g, '')
-  if (phone.startsWith('+')) digits = phone.slice(1).replace(/\D/g, '')
   if (!digits) return ''
-  // Solo 10 dígitos que NO son país (lada + número, ej. 6865690472) → México móvil 521 + 10
+  // 10 dígitos (ej. 8126333310) → México móvil 521 + 10
   if (digits.length === 10 && !digits.startsWith('52')) digits = '521' + digits
-  // 52 + 10 dígitos (sin 1 de móvil) → añadir 1 para WhatsApp
+  // 52 + 10 (sin 1 de móvil) → añadir 1
   else if (digits.startsWith('52') && digits.length === 12) digits = '521' + digits.slice(2)
+  // 52 + 1 + 10 = 13 dígitos → ya está bien
+  else if (digits.startsWith('521') && digits.length === 13) { /* ok */ }
+  // Cualquier otro con 52 al inicio: asegurar 521 + 10
+  else if (digits.startsWith('52') && digits.length === 11) digits = '521' + digits.slice(2)
+  if (digits.length < 13 || !digits.startsWith('521')) return ''
   return `whatsapp:${digits}`
 }
 

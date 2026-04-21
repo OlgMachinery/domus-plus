@@ -32,7 +32,7 @@ export async function POST(
         id: true,
         status: true,
         amount: true,
-        allocationId: true,
+        budgetAccountId: true,
         date: true,
         reason: true,
         createdByUserId: true,
@@ -49,12 +49,14 @@ export async function POST(
 
     const amountSentRaw = form.get('amountSent') ?? form.get('amount')
     const amountSent = toDecimal(amountSentRaw)
-    const allocationIdFromForm = typeof form.get('allocationId') === 'string' ? form.get('allocationId') as string : ''
-    const allocationId = allocationIdFromForm || mr.allocationId
-    if (!allocationId) return jsonError('Indica la asignación (partida/categoría) para el egreso', 400)
+    const fromForm =
+      (typeof form.get('budgetAccountId') === 'string' ? (form.get('budgetAccountId') as string) : '') ||
+      (typeof form.get('allocationId') === 'string' ? (form.get('allocationId') as string) : '')
+    const budgetAccountId = fromForm || mr.budgetAccountId
+    if (!budgetAccountId) return jsonError('Indica la cuenta de presupuesto (destino) para el egreso', 400)
 
-    const alloc = await prisma.entityBudgetAllocation.findUnique({
-      where: { id: allocationId },
+    const alloc = await prisma.budgetAccount.findUnique({
+      where: { id: budgetAccountId },
       select: { familyId: true },
     })
     if (!alloc || alloc.familyId !== familyId) return jsonError('Asignación no encontrada o sin acceso', 403)
@@ -84,11 +86,13 @@ export async function POST(
         data: {
           familyId,
           userId: mr.createdByUserId,
-          allocationId,
+          budgetAccountId,
           amount: String(finalAmount),
           date,
           description: `Solicitud efectivo: ${mr.reason}`,
           registrationCode,
+          source: 'manual',
+          sourceChannel: 'app',
         },
         select: { id: true, registrationCode: true },
       }),

@@ -114,6 +114,19 @@
   flex-shrink: 0;
 }
 
+/* Cerrar sesión: mismo peso visual que el resto del header (no bloque rojo dominante) */
+.sapHeaderLogout {
+  color: var(--danger);
+  border-color: rgba(220, 38, 38, 0.35);
+  font-weight: 600;
+}
+
+.sapHeaderLogout:hover:not(:disabled) {
+  background: rgba(220, 38, 38, 0.08);
+  border-color: var(--danger);
+  color: var(--danger-hover, #b91c1c);
+}
+
 .sapHeaderRight .sapHeaderSearchWrap {
   min-width: 0;
   flex-shrink: 1;
@@ -205,6 +218,14 @@
   padding: 24px 32px;
   min-width: 0;
   box-sizing: border-box;
+}
+
+/* Vista Presupuesto: espaciado y safe area */
+.viewPresupuesto.sapContent {
+  padding-bottom: max(24px, env(safe-area-inset-bottom, 0));
+}
+.viewPresupuesto.sapContent > * + * {
+  margin-top: var(--layout-section-gap);
 }
 
 .pageHead {
@@ -648,5 +669,222 @@
   .calDayCell {
     min-height: 90px;
     page-break-inside: avoid;
+  }
+}
+
+/* Configuración: cabecera con ícono */
+.configCardHeaderWithIcon {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-16);
+}
+.configCardIcon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: #fff;
+}
+.configCardIcon svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* Configuración: bloques de acción (asistente, partidas) — desktop y móvil */
+.configCardPrimary .cardBody {
+  padding: var(--space-20);
+}
+
+/* Hub de enlaces (Configuración → Presupuesto, Usuarios, Cosas) */
+.configHubSection .configActionRow:first-of-type {
+  padding-top: 0;
+}
+.configActionRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding: var(--space-16) 0;
+  border-bottom: 1px solid var(--border);
+}
+.configActionRow:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.configActionRow .btn {
+  align-self: flex-start;
+  min-height: 44px;
+  padding-left: var(--space-20);
+  padding-right: var(--space-20);
+}
+@media (min-width: 600px) {
+  .configActionRow {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-20);
+  }
+  .configActionRow .btn {
+    flex-shrink: 0;
+  }
+  .configActionRow .muted {
+    flex: 1;
+    min-width: 0;
+  }
+}
+@media (max-width: 768px) {
+  .configActionRow .btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 48px;
+  }
+}
+
+/* Setup / Partidas: estilo iOS — fondo suave, contenido centrado, cards con sombra */
+.setupObjectsBody {
+  background: var(--sap-bg);
+}
+.setupObjectsBody .sapContent {
+  max-width: 720px;
+  padding: var(--space-24) var(--space-20);
+}
+.setupObjectsBody .sapContent > .pageHead {
+  margin-bottom: var(--space-24);
+}
+.setupObjectsBody .sapContent > .alert {
+  margin-bottom: var(--space-16);
+}
+.setupObjectsBody .pageHead {
+  text-align: center;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-12);
+}
+.setupObjectsBody .pageHead .sectionRow {
+  width: 100%;
+  justify-content: center;
+}
+.setupObjectsBody .pageTitle {
+  font-size: var(--font-large-title);
+  color: var(--sap-text);
+  margin: 0 0 var(--space-8);
+}
+.setupObjectsBody .pageSubtitle {
+  font-size: var(--font-body);
+  color: var(--sap-text-secondary);
+  line-height: 1.5;
+  max-width: 560px;
+  margin: 0 auto;
+}
+.setupObjectsBody .chartBox {
+  background: var(--sap-card);
+  border: 1px solid var(--sap-border);
+  border-radius: var(--sap-radius);
+  box-shadow: var(--sap-shadow-card);
+  padding: var(--space-24);
+  overflow: visible;
+}
+.setupObjectsBody .chartBox .chartTitle {
+  margin-bottom: var(--space-12);
+}
+.setupObjectsBody .chartBox .fieldGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-20);
+  margin-top: var(--space-12);
+}
+.setupObjectsBody .chartBox .fieldGrid label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  margin: 0;
+}
+.setupObjectsBody .chartBox .fieldGrid .sectionRow {
+  margin-top: var(--space-16);
+  padding-top: var(--space-16);
+  border-top: 1px solid var(--sap-border);
+  width: 100%;
+  flex: 0 0 auto;
+}
+.setupObjectsBody .chartTitle {
+  font-size: var(--font-section-title);
+  font-weight: 700;
+  color: var(--sap-text);
+}
+
+.setupBreadcrumbLink {
+  color: var(--sap-muted);
+  text-decoration: none;
+  font-weight: 500;
+}
+.setupBreadcrumbLink:hover {
+  color: var(--sap-primary);
+  text-decoration: underline;
+}
+.setupBreadcrumbInContent .setupBreadcrumbLink {
+  color: var(--sap-muted);
+}
+
+.setupSidebar .setupSidebarActions {
+  margin-top: var(--space-8);
+}
+.setupSidebar .setupSidebarActions .btn {
+  min-height: 44px;
+}
+@media (max-width: 768px) {
+  .setupObjectsBody .sapSidebar {
+    padding: var(--space-16);
+  }
+  .setupSidebar .setupSidebarActions .btn {
+    min-height: 48px;
+  }
+  .setupObjectsBody .pageHead {
+    text-align: left;
+    align-items: flex-start;
+  }
+  .setupObjectsBody .pageSubtitle {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+
+/* Onboarding wizard: botones de paso siempre visibles, centrados tipo iOS */
+.onboardingStepActions {
+  display: flex;
+  gap: var(--space-12);
+  flex-wrap: wrap;
+  margin-top: var(--space-24);
+  align-items: center;
+  justify-content: center;
+}
+.onboardingStepActions .btn {
+  min-height: 44px;
+  padding-left: var(--space-20);
+  padding-right: var(--space-20);
+}
+@media (max-width: 768px) {
+  .onboardingMain {
+    padding-bottom: 100px; /* espacio para la barra fija de acciones */
+  }
+  .onboardingStepActions {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin-left: -24px;
+    margin-right: -24px;
+    margin-top: var(--space-24);
+    padding: var(--space-16) 24px;
+    padding-bottom: calc(var(--space-16) + env(safe-area-inset-bottom, 0));
+    background: var(--card);
+    border-top: 1px solid var(--border);
+    z-index: 10;
+  }
+  .onboardingStepActions .btn {
+    min-height: 48px;
+    flex: 1 1 auto;
+    min-width: 120px;
   }
 }

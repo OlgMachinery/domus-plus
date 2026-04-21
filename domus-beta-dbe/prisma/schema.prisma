@@ -11,15 +11,12 @@ datasource db {
   provider = "sqlite"
 }
 
-enum EntityType {
+/// Tipos de entidad unificados (incluye FAMILIA raíz por hogar).
+enum EntityKind {
+  FAMILY
   PERSON
-  HOUSE
+  ASSET
   PET
-  VEHICLE
-  PROJECT
-  FUND
-  GROUP
-  OTHER
 }
 
 model User {
@@ -34,7 +31,9 @@ model User {
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   memberships  FamilyMember[]
-  entityOwnerships BudgetEntityOwner[]
+  entityOwnerships EntityOwner[]
+  entityPermissions UserEntityPermission[]
+  budgetCategories BudgetCategory[]
   transactions Transaction[]
   receipts     Receipt[]
   receiptExtractions ReceiptExtraction[] @relation("ReceiptExtractionUser")
@@ -45,6 +44,66 @@ model User {
   moneyRequestsApproved MoneyRequest[] @relation("MoneyRequestApprovedBy")
   moneyRequestsRejected MoneyRequest[] @relation("MoneyRequestRejectedBy")
   passwordResetTokens PasswordResetToken[]
+  documents UserDocument[]
+  things   UserThing[]
+}
+
+model UserDocument {
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+  category      String    // ej. IDENTIFICACIONES, ACTAS, VEHICULOS, MOTOCICLETAS (el usuario puede crear categorías)
+  name          String?   // etiqueta (ej. "INE", "Acta de nacimiento")
+  fileUrl       String    @map("file_url")
+  fileName      String    @map("file_name")
+  contentType   String?   @map("content_type")
+  thumbnailUrl  String?   @map("thumbnail_url")   // miniatura ~1x1 pulgada para lista
+  extractedData Json?     @map("extracted_data")  // datos extraídos (nombre, número, fecha vencimiento, etc.) ordenados
+  expiresAt     DateTime? @map("expires_at")      // fecha de vencimiento (identificaciones, licencias)
+  reminderLastSentAt DateTime? @map("reminder_last_sent_at")  // último recordatorio por WhatsApp (vencimiento)
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_documents")
+}
+
+model UserThing {
+  id                    String    @id @default(uuid())
+  userId                String    @map("user_id")
+  type                  String    // DISPOSITIVO, AUTO, BICICLETA, SERVICIO_INTERNET, VISITA_MEDICA, OTRO
+  name                  String    // ej. "Mi laptop", "Carro", "Internet de casa"
+  brand                 String?   @map("brand")
+  model                 String?   @map("model")
+  serialNumber          String?   @map("serial_number")
+  acquisitionDate       DateTime? @map("acquisition_date")
+  invoiceUrl            String?   @map("invoice_url")
+  warrantyInfo          String?   @map("warranty_info")
+  serviceProviderContact String?  @map("service_provider_contact")
+  notes                 String?   @map("notes")
+  extraJson             Json?     @map("extra_json")   // placas, llantas marca/modelo, monto mensual, etc.
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  user     User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  records  UserThingMaintenanceRecord[]
+
+  @@map("user_things")
+}
+
+model UserThingMaintenanceRecord {
+  id            String    @id @default(uuid())
+  userThingId   String    @map("user_thing_id")
+  recordType    String    @map("record_type")   // SERVICIO, MANTENIMIENTO, PAGO, VISITA_MEDICA, CAMBIO_LLANTAS, etc.
+  date          DateTime  @map("date")
+  nextDueDate   DateTime? @map("next_due_date")
+  amount        String?   @map("amount")
+  description   String?   @map("description")
+  imageUrl      String?   @map("image_url")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  thing UserThing @relation(fields: [userThingId], references: [id], onDelete: Cascade)
+
+  @@map("user_thing_maintenance_records")
 }
 
 model Family {
@@ -55,14 +114,17 @@ model Family {
   budgetStartDate  DateTime @map("budget_start_date")
   setupComplete    Boolean  @default(false) @map("setup_complete")
   planStatus       String   @default("DRAFT") @map("plan_status")
+  inventoryJson    Json?    @map("inventory_json")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
   members           FamilyMember[]
-  budgetEntities    BudgetEntity[]
-  entityOwners      BudgetEntityOwner[]
+  entities          Entity[]
+  entityServices    EntityService[]
+  customEntityTypes FamilyEntityType[]
+  entityOwners      EntityOwner[]
   budgetCategories  BudgetCategory[]
-  allocations       EntityBudgetAllocation[]
+  budgetAccounts    BudgetAccount[]
   transactions      Transaction[]
   receipts          Receipt[]
   receiptExtractions ReceiptExtraction[]
@@ -71,8 +133,44 @@ model Family {
   categoryPreferences FamilyCategoryPreference[]
   budgetAdjustmentSuggestions BudgetAdjustmentSuggestion[]
   userBudgetSubdivisions UserBudgetSubdivision[]
+  userEntityPermissions UserEntityPermission[]
   calendarEvents FamilyCalendarEvent[]
   invites FamilyInvite[]
+  assets FamilyAsset[]
+}
+
+// Activos del hogar (electrodomésticos, vehículos): inventario con fotos y videos en storage.
+model FamilyAsset {
+  id            String   @id @default(uuid())
+  familyId      String   @map("family_id")
+  type          String   // ARTICLE | VEHICLE
+  name          String
+  inventoryCode String?  @map("inventory_code") // ej. TVS-ALF
+  marca         String?
+  modelo        String?
+  year          String?
+  serialNumber String?  @map("serial_number")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  family Family             @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  media  FamilyAssetMedia[]
+
+  @@map("family_assets")
+}
+
+// Fotos (3-10) y videos (2) por activo; URL apunta a storage (Spaces).
+model FamilyAssetMedia {
+  id        String   @id @default(uuid())
+  assetId   String   @map("asset_id")
+  kind      String   // PHOTO | VIDEO
+  url       String
+  sortOrder Int      @default(0) @map("sort_order")
+  uploadedAt DateTime @default(now()) @map("uploaded_at")
+
+  asset FamilyAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@map("family_asset_media")
 }
 
 model FamilyMember {
@@ -113,27 +211,54 @@ model PasswordResetToken {
   @@map("password_reset_tokens")
 }
 
-model BudgetEntity {
+// Tipos de partida personalizados por familia (ej. Electrodoméstico, Negocio). Complementan ASSET/PET vía customTypeId.
+model FamilyEntityType {
   id        String   @id @default(uuid())
   familyId  String   @map("family_id")
-  type      EntityType
   name      String
-  imageUrl  String?  @map("image_url")
-  isActive  Boolean  @default(true) @map("is_active")
-  participatesInBudget  Boolean @default(true) @map("participates_in_budget")
-  participatesInReports Boolean @default(true) @map("participates_in_reports")
   createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
 
-  family      Family                   @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  allocations EntityBudgetAllocation[]
-  owners      BudgetEntityOwner[]
-  moneyRequestsFor MoneyRequest[]
+  family   Family    @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  entities Entity[]
 
-  @@map("budget_entities")
+  @@unique([familyId, name])
+  @@map("family_entity_types")
 }
 
-model BudgetEntityOwner {
+/// Entidad base unificada (Familia raíz + personas + activos + mascotas).
+model Entity {
+  id           String   @id @default(uuid())
+  familyId     String   @map("family_id")
+  type         EntityKind
+  customTypeId String?  @map("custom_type_id")
+  name         String
+  subtype      String?
+  parentId     String?  @map("parent_id")
+  ownerEntityId String? @map("owner_entity_id")
+  imageUrl     String?  @map("image_url")
+  isActive     Boolean  @default(true) @map("is_active")
+  participatesInBudget  Boolean @default(true) @map("participates_in_budget")
+  participatesInReports Boolean @default(true) @map("participates_in_reports")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  family      Family            @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  customType  FamilyEntityType? @relation(fields: [customTypeId], references: [id], onDelete: SetNull)
+  parent      Entity?           @relation("EntityHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Entity[]          @relation("EntityHierarchy")
+  ownerEntity Entity?           @relation("EntityOwnership", fields: [ownerEntityId], references: [id], onDelete: SetNull)
+  ownedThings Entity[]          @relation("EntityOwnership")
+  entityServices EntityService[]
+  budgetAccounts BudgetAccount[]
+  owners      EntityOwner[]
+  permissionsGranted UserEntityPermission[]
+  moneyRequestsFor MoneyRequest[]
+
+  @@index([familyId, type])
+  @@map("entities")
+}
+
+model EntityOwner {
   id        String   @id @default(uuid())
   familyId  String   @map("family_id")
   entityId  String   @map("entity_id")
@@ -142,27 +267,112 @@ model BudgetEntityOwner {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  family Family      @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  entity BudgetEntity @relation(fields: [entityId], references: [id], onDelete: Cascade)
-  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  entity Entity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([entityId, userId])
   @@map("budget_entity_owners")
 }
 
+/// Catálogo global de servicios (sin texto libre como destino).
+model Service {
+  id             String   @id @default(uuid())
+  name           String   @unique
+  categoryGroup  String?  @map("category_group")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  entityServices EntityService[]
+  budgetAccounts BudgetAccount[]
+
+  @@map("services")
+}
+
+/// Servicio habilitado para una entidad dentro de una familia.
+model EntityService {
+  id         String   @id @default(uuid())
+  familyId   String   @map("family_id")
+  entityId   String   @map("entity_id")
+  serviceId  String   @map("service_id")
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  family  Family  @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  entity  Entity  @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  @@unique([entityId, serviceId])
+  @@map("entity_services")
+}
+
+/// Destino presupuestal = entidad + servicio (cuenta con límite mensual).
+model BudgetAccount {
+  id                   String   @id @default(uuid())
+  familyId             String   @map("family_id")
+  entityId             String   @map("entity_id")
+  serviceId            String   @map("service_id")
+  monthlyLimit         Decimal  @default(0) @map("monthly_limit")
+  isActive             Boolean  @default(true) @map("is_active")
+  defaultPaymentMethod String?  @map("default_payment_method")
+  bankAccountLabel     String?  @map("bank_account_label")
+  providerClabe        String?  @map("provider_clabe")
+  providerReference    String?  @map("provider_reference")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  family       Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  entity       Entity        @relation(fields: [entityId], references: [id], onDelete: Cascade)
+  service      Service       @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  transactions Transaction[]
+  moneyRequests MoneyRequest[]
+  subdivisions UserBudgetSubdivision[]
+
+  @@unique([entityId, serviceId])
+  @@map("budget_accounts")
+}
+
+/// Permisos por usuario sobre entidades (vista / gastar / mover).
+model UserEntityPermission {
+  id          String   @id @default(uuid())
+  familyId    String   @map("family_id")
+  userId      String   @map("user_id")
+  entityId    String   @map("entity_id")
+  canView     Boolean  @default(true) @map("can_view")
+  canSpend    Boolean  @default(false) @map("can_spend")
+  canMove     Boolean  @default(false) @map("can_move")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entity Entity @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, entityId])
+  @@map("user_entity_permissions")
+}
+
 model BudgetCategory {
   id        String   @id @default(uuid())
   familyId  String   @map("family_id")
+  userId    String?  @map("user_id")   // null = familia; si set = partidas del entorno de ese usuario
   type      String
   name      String
+  code      String?  // ej. 6110, 7100 (para partidas jerárquicas)
+  parentId  String?  @map("parent_id") // categoría padre (mismo familyId+userId)
   isActive  Boolean  @default(true) @map("is_active")
+  sortOrder Int      @default(0) @map("sort_order")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   family      Family                     @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  allocations EntityBudgetAllocation[]
+  user        User?                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent      BudgetCategory?            @relation("CategoryParent", fields: [parentId], references: [id], onDelete: SetNull)
+  children    BudgetCategory[]           @relation("CategoryParent")
   preferences FamilyCategoryPreference[]
 
+  @@unique([familyId, userId, code])
   @@map("budget_categories")
 }
 
@@ -178,25 +388,6 @@ model FamilyCategoryPreference {
 
   @@unique([familyId, preferenceKey])
   @@map("family_category_preferences")
-}
-
-model EntityBudgetAllocation {
-  id          String   @id @default(uuid())
-  familyId    String   @map("family_id")
-  entityId    String   @map("entity_id")
-  categoryId  String   @map("category_id")
-  monthlyLimit Decimal @map("monthly_limit")
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  family   Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  entity   BudgetEntity  @relation(fields: [entityId], references: [id], onDelete: Cascade)
-  category BudgetCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  transactions Transaction[]
-  moneyRequests MoneyRequest[]
-
-  @@map("entity_budget_allocations")
 }
 
 model CategorySuggestion {
@@ -231,17 +422,18 @@ model BudgetAdjustmentSuggestion {
 }
 
 model UserBudgetSubdivision {
-  id            String   @id @default(uuid())
-  userId        String   @map("user_id")
-  familyId      String   @map("family_id")
-  allocationId  String   @map("allocation_id")
-  name          String
-  sortOrder     Int      @default(0) @map("sort_order")
-  createdAt     DateTime @default(now()) @map("created_at")
+  id               String   @id @default(uuid())
+  userId           String   @map("user_id")
+  familyId         String   @map("family_id")
+  budgetAccountId  String   @map("budget_account_id")
+  name             String
+  sortOrder        Int      @default(0) @map("sort_order")
+  createdAt        DateTime @default(now()) @map("created_at")
 
-  family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  family       Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  budgetAccount BudgetAccount @relation(fields: [budgetAccountId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, familyId, allocationId, name])
+  @@unique([userId, familyId, budgetAccountId, name])
   @@map("user_budget_subdivisions")
 }
 
@@ -249,20 +441,25 @@ model Transaction {
   id               String   @id @default(uuid())
   familyId         String   @map("family_id")
   userId           String   @map("user_id")
-  allocationId     String   @map("allocation_id")
+  budgetAccountId  String   @map("budget_account_id")
   amount           Decimal
   date             DateTime
   description      String?
-  registrationCode String?  @map("registration_code")   // E-XXXX egreso, I-XXXX ingreso; único por familia
-  pendingReason    String?  @map("pending_reason")       // "categoría" | "usuario" | "categoría y usuario" cuando no hubo asignación clara
+  registrationCode String?  @map("registration_code")
+  pendingReason    String?  @map("pending_reason")
+  /// manual | ticket | whatsapp | import (legacy: source_channel podía ser app/email)
+  source           String   @default("manual")
+  sourceChannel    String?  @map("source_channel")
+  paymentMethod    String?  @map("payment_method")
+  conceptDetail    String?  @map("concept_detail")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
-  family     Family                 @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  allocation EntityBudgetAllocation @relation(fields: [allocationId], references: [id], onDelete: Restrict)
-  receipts   Receipt[]
-  moneyRequest MoneyRequest?
+  family        Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  budgetAccount BudgetAccount @relation(fields: [budgetAccountId], references: [id], onDelete: Restrict)
+  receipts      Receipt[]
+  moneyRequest  MoneyRequest?
 
   @@unique([familyId, registrationCode])
   @@map("transactions")
@@ -373,7 +570,7 @@ model MoneyRequest {
   requestedAt         DateTime  @default(now()) @map("requested_at")
   forEntityId         String?   @map("for_entity_id")
   forName             String?   @map("for_name")
-  allocationId        String?   @map("allocation_id")
+  budgetAccountId     String?   @map("budget_account_id")
   date                DateTime  @map("date")
   reason              String    @map("reason")
   amount              Decimal   @map("amount")
@@ -392,8 +589,8 @@ model MoneyRequest {
 
   family       Family        @relation(fields: [familyId], references: [id], onDelete: Cascade)
   createdBy    User          @relation("MoneyRequestCreatedBy", fields: [createdByUserId], references: [id], onDelete: Cascade)
-  forEntity    BudgetEntity? @relation(fields: [forEntityId], references: [id], onDelete: SetNull)
-  allocation   EntityBudgetAllocation? @relation(fields: [allocationId], references: [id], onDelete: SetNull)
+  forEntity    Entity? @relation(fields: [forEntityId], references: [id], onDelete: SetNull)
+  budgetAccount BudgetAccount? @relation(fields: [budgetAccountId], references: [id], onDelete: SetNull)
   transaction  Transaction?  @relation(fields: [transactionId], references: [id], onDelete: SetNull)
   approvedBy   User?         @relation("MoneyRequestApprovedBy", fields: [approvedByUserId], references: [id], onDelete: SetNull)
   rejectedBy   User?         @relation("MoneyRequestRejectedBy", fields: [rejectedByUserId], references: [id], onDelete: SetNull)

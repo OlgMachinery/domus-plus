@@ -31,14 +31,14 @@ export async function POST(
     const { familyId, userId, isFamilyAdmin } = await requireMembership(req)
 
     const { id } = await params
-    const entity = await prisma.budgetEntity.findUnique({
+    const entity = await prisma.entity.findUnique({
       where: { id },
       select: { id: true, familyId: true },
     })
     if (!entity) return jsonError('Entidad no encontrada', 404)
     if (entity.familyId !== familyId) return jsonError('No tienes acceso a esta entidad', 403)
 
-    const isOwner = await prisma.budgetEntityOwner.findUnique({
+    const isOwner = await prisma.entityOwner.findUnique({
       where: { entityId_userId: { entityId: id, userId } },
       select: { userId: true },
     })
@@ -69,7 +69,7 @@ export async function POST(
     const key = `families/${familyId}/entities/${id}/avatar-${Date.now()}-${rand}-${safeName(f.name)}.${ext}`
     const fileUrl = await uploadToSpaces({ key, body: out, contentType: 'image/webp' })
 
-    const updated = await prisma.budgetEntity.update({
+    const updated = await prisma.entity.update({
       where: { id },
       data: { imageUrl: fileUrl },
       select: { id: true, imageUrl: true },
@@ -104,20 +104,20 @@ export async function DELETE(
     const { familyId, userId, isFamilyAdmin } = await requireMembership(req)
 
     const { id } = await params
-    const entity = await prisma.budgetEntity.findUnique({
+    const entity = await prisma.entity.findUnique({
       where: { id },
       select: { id: true, familyId: true },
     })
     if (!entity) return jsonError('Entidad no encontrada', 404)
     if (entity.familyId !== familyId) return jsonError('No tienes acceso a esta entidad', 403)
 
-    const isOwner = await prisma.budgetEntityOwner.findUnique({
+    const isOwner = await prisma.entityOwner.findUnique({
       where: { entityId_userId: { entityId: id, userId } },
       select: { userId: true },
     })
     if (!isFamilyAdmin && !isOwner) return jsonError('Solo el administrador o el responsable de la partida pueden quitar la foto', 403)
 
-    await prisma.budgetEntity.update({ where: { id }, data: { imageUrl: null }, select: { id: true } })
+    await prisma.entity.update({ where: { id }, data: { imageUrl: null }, select: { id: true } })
     return NextResponse.json({ ok: true }, { status: 200 })
   } catch (e: any) {
     return jsonError(e?.message || 'No se pudo eliminar la imagen', 500)

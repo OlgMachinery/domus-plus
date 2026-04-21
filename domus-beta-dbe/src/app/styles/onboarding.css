@@ -1,0 +1,312 @@
+/**
+ * Onboarding wizard — estilo iOS: centrado, alegre, profesional.
+ * Card principal con sombra, títulos grandes, texto legible y espacio generoso.
+ */
+
+/* Fondo de página tipo iOS (gris suave) */
+.onboardingRoot {
+  background: var(--sap-bg);
+}
+.onboardingRoot .sapHeader {
+  background: var(--sap-card);
+  box-shadow: var(--sap-shadow-sm);
+}
+
+/* Contenedor principal: card centrada, ~33% más grande que antes (640→850px) */
+.onboardingMain {
+  max-width: 850px;
+  margin: 0 auto;
+  padding: 44px 36px;
+  background: var(--sap-card);
+  border-radius: var(--sap-radius-lg);
+  box-shadow: var(--sap-shadow-card);
+  margin-top: var(--space-20);
+  margin-bottom: var(--space-24);
+}
+
+/* Bloque de cada paso: título y descripción ~33% más grandes */
+.onboardingStepHead {
+  margin-bottom: var(--space-24);
+  text-align: center;
+}
+.onboardingStepTitle {
+  margin: 0 0 var(--space-16);
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: var(--letter-spacing-tight);
+  color: var(--sap-text);
+  line-height: 1.2;
+}
+.onboardingStepDesc {
+  margin: 0 auto;
+  font-size: 1.0625rem;
+  color: var(--sap-text-secondary);
+  line-height: 1.55;
+  max-width: 620px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Fila de formulario: input(s) + botón en línea — más espacio para no solapar */
+.onboardingFormRow {
+  display: flex;
+  gap: var(--space-12);
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: var(--space-16);
+}
+.onboardingFormRow .input,
+.onboardingFormRow .select {
+  flex: 1 1 200px;
+  min-width: 0;
+  min-height: 44px;
+}
+
+/* Lista de ítems agregados — más alto para no solapar texto */
+.onboardingList {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--space-20);
+}
+.onboardingListItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  padding: var(--space-16) var(--space-16);
+  margin-bottom: var(--space-12);
+  min-height: 52px;
+  box-sizing: border-box;
+  background: var(--sap-card);
+  border: 1px solid var(--sap-border);
+  border-radius: var(--sap-radius-sm);
+  box-shadow: var(--sap-shadow-sm);
+}
+.onboardingListItem:last-child {
+  margin-bottom: 0;
+}
+
+/* Tarjeta por ítem (vehículo, electro) — estilo iOS */
+.onboardingCard {
+  margin-bottom: var(--space-12);
+  padding: var(--space-16);
+  border: 1px solid var(--sap-border);
+  border-radius: var(--sap-radius);
+  background: var(--sap-bg);
+  box-shadow: var(--sap-shadow-sm);
+}
+.onboardingCardHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  margin-bottom: var(--space-12);
+}
+.onboardingCardTitle {
+  margin: 0;
+  font-size: var(--font-body);
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Grid de campos (marca, modelo, año, serie) */
+.onboardingFieldGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: var(--space-8);
+  margin-bottom: var(--space-12);
+}
+.onboardingField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  min-width: 0;
+}
+.onboardingFieldLabel {
+  font-size: var(--font-label);
+  color: var(--muted);
+  font-weight: 500;
+}
+.onboardingField .input {
+  width: 100%;
+}
+
+/* Botones "Agregar rápido" */
+.onboardingQuickAdd {
+  margin-bottom: var(--space-12);
+}
+.onboardingQuickAddLabel {
+  font-size: var(--font-label);
+  color: var(--muted);
+  margin-bottom: var(--space-8);
+  display: block;
+}
+.onboardingQuickAddBtns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+/* Fila de fotos/videos */
+.onboardingMediaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  align-items: center;
+  margin-top: var(--space-8);
+}
+.onboardingMediaRow:first-of-type {
+  margin-top: 0;
+}
+.onboardingMediaLabel {
+  font-size: var(--font-label);
+  color: var(--muted);
+  margin-right: var(--space-4);
+}
+.onboardingMediaThumb {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}
+.onboardingMediaPlaceholder {
+  width: 44px;
+  height: 44px;
+  background: var(--border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+
+/* Checkboxes en grid (fondos, categorías) — 2 columnas en desktop */
+.onboardingCheckGrid {
+  display: grid;
+  gap: var(--space-8);
+  margin-bottom: var(--space-16);
+  max-height: 320px;
+  overflow-y: auto;
+}
+@media (min-width: 520px) {
+  .onboardingCheckGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.onboardingCheckItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-8) 0;
+}
+.onboardingCheckItem .muted {
+  font-size: var(--font-label);
+  margin-left: auto;
+}
+
+/* Casa y espacios: opciones en bloque compacto */
+.onboardingOptionsBlock {
+  margin-bottom: var(--space-16);
+}
+.onboardingOptionRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  margin-bottom: var(--space-12);
+}
+.onboardingOptionRow .input {
+  max-width: 200px;
+  margin-left: var(--space-8);
+}
+
+/* Resumen final — card tipo iOS, texto con espacio */
+.onboardingSummary {
+  background: var(--sap-bg);
+  border: 1px solid var(--sap-border);
+  border-radius: var(--sap-radius);
+  padding: var(--space-20);
+  margin-bottom: var(--space-20);
+  font-size: var(--font-body);
+  line-height: 1.5;
+  box-shadow: var(--sap-shadow-sm);
+}
+.onboardingSummaryLine {
+  margin-bottom: var(--space-12);
+}
+.onboardingSummaryLine:last-child {
+  margin-bottom: 0;
+}
+.onboardingSummaryLine strong {
+  display: inline-block;
+  min-width: 10em;
+  color: var(--sap-text);
+}
+/* Categorías en resumen: permitir wrap en varias líneas para que quepan bien */
+.onboardingSummaryLine .muted,
+.onboardingSummaryLine span:not(strong) {
+  max-width: 100%;
+  word-wrap: break-word;
+}
+
+/* Electro: sección por tipo */
+.onboardingElectroSection {
+  margin-bottom: var(--space-16);
+  padding-bottom: var(--space-12);
+  border-bottom: 1px solid var(--sap-border);
+}
+.onboardingElectroSection:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+.onboardingElectroSectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  margin-bottom: var(--space-8);
+}
+.onboardingElectroItem {
+  margin-bottom: var(--space-12);
+  padding: var(--space-12);
+  border: 1px solid var(--sap-border);
+  border-radius: var(--sap-radius-sm);
+  background: var(--sap-card);
+  box-shadow: var(--sap-shadow-sm);
+}
+.onboardingElectroItem:last-child {
+  margin-bottom: 0;
+}
+.onboardingElectroFields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  align-items: center;
+  margin-bottom: var(--space-8);
+}
+.onboardingElectroCode {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  margin-bottom: var(--space-8);
+}
+.onboardingElectroCode .input {
+  width: 48px;
+  text-align: center;
+}
+.onboardingElectroScroll {
+  max-height: 400px;
+  overflow-y: auto;
+  margin-bottom: var(--space-16);
+}
+
+/* Alert dentro del paso */
+.onboardingMain .alert {
+  margin-bottom: var(--space-12);
+}
+
+/* Pill admin */
+.onboardingMain .pill.pillOk {
+  margin-bottom: var(--space-8);
+}

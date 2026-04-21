@@ -36,36 +36,24 @@ export async function POST(req: NextRequest) {
   try {
     const { familyId, userId } = await requireMembership(req)
 
-    const entities = await prisma.budgetEntity.findMany({ where: { familyId }, select: { id: true, name: true } })
+    const entities = await prisma.entity.findMany({ where: { familyId }, select: { id: true, name: true } })
     const casa = entities.find((e) => e.name?.trim().toLowerCase() === 'casa')
-    const categories = await prisma.budgetCategory.findMany({ where: { familyId }, select: { id: true, name: true } })
-    const catServicios = categories.find((c) => (c.name || '').toLowerCase().includes('servicios'))
-    const catSuper = categories.find((c) => (c.name || '').trim().toLowerCase() === 'supermercado')
-
-    if (!casa || !catServicios) {
-      return jsonError(
-        'Faltan partida "Casa" o categoría "Servicios". Ejecuta antes "Cargar datos ficticios" en Configuración.',
-        400
-      )
+    if (!casa) {
+      return jsonError('Falta la entidad "Casa". Ejecuta antes "Cargar datos ficticios" en Configuración.', 400)
     }
-
-    const allocationServicios = await prisma.entityBudgetAllocation.findFirst({
-      where: { familyId, entityId: casa.id, categoryId: catServicios.id },
-      select: { id: true },
+    const accountsCasa = await prisma.budgetAccount.findMany({
+      where: { familyId, entityId: casa.id, isActive: true },
+      select: { id: true, service: { select: { name: true } } },
     })
+    const allocationServicios = accountsCasa.find((a) => (a.service.name || '').toLowerCase().includes('servicios'))
+    const allocationSuper = accountsCasa.find((a) => (a.service.name || '').trim().toLowerCase() === 'supermercado')
+
     if (!allocationServicios) {
       return jsonError(
-        'Falta partida Casa + Servicios. Ejecuta antes "Cargar datos ficticios".',
+        'Falta destino Casa + servicio de tipo Servicios (luz/agua). Ejecuta antes "Cargar datos ficticios" en Configuración.',
         400
       )
     }
-
-    const allocationSuper = catSuper
-      ? await prisma.entityBudgetAllocation.findFirst({
-          where: { familyId, entityId: casa.id, categoryId: catSuper.id },
-          select: { id: true },
-        })
-      : null
     const allocationForSuper = allocationSuper?.id ?? allocationServicios.id
 
     const periodStart = daysAgo(35)
@@ -75,9 +63,9 @@ export async function POST(req: NextRequest) {
     await prisma.$transaction(async (tx) => {
       const descriptions = ['Super Demo (consumo)', 'Recibo CFE (demo)', 'Recibo Agua (demo)'] as const
       const configs = [
-        { allocationId: allocationForSuper, amount: '1350', date: thisMonthDay(2) },
-        { allocationId: allocationServicios.id, amount: '450', date: thisMonthDay(4) },
-        { allocationId: allocationServicios.id, amount: '120', date: thisMonthDay(6) },
+        { budgetAccountId: allocationForSuper, amount: '1350', date: thisMonthDay(2) },
+        { budgetAccountId: allocationServicios.id, amount: '450', date: thisMonthDay(4) },
+        { budgetAccountId: allocationServicios.id, amount: '120', date: thisMonthDay(6) },
       ]
 
       for (let i = 0; i < 3; i++) {
@@ -85,7 +73,7 @@ export async function POST(req: NextRequest) {
         const cfg = configs[i]
         let txId: string | null = await tx.transaction
           .findFirst({
-            where: { familyId, allocationId: cfg.allocationId, description: desc },
+            where: { familyId, budgetAccountId: cfg.budgetAccountId, description: desc },
             select: { id: true },
           })
           .then((r) => r?.id ?? null)
@@ -96,7 +84,7 @@ export async function POST(req: NextRequest) {
             data: {
               familyId,
               userId,
-              allocationId: cfg.allocationId,
+              budgetAccountId: cfg.budgetAccountId,
               amount: cfg.amount,
               date: cfg.date,
               description: desc,

@@ -26,12 +26,12 @@ export async function GET(req: NextRequest) {
 
   let created = 0
   for (const family of families) {
-    const allocations = await prisma.entityBudgetAllocation.findMany({
+    const allocations = await prisma.budgetAccount.findMany({
       where: { familyId: family.id, isActive: true, monthlyLimit: { gt: 0 } },
       select: {
         id: true,
         monthlyLimit: true,
-        category: { select: { name: true } },
+        service: { select: { name: true } },
         entity: { select: { name: true } },
       },
     })
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
       const txSum = await prisma.transaction.aggregate({
         where: {
           familyId: family.id,
-          allocationId: alloc.id,
+          budgetAccountId: alloc.id,
           date: { gte: monthStart, lte: monthEnd },
         },
         _sum: { amount: true },
@@ -57,8 +57,9 @@ export async function GET(req: NextRequest) {
       })
       const alreadySuggested = pendingSame.some((p) => {
         try {
-          const pl = JSON.parse(p.payload) as { allocationId?: string }
-          return pl.allocationId === alloc.id
+          const pl = JSON.parse(p.payload) as { allocationId?: string; budgetAccountId?: string }
+          const aid = pl.budgetAccountId ?? pl.allocationId
+          return aid === alloc.id
         } catch {
           return false
         }
@@ -71,13 +72,14 @@ export async function GET(req: NextRequest) {
       })
       if (!member) continue
       const payload = {
+        budgetAccountId: alloc.id,
         allocationId: alloc.id,
-        categoryName: alloc.category?.name ?? null,
+        categoryName: alloc.service?.name ?? null,
         entityName: alloc.entity?.name ?? null,
         currentLimit: limit,
         currentSpend: spent,
         suggestedNewLimit: Math.ceil(spent * 1.1),
-        text: `Gasto del mes ($${spent}) alcanzó o superó el límite ($${limit}) en ${alloc.category?.name ?? '—'} / ${alloc.entity?.name ?? '—'}.`,
+        text: `Gasto del mes ($${spent}) alcanzó o superó el límite ($${limit}) en ${alloc.service?.name ?? '—'} / ${alloc.entity?.name ?? '—'}.`,
       }
       await prisma.budgetAdjustmentSuggestion.create({
         data: {

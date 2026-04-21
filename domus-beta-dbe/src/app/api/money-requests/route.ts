@@ -3,6 +3,7 @@ import { jsonError, requireMembership } from '@/lib/auth/session'
 import { prisma } from '@/lib/db/prisma'
 import { generateMoneyRequestRegistrationCode } from '@/lib/registration-code'
 import { sendWhatsAppMessageAndGetSid } from '@/lib/whatsapp'
+import { mapBudgetAccountToLegacyAllocationShape } from '@/lib/budget/transaction-allocation-compat'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest) {
         requestedAt: true,
         forEntityId: true,
         forName: true,
-        allocationId: true,
+        budgetAccountId: true,
         date: true,
         reason: true,
         amount: true,
@@ -57,11 +58,11 @@ export async function GET(req: NextRequest) {
         createdAt: true,
         createdBy: { select: { id: true, name: true, email: true } },
         forEntity: { select: { id: true, name: true, type: true } },
-        allocation: {
+        budgetAccount: {
           select: {
             id: true,
-            entity: { select: { id: true, name: true } },
-            category: { select: { id: true, name: true } },
+            entity: { select: { id: true, name: true, type: true } },
+            service: { select: { id: true, name: true } },
           },
         },
       },
@@ -69,37 +70,50 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      moneyRequests: list.map((r) => ({
-        id: r.id,
-        familyId: r.familyId,
-        createdByUserId: r.createdByUserId,
-        requestedAt: r.requestedAt.toISOString(),
-        forEntityId: r.forEntityId ?? null,
-        forName: r.forName ?? null,
-        allocationId: r.allocationId ?? null,
-        date: r.date.toISOString(),
-        reason: r.reason,
-        amount: r.amount.toString(),
-        currency: r.currency,
-        status: r.status,
-        transactionId: r.transactionId ?? null,
-        registrationCode: r.registrationCode ?? null,
-        approvedAt: r.approvedAt?.toISOString() ?? null,
-        approvedByUserId: r.approvedByUserId ?? null,
-        rejectedAt: r.rejectedAt?.toISOString() ?? null,
-        rejectedByUserId: r.rejectedByUserId ?? null,
-        deliveredAt: r.deliveredAt?.toISOString() ?? null,
-        createdAt: r.createdAt.toISOString(),
-        createdBy: r.createdBy,
-        forEntity: r.forEntity ?? null,
-        allocation: r.allocation ?? null,
-      })),
+      moneyRequests: list.map((r) => {
+        const legacyAlloc =
+          r.budgetAccount && r.budgetAccount.entity && r.budgetAccount.service
+            ? mapBudgetAccountToLegacyAllocationShape({
+                id: r.budgetAccount.id,
+                entity: r.budgetAccount.entity,
+                service: r.budgetAccount.service,
+              })
+            : null
+        return {
+          id: r.id,
+          familyId: r.familyId,
+          createdByUserId: r.createdByUserId,
+          requestedAt: r.requestedAt.toISOString(),
+          forEntityId: r.forEntityId ?? null,
+          forName: r.forName ?? null,
+          budgetAccountId: r.budgetAccountId ?? null,
+          allocationId: r.budgetAccountId ?? null,
+          date: r.date.toISOString(),
+          reason: r.reason,
+          amount: r.amount.toString(),
+          currency: r.currency,
+          status: r.status,
+          transactionId: r.transactionId ?? null,
+          registrationCode: r.registrationCode ?? null,
+          approvedAt: r.approvedAt?.toISOString() ?? null,
+          approvedByUserId: r.approvedByUserId ?? null,
+          rejectedAt: r.rejectedAt?.toISOString() ?? null,
+          rejectedByUserId: r.rejectedByUserId ?? null,
+          deliveredAt: r.deliveredAt?.toISOString() ?? null,
+          createdAt: r.createdAt.toISOString(),
+          createdBy: r.createdBy,
+          forEntity: r.forEntity ?? null,
+          budgetAccount: r.budgetAccount ?? null,
+          allocation: legacyAlloc,
+        }
+      }),
     })
-  } catch (e: any) {
-    if (e?.message === 'No autenticado' || e?.message === 'No hay familia activa' || e?.message?.includes('acceso')) {
-      return jsonError(e.message, 401)
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : ''
+    if (msg === 'No autenticado' || msg === 'No hay familia activa' || msg.includes('acceso')) {
+      return jsonError(msg, 401)
     }
-    return jsonError(e?.message || 'Error al listar solicitudes', 500)
+    return jsonError(msg || 'Error al listar solicitudes', 500)
   }
 }
 
@@ -111,7 +125,10 @@ export async function POST(req: NextRequest) {
     const { n: amount, ok: amountOk } = toDecimal(body.amount)
     const forEntityId = typeof body.forEntityId === 'string' ? body.forEntityId.trim() || null : null
     const forName = typeof body.forName === 'string' ? body.forName.trim() || null : null
-    const allocationId = typeof body.allocationId === 'string' ? body.allocationId.trim() || null : null
+    const budgetAccountId =
+      (typeof body.budgetAccountId === 'string' ? body.budgetAccountId.trim() : '') ||
+      (typeof body.allocationId === 'string' ? body.allocationId.trim() : '') ||
+      null
     let date: Date
     if (typeof body.date === 'string' && body.date) {
       const d = new Date(body.date)
@@ -125,18 +142,18 @@ export async function POST(req: NextRequest) {
     if (!amountOk || amount <= 0) return jsonError('Monto inválido', 400)
 
     if (forEntityId) {
-      const entity = await prisma.budgetEntity.findUnique({
+      const entity = await prisma.entity.findUnique({
         where: { id: forEntityId },
         select: { familyId: true },
       })
       if (!entity || entity.familyId !== familyId) return jsonError('Partida no encontrada o sin acceso', 403)
     }
-    if (allocationId) {
-      const alloc = await prisma.entityBudgetAllocation.findUnique({
-        where: { id: allocationId },
+    if (budgetAccountId) {
+      const acc = await prisma.budgetAccount.findUnique({
+        where: { id: budgetAccountId },
         select: { familyId: true },
       })
-      if (!alloc || alloc.familyId !== familyId) return jsonError('Asignación no encontrada o sin acceso', 403)
+      if (!acc || acc.familyId !== familyId) return jsonError('Cuenta presupuestal no encontrada o sin acceso', 403)
     }
 
     const registrationCode = await generateMoneyRequestRegistrationCode(prisma, familyId)
@@ -146,7 +163,7 @@ export async function POST(req: NextRequest) {
         createdByUserId: userId,
         forEntityId,
         forName,
-        allocationId,
+        budgetAccountId: budgetAccountId || null,
         date,
         reason,
         amount,
@@ -166,7 +183,6 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Notificar al admin por WhatsApp y guardar SID para vincular reply (comprobante)
     const adminMember = await prisma.familyMember.findFirst({
       where: { familyId, isFamilyAdmin: true },
       select: { user: { select: { phone: true } } },
@@ -175,8 +191,8 @@ export async function POST(req: NextRequest) {
     if (adminPhone) {
       const creatorName = created.createdBy?.name || created.createdBy?.email || 'Alguien'
       const amountStr = Number(created.amount).toLocaleString('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
-      const body = `Nueva solicitud de efectivo: *${created.registrationCode ?? '—'}*\nMotivo: ${created.reason}\nMonto: $${amountStr} ${currency}\nSolicitante: ${creatorName}\n\n_Responde a ESTE mensaje con la foto del comprobante para registrar la entrega._`
-      const sent = await sendWhatsAppMessageAndGetSid(adminPhone, body)
+      const waBody = `Nueva solicitud de efectivo: *${created.registrationCode ?? '—'}*\nMotivo: ${created.reason}\nMonto: $${amountStr} ${currency}\nSolicitante: ${creatorName}\n\n_Responde a ESTE mensaje con la foto del comprobante para registrar la entrega._`
+      const sent = await sendWhatsAppMessageAndGetSid(adminPhone, waBody)
       if (sent.ok && sent.sid) {
         await prisma.moneyRequest.update({
           where: { id: created.id },
@@ -200,8 +216,9 @@ export async function POST(req: NextRequest) {
       },
       { status: 201 }
     )
-  } catch (e: any) {
-    if (e?.message === 'No autenticado' || e?.message === 'No hay familia activa') return jsonError(e.message, 401)
-    return jsonError(e?.message || 'Error al crear solicitud', 500)
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : ''
+    if (msg === 'No autenticado' || msg === 'No hay familia activa') return jsonError(msg, 401)
+    return jsonError(msg || 'Error al crear solicitud', 500)
   }
 }

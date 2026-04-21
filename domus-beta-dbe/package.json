@@ -6,7 +6,11 @@
     "dev": "next dev",
     "dev:webpack": "next dev --webpack",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "clear-fake-data": "npx tsx scripts/clear-fake-data.ts",
+    "db:reset:local": "npx prisma db push --force-reset",
+    "db:seed:local": "npx tsx scripts/seed-local-demo.ts",
+    "db:reset-seed:local": "npx prisma db push --force-reset && npx tsx scripts/seed-local-demo.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.995.0",
@@ -42,6 +46,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "prisma": "^7.4.1",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { jsonError, requireMembership } from '@/lib/auth/session'
 import { prisma } from '@/lib/db/prisma'
+import { normalizePhoneForStorage } from '@/lib/whatsapp'
 
 export async function PATCH(
   req: NextRequest,
@@ -16,7 +17,9 @@ export async function PATCH(
     const nameRaw = typeof body.name === 'string' ? body.name : undefined
     const name = nameRaw !== undefined ? (nameRaw.trim() ? nameRaw.trim() : null) : undefined
     const phoneRaw = typeof body.phone === 'string' ? body.phone.trim() : undefined
-    const phone = phoneRaw !== undefined ? (phoneRaw ? phoneRaw : null) : undefined
+    const phone = phoneRaw !== undefined
+      ? (phoneRaw ? (normalizePhoneForStorage(phoneRaw).replace(/\D/g, '').length >= 12 ? normalizePhoneForStorage(phoneRaw) : phoneRaw) : null)
+      : undefined
     const cityRaw = typeof body.city === 'string' ? body.city.trim() : undefined
     const city = cityRaw !== undefined ? (cityRaw || null) : undefined
 

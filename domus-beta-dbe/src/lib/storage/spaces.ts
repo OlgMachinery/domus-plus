@@ -84,3 +84,16 @@ export async function getSignedDownloadUrl(args: { key: string; expiresInSeconds
   )
 }
 
+/** Devuelve el cuerpo del objeto en Spaces como Buffer (para re-procesar, p. ej. extracción). */
+export async function getObjectAsBuffer(key: string): Promise<Buffer> {
+  const client = getSpacesClient()
+  const bucket = getSpacesBucket()
+  const response = await client.send(
+    new GetObjectCommand({ Bucket: bucket, Key: key })
+  )
+  const body = response.Body
+  if (!body) throw new Error('Objeto vacío')
+  const bytes = await body.transformToByteArray()
+  return Buffer.from(bytes)
+}
+

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { jsonError, requireMembership } from '@/lib/auth/session'
 import { prisma } from '@/lib/db/prisma'
 import { hashPassword } from '@/lib/auth/password'
-import { sendWhatsAppMessage, getDomusLinkSuffix } from '@/lib/whatsapp'
+import { sendWhatsAppMessage, getDomusLinkSuffix, normalizePhoneForStorage } from '@/lib/whatsapp'
 
 function normalizeEmail(value: unknown) {
   return typeof value === 'string' ? value.trim().toLowerCase() : ''
@@ -50,7 +50,10 @@ export async function POST(req: NextRequest) {
     const email = normalizeEmail(body.email)
     const password = typeof body.password === 'string' ? body.password : ''
     const name = typeof body.name === 'string' ? body.name.trim() : null
-    const phone = typeof body.phone === 'string' ? body.phone.trim() : null
+    const phoneRaw = typeof body.phone === 'string' ? body.phone.trim() : null
+    const phone = phoneRaw
+      ? (normalizePhoneForStorage(phoneRaw).replace(/\D/g, '').length >= 12 ? normalizePhoneForStorage(phoneRaw) : phoneRaw)
+      : null
     const makeAdmin = body.isFamilyAdmin === true
 
     if (!email || !email.includes('@')) return jsonError('Email inválido', 400)

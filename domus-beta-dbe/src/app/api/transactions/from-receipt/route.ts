@@ -50,17 +50,19 @@ function inferCategoryHint(args: { merchantName: string | null; rawText: string 
 
 function scoreAllocation(args: { allocation: any; hint: string | null; userName: string }) {
   const { allocation, hint, userName } = args
-  const catName = normalizeText(allocation?.category?.name)
+  const svcName = allocation?.service?.name ?? allocation?.category?.name
+  const catName = normalizeText(svcName)
   const entType = String(allocation?.entity?.type || '')
+  const sub = String(allocation?.entity?.subtype || '')
   const entName = normalizeText(allocation?.entity?.name)
   const hintNorm = hint ? normalizeText(hint) : null
 
   let score = 0
   if (hintNorm && catName.includes(hintNorm)) score += 100
-  if (!hintNorm && entType === 'HOUSE') score += 2
+  if (!hintNorm && (entType === 'ASSET' || entType === 'HOUSE') && (sub === 'casa' || !sub)) score += 2
 
-  if (hintNorm === 'supermercado' && entType === 'HOUSE') score += 10
-  if (hintNorm === 'gasolina' && entType === 'VEHICLE') score += 10
+  if (hintNorm === 'supermercado' && (entType === 'HOUSE' || (entType === 'ASSET' && sub === 'casa'))) score += 10
+  if (hintNorm === 'gasolina' && (entType === 'VEHICLE' || (entType === 'ASSET' && sub === 'auto'))) score += 10
   if (hintNorm === 'mascotas' && entType === 'PET') score += 10
 
   if (userName && entName && entName.includes(normalizeText(userName))) score += 2
@@ -86,7 +88,9 @@ export async function POST(req: NextRequest) {
     if (!files.length) return jsonError('Debes adjuntar al menos 1 foto (file)', 400)
     if (files.length > 8) return jsonError('Demasiadas fotos. Sube máximo 8.', 400)
 
-    const allocationIdOverride = typeof form.get('allocationId') === 'string' ? String(form.get('allocationId') || '').trim() : ''
+    const allocationIdOverride =
+      (typeof form.get('budgetAccountId') === 'string' ? String(form.get('budgetAccountId') || '').trim() : '') ||
+      (typeof form.get('allocationId') === 'string' ? String(form.get('allocationId') || '').trim() : '')
     const assignToUserIdRaw = typeof form.get('assignToUserId') === 'string' ? String(form.get('assignToUserId') || '').trim() : ''
     const forceDuplicate = form.get('forceDuplicate') === '1' || form.get('forceDuplicate') === 'true'
     let transactionUserId = userId
@@ -151,33 +155,38 @@ export async function POST(req: NextRequest) {
     const txDate = receiptDate || new Date()
 
     // 4) Elegir asignación (cuenta); si el gasto es para otro usuario, preferir partidas de sus entidades
-    let allocationId = allocationIdOverride
-    if (allocationId) {
-      const alloc = await prisma.entityBudgetAllocation.findUnique({ where: { id: allocationId }, select: { id: true, familyId: true, isActive: true } })
-      if (!alloc) return jsonError('Asignación no encontrada', 404)
-      if (alloc.familyId !== familyId) return jsonError('No tienes acceso a esa asignación', 403)
-      if (!alloc.isActive) return jsonError('Esa asignación está inactiva', 409)
+    let budgetAccountId = allocationIdOverride
+    if (budgetAccountId) {
+      const alloc = await prisma.budgetAccount.findUnique({
+        where: { id: budgetAccountId },
+        select: { id: true, familyId: true, isActive: true },
+      })
+      if (!alloc) return jsonError('Cuenta de presupuesto no encontrada', 404)
+      if (alloc.familyId !== familyId) return jsonError('No tienes acceso a esa cuenta', 403)
+      if (!alloc.isActive) return jsonError('Esa cuenta está inactiva', 409)
     } else {
-      let allocs = await prisma.entityBudgetAllocation.findMany({
-        where: { familyId, isActive: true, entity: { isActive: true, participatesInBudget: true }, category: { isActive: true } },
+      let allocs = await prisma.budgetAccount.findMany({
+        where: { familyId, isActive: true, entity: { isActive: true, participatesInBudget: true } },
         select: {
           id: true,
           entityId: true,
           monthlyLimit: true,
-          entity: { select: { id: true, name: true, type: true } },
-          category: { select: { id: true, name: true, type: true } },
+          entity: { select: { id: true, name: true, type: true, subtype: true } },
+          service: { select: { id: true, name: true } },
         },
         orderBy: { createdAt: 'asc' },
       })
       if (transactionUserId !== userId) {
-        const ownedEntityIds = await prisma.budgetEntityOwner.findMany({
-          where: { familyId, userId: transactionUserId },
-          select: { entityId: true },
-        }).then((r) => r.map((x) => x.entityId))
+        const ownedEntityIds = await prisma.entityOwner
+          .findMany({
+            where: { familyId, userId: transactionUserId },
+            select: { entityId: true },
+          })
+          .then((r) => r.map((x) => x.entityId))
         const forUser = allocs.filter((a) => ownedEntityIds.includes(a.entityId))
         if (forUser.length) allocs = forUser
       }
-      if (!allocs.length) return jsonError('No hay asignaciones activas. Ve a Presupuesto y configura montos.', 409)
+      if (!allocs.length) return jsonError('No hay cuentas de presupuesto activas. Ve a Presupuesto y configura montos.', 409)
 
       const merchantName = extraction?.merchantName || null
       const rawText = extraction?.rawText || null
@@ -193,7 +202,7 @@ export async function POST(req: NextRequest) {
       const allocationOptions: AllocationOption[] = allocs.map((a) => ({
         id: a.id,
         entityName: a.entity?.name ?? '',
-        categoryName: a.category?.name ?? '',
+        categoryName: a.service?.name ?? '',
       }))
       const suggestedId = await suggestAllocationForReceipt(
         merchantName ?? '',
@@ -202,7 +211,7 @@ export async function POST(req: NextRequest) {
         categoryHintFromPreference,
       )
       if (suggestedId) {
-        allocationId = suggestedId
+        budgetAccountId = suggestedId
       } else {
         const hint = inferCategoryHint({ merchantName, rawText })
         let best = allocs[0]!
@@ -214,7 +223,7 @@ export async function POST(req: NextRequest) {
             bestScore = s
           }
         }
-        allocationId = best.id
+        budgetAccountId = best.id
       }
     }
 
@@ -253,11 +262,13 @@ export async function POST(req: NextRequest) {
         data: {
           familyId,
           userId: transactionUserId,
-          allocationId,
+          budgetAccountId,
           amount: amountStr || String(total),
           date: txDate,
           description,
           registrationCode,
+          source: 'ticket',
+          sourceChannel: 'app',
         },
         select: { id: true, registrationCode: true },
       })

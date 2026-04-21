@@ -52,15 +52,24 @@ export const AnyNull = runtime.AnyNull
 
 export const ModelName = {
   User: 'User',
+  UserDocument: 'UserDocument',
+  UserThing: 'UserThing',
+  UserThingMaintenanceRecord: 'UserThingMaintenanceRecord',
   Family: 'Family',
+  FamilyAsset: 'FamilyAsset',
+  FamilyAssetMedia: 'FamilyAssetMedia',
   FamilyMember: 'FamilyMember',
   FamilyInvite: 'FamilyInvite',
   PasswordResetToken: 'PasswordResetToken',
-  BudgetEntity: 'BudgetEntity',
-  BudgetEntityOwner: 'BudgetEntityOwner',
+  FamilyEntityType: 'FamilyEntityType',
+  Entity: 'Entity',
+  EntityOwner: 'EntityOwner',
+  Service: 'Service',
+  EntityService: 'EntityService',
+  BudgetAccount: 'BudgetAccount',
+  UserEntityPermission: 'UserEntityPermission',
   BudgetCategory: 'BudgetCategory',
   FamilyCategoryPreference: 'FamilyCategoryPreference',
-  EntityBudgetAllocation: 'EntityBudgetAllocation',
   CategorySuggestion: 'CategorySuggestion',
   BudgetAdjustmentSuggestion: 'BudgetAdjustmentSuggestion',
   UserBudgetSubdivision: 'UserBudgetSubdivision',
@@ -103,6 +112,60 @@ export const UserScalarFieldEnum = {
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
 
 
+export const UserDocumentScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  category: 'category',
+  name: 'name',
+  fileUrl: 'fileUrl',
+  fileName: 'fileName',
+  contentType: 'contentType',
+  thumbnailUrl: 'thumbnailUrl',
+  extractedData: 'extractedData',
+  expiresAt: 'expiresAt',
+  reminderLastSentAt: 'reminderLastSentAt',
+  createdAt: 'createdAt'
+} as const
+
+export type UserDocumentScalarFieldEnum = (typeof UserDocumentScalarFieldEnum)[keyof typeof UserDocumentScalarFieldEnum]
+
+
+export const UserThingScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  type: 'type',
+  name: 'name',
+  brand: 'brand',
+  model: 'model',
+  serialNumber: 'serialNumber',
+  acquisitionDate: 'acquisitionDate',
+  invoiceUrl: 'invoiceUrl',
+  warrantyInfo: 'warrantyInfo',
+  serviceProviderContact: 'serviceProviderContact',
+  notes: 'notes',
+  extraJson: 'extraJson',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type UserThingScalarFieldEnum = (typeof UserThingScalarFieldEnum)[keyof typeof UserThingScalarFieldEnum]
+
+
+export const UserThingMaintenanceRecordScalarFieldEnum = {
+  id: 'id',
+  userThingId: 'userThingId',
+  recordType: 'recordType',
+  date: 'date',
+  nextDueDate: 'nextDueDate',
+  amount: 'amount',
+  description: 'description',
+  imageUrl: 'imageUrl',
+  createdAt: 'createdAt'
+} as const
+
+export type UserThingMaintenanceRecordScalarFieldEnum = (typeof UserThingMaintenanceRecordScalarFieldEnum)[keyof typeof UserThingMaintenanceRecordScalarFieldEnum]
+
+
 export const FamilyScalarFieldEnum = {
   id: 'id',
   name: 'name',
@@ -111,11 +174,41 @@ export const FamilyScalarFieldEnum = {
   budgetStartDate: 'budgetStartDate',
   setupComplete: 'setupComplete',
   planStatus: 'planStatus',
+  inventoryJson: 'inventoryJson',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
 
 export type FamilyScalarFieldEnum = (typeof FamilyScalarFieldEnum)[keyof typeof FamilyScalarFieldEnum]
+
+
+export const FamilyAssetScalarFieldEnum = {
+  id: 'id',
+  familyId: 'familyId',
+  type: 'type',
+  name: 'name',
+  inventoryCode: 'inventoryCode',
+  marca: 'marca',
+  modelo: 'modelo',
+  year: 'year',
+  serialNumber: 'serialNumber',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type FamilyAssetScalarFieldEnum = (typeof FamilyAssetScalarFieldEnum)[keyof typeof FamilyAssetScalarFieldEnum]
+
+
+export const FamilyAssetMediaScalarFieldEnum = {
+  id: 'id',
+  assetId: 'assetId',
+  kind: 'kind',
+  url: 'url',
+  sortOrder: 'sortOrder',
+  uploadedAt: 'uploadedAt'
+} as const
+
+export type FamilyAssetMediaScalarFieldEnum = (typeof FamilyAssetMediaScalarFieldEnum)[keyof typeof FamilyAssetMediaScalarFieldEnum]
 
 
 export const FamilyMemberScalarFieldEnum = {
@@ -153,11 +246,25 @@ export const PasswordResetTokenScalarFieldEnum = {
 export type PasswordResetTokenScalarFieldEnum = (typeof PasswordResetTokenScalarFieldEnum)[keyof typeof PasswordResetTokenScalarFieldEnum]
 
 
-export const BudgetEntityScalarFieldEnum = {
+export const FamilyEntityTypeScalarFieldEnum = {
+  id: 'id',
+  familyId: 'familyId',
+  name: 'name',
+  createdAt: 'createdAt'
+} as const
+
+export type FamilyEntityTypeScalarFieldEnum = (typeof FamilyEntityTypeScalarFieldEnum)[keyof typeof FamilyEntityTypeScalarFieldEnum]
+
+
+export const EntityScalarFieldEnum = {
   id: 'id',
   familyId: 'familyId',
   type: 'type',
+  customTypeId: 'customTypeId',
   name: 'name',
+  subtype: 'subtype',
+  parentId: 'parentId',
+  ownerEntityId: 'ownerEntityId',
   imageUrl: 'imageUrl',
   isActive: 'isActive',
   participatesInBudget: 'participatesInBudget',
@@ -166,10 +273,10 @@ export const BudgetEntityScalarFieldEnum = {
   updatedAt: 'updatedAt'
 } as const
 
-export type BudgetEntityScalarFieldEnum = (typeof BudgetEntityScalarFieldEnum)[keyof typeof BudgetEntityScalarFieldEnum]
+export type EntityScalarFieldEnum = (typeof EntityScalarFieldEnum)[keyof typeof EntityScalarFieldEnum]
 
 
-export const BudgetEntityOwnerScalarFieldEnum = {
+export const EntityOwnerScalarFieldEnum = {
   id: 'id',
   familyId: 'familyId',
   entityId: 'entityId',
@@ -179,15 +286,76 @@ export const BudgetEntityOwnerScalarFieldEnum = {
   updatedAt: 'updatedAt'
 } as const
 
-export type BudgetEntityOwnerScalarFieldEnum = (typeof BudgetEntityOwnerScalarFieldEnum)[keyof typeof BudgetEntityOwnerScalarFieldEnum]
+export type EntityOwnerScalarFieldEnum = (typeof EntityOwnerScalarFieldEnum)[keyof typeof EntityOwnerScalarFieldEnum]
+
+
+export const ServiceScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  categoryGroup: 'categoryGroup',
+  isActive: 'isActive',
+  createdAt: 'createdAt'
+} as const
+
+export type ServiceScalarFieldEnum = (typeof ServiceScalarFieldEnum)[keyof typeof ServiceScalarFieldEnum]
+
+
+export const EntityServiceScalarFieldEnum = {
+  id: 'id',
+  familyId: 'familyId',
+  entityId: 'entityId',
+  serviceId: 'serviceId',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type EntityServiceScalarFieldEnum = (typeof EntityServiceScalarFieldEnum)[keyof typeof EntityServiceScalarFieldEnum]
+
+
+export const BudgetAccountScalarFieldEnum = {
+  id: 'id',
+  familyId: 'familyId',
+  entityId: 'entityId',
+  serviceId: 'serviceId',
+  monthlyLimit: 'monthlyLimit',
+  isActive: 'isActive',
+  defaultPaymentMethod: 'defaultPaymentMethod',
+  bankAccountLabel: 'bankAccountLabel',
+  providerClabe: 'providerClabe',
+  providerReference: 'providerReference',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type BudgetAccountScalarFieldEnum = (typeof BudgetAccountScalarFieldEnum)[keyof typeof BudgetAccountScalarFieldEnum]
+
+
+export const UserEntityPermissionScalarFieldEnum = {
+  id: 'id',
+  familyId: 'familyId',
+  userId: 'userId',
+  entityId: 'entityId',
+  canView: 'canView',
+  canSpend: 'canSpend',
+  canMove: 'canMove',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type UserEntityPermissionScalarFieldEnum = (typeof UserEntityPermissionScalarFieldEnum)[keyof typeof UserEntityPermissionScalarFieldEnum]
 
 
 export const BudgetCategoryScalarFieldEnum = {
   id: 'id',
   familyId: 'familyId',
+  userId: 'userId',
   type: 'type',
   name: 'name',
+  code: 'code',
+  parentId: 'parentId',
   isActive: 'isActive',
+  sortOrder: 'sortOrder',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -204,20 +372,6 @@ export const FamilyCategoryPreferenceScalarFieldEnum = {
 } as const
 
 export type FamilyCategoryPreferenceScalarFieldEnum = (typeof FamilyCategoryPreferenceScalarFieldEnum)[keyof typeof FamilyCategoryPreferenceScalarFieldEnum]
-
-
-export const EntityBudgetAllocationScalarFieldEnum = {
-  id: 'id',
-  familyId: 'familyId',
-  entityId: 'entityId',
-  categoryId: 'categoryId',
-  monthlyLimit: 'monthlyLimit',
-  isActive: 'isActive',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
-} as const
-
-export type EntityBudgetAllocationScalarFieldEnum = (typeof EntityBudgetAllocationScalarFieldEnum)[keyof typeof EntityBudgetAllocationScalarFieldEnum]
 
 
 export const CategorySuggestionScalarFieldEnum = {
@@ -253,7 +407,7 @@ export const UserBudgetSubdivisionScalarFieldEnum = {
   id: 'id',
   userId: 'userId',
   familyId: 'familyId',
-  allocationId: 'allocationId',
+  budgetAccountId: 'budgetAccountId',
   name: 'name',
   sortOrder: 'sortOrder',
   createdAt: 'createdAt'
@@ -266,12 +420,16 @@ export const TransactionScalarFieldEnum = {
   id: 'id',
   familyId: 'familyId',
   userId: 'userId',
-  allocationId: 'allocationId',
+  budgetAccountId: 'budgetAccountId',
   amount: 'amount',
   date: 'date',
   description: 'description',
   registrationCode: 'registrationCode',
   pendingReason: 'pendingReason',
+  source: 'source',
+  sourceChannel: 'sourceChannel',
+  paymentMethod: 'paymentMethod',
+  conceptDetail: 'conceptDetail',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -360,7 +518,7 @@ export const MoneyRequestScalarFieldEnum = {
   requestedAt: 'requestedAt',
   forEntityId: 'forEntityId',
   forName: 'forName',
-  allocationId: 'allocationId',
+  budgetAccountId: 'budgetAccountId',
   date: 'date',
   reason: 'reason',
   amount: 'amount',
@@ -434,10 +592,35 @@ export const SortOrder = {
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
 
 
+export const NullableJsonNullValueInput = {
+  DbNull: DbNull,
+  JsonNull: JsonNull
+} as const
+
+export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
+
+
 export const NullsOrder = {
   first: 'first',
   last: 'last'
 } as const
 
 export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+export const JsonNullValueFilter = {
+  DbNull: DbNull,
+  JsonNull: JsonNull,
+  AnyNull: AnyNull
+} as const
+
+export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
+
+
+export const QueryMode = {
+  default: 'default',
+  insensitive: 'insensitive'
+} as const
+
+export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
 

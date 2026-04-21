@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/prisma'
-import { findUserByPhone, normalizePhone, createTwiMLResponse, createTwiMLResponseMultiple, sendWhatsAppMessage, sendWhatsAppMessageAndGetSid, sendWhatsAppWithMediaAndGetSid, getDomusLinkSuffix } from '@/lib/whatsapp'
+import { findUserByPhone, normalizePhone, createTwiMLResponse, createTwiMLResponseMultiple, sendWhatsAppMessage, sendWhatsAppMessageAndGetSid, sendWhatsAppWithMediaAndGetSid, getDomusLinkSuffix, DOMUS_APP_URL } from '@/lib/whatsapp'
 import { generateRegistrationCode, generateMoneyRequestRegistrationCode, type PrismaLike } from '@/lib/registration-code'
 import { extractReceiptFromImageBytes } from '@/lib/receipts/extract'
-import { uploadToSpaces, getSignedDownloadUrl } from '@/lib/storage/spaces'
+import { uploadToSpaces, getSignedDownloadUrl, extractKeyFromSpacesUrl } from '@/lib/storage/spaces'
 import {
   getAgentReply,
   suggestCategoryForReceipt,
@@ -17,6 +17,8 @@ import { generateTicketImagePng, generateCashReceiptTicketPng, generateRejectedT
 import { findPossibleDuplicate } from '@/lib/dedup'
 import { containsSensitiveData } from '@/lib/sensitive'
 import { buildConsumptionSummary } from '@/lib/consumption/summary'
+import { getOrCreateServiceFromBudgetCategoryName } from '@/lib/budget/legacy-category-to-service'
+import { getOrCreateBudgetAccount } from '@/lib/budget/get-or-create-budget-account'
 
 export const dynamic = 'force-dynamic'
 
@@ -43,6 +45,36 @@ function parseTextMessage(body: string): { amount: number; concept: string; reci
     }
   }
   return { amount, concept, recipientName }
+}
+
+/** Detecta si piden factura/imagen de algo de "Mis cosas": "envía factura de mi carro", "mándame la foto del laptop". */
+function parseThingsInvoiceIntent(body: string): string | null {
+  const raw = body.trim()
+  if (!raw || raw.length < 10) return null
+  const t = raw.toLowerCase().normalize('NFD').replace(/\u0300-\u036f/g, '')
+  const m1 = t.match(/(?:env[ií]a|m[aá]ndame|p[aá]same|dame|quiero)\s+(?:la\s+)?(?:factura|imagen|foto)\s+(?:de\s+)?(?:mi\s+)?(.+)$/)
+  const m2 = t.match(/(?:factura|imagen|foto)\s+(?:de\s+)?(?:mi\s+)?(.+)$/)
+  const thingPart = (m1?.[1] || m2?.[1] || '').trim()
+  if (!thingPart || thingPart.length < 2) return null
+  const first = thingPart.split(/\s+/)[0]!
+  if (['carro', 'auto', 'coche', 'vehículo', 'vehiculo'].includes(first)) return 'auto'
+  if (['laptop', 'computadora', 'pc', 'compu', 'dispositivo'].includes(first)) return 'dispositivo'
+  if (['bici', 'bicicleta'].includes(first)) return 'bicicleta'
+  if (['internet', 'wifi'].includes(first)) return 'internet'
+  return first
+}
+
+/** Detecta si piden un documento (identificación o acta) por WhatsApp: "mándame mi INE", "envía mi identificación", "dame acta". */
+function parseDocumentRequestIntent(body: string): 'IDENTIFICACIONES' | 'ACTAS' | null {
+  const t = body.trim().toLowerCase().normalize('NFD').replace(/\u0300-\u036f/g, '')
+  if (!t) return null
+  const idTerms = ['identificacion', 'identificación', 'ine', 'ife', 'licencia', 'pasaporte', 'credencial', 'mándame mi', 'mandame mi', 'envía mi', 'envia mi', 'dame mi', 'pásame mi', 'pasame mi']
+  const actaTerms = ['acta', 'actas', 'nacimiento', 'matrimonio', 'defuncion', 'defunción']
+  const wantsId = idTerms.some((term) => t.includes(term)) || /\b(mi\s+)(ine|ife|credencial|licencia|pasaporte)\b/i.test(body)
+  const wantsActa = actaTerms.some((term) => t.includes(term))
+  if (wantsId && !wantsActa) return 'IDENTIFICACIONES'
+  if (wantsActa) return 'ACTAS'
+  return null
 }
 
 /** Detecta intención de solicitud de efectivo: "solicitud 500 cine", "necesito 500 cine", "quiero 500 para cine". */
@@ -168,12 +200,15 @@ function parseDateOnly(dateStr: string | null): Date | null {
 }
 
 type AllocationWithDetails = {
+  budgetAccountId: string
+  /** mismo id (compat API/UI legada) */
   allocationId: string
-  categoryId: string
+  serviceId: string
   entityName: string
   categoryName: string
-  /** true si se asignó por nombre de usuario/entidad en el mensaje */
   assignedByName: boolean
+  /** Si existe categoría legada con el mismo nombre que el servicio, para aprendizaje (FamilyCategoryPreference). */
+  categoryId: string | null
 }
 
 /** Busca una asignación activa por familia; opcionalmente por nombre de entidad y categoría. Devuelve id + datos para clasificación y mensaje. */
@@ -181,18 +216,17 @@ async function findAllocationWithDetails(
   familyId: string,
   options: { entityNameHint?: string | null; categoryHint?: string | null },
 ): Promise<AllocationWithDetails | null> {
-  const allocs = await prisma.entityBudgetAllocation.findMany({
+  const allocs = await prisma.budgetAccount.findMany({
     where: {
       familyId,
       isActive: true,
       entity: { isActive: true, participatesInBudget: true },
-      category: { isActive: true },
     },
     select: {
       id: true,
-      categoryId: true,
+      serviceId: true,
       entity: { select: { name: true } },
-      category: { select: { name: true } },
+      service: { select: { name: true } },
     },
     orderBy: { createdAt: 'asc' },
   })
@@ -204,7 +238,7 @@ async function findAllocationWithDetails(
   if (entityHint || catHint) {
     const scored = allocs.map((a) => {
       const en = norm(a.entity.name)
-      const cn = norm(a.category.name)
+      const cn = norm(a.service.name)
       let score = 0
       if (entityHint && en.includes(entityHint)) score += 10
       if (entityHint && entityHint.includes(en)) score += 5
@@ -227,18 +261,29 @@ async function findAllocationWithDetails(
     } else if (catHint && (norm(catHint) === 'comida' || norm(catHint).includes('eventos familiares'))) {
       // Concepto es comida/pastel/cumple pero ninguna partida coincidió: evitar Renta/Hipoteca
       const notRenta = allocs.find((a) => {
-        const cn = norm(a.category.name)
+        const cn = norm(a.service.name)
         return !cn.includes('renta') && !cn.includes('hipoteca')
       })
       if (notRenta) chosen = notRenta
     }
   }
+  const legacyCat = await prisma.budgetCategory.findFirst({
+    where: {
+      familyId,
+      name: chosen.service.name,
+      isActive: true,
+      userId: null,
+    },
+    select: { id: true },
+  })
   return {
+    budgetAccountId: chosen.id,
     allocationId: chosen.id,
-    categoryId: chosen.categoryId,
+    serviceId: chosen.serviceId,
     entityName: chosen.entity.name,
-    categoryName: chosen.category.name,
+    categoryName: chosen.service.name,
     assignedByName,
+    categoryId: legacyCat?.id ?? null,
   }
 }
 
@@ -248,7 +293,7 @@ async function findAllocationForFamily(
   options: { entityNameHint?: string | null; categoryHint?: string | null },
 ): Promise<string | null> {
   const d = await findAllocationWithDetails(familyId, options)
-  return d?.allocationId ?? null
+  return d?.budgetAccountId ?? null
 }
 
 /** Preferencia aprendida: comercio/concepto → categoría por familia. */
@@ -439,6 +484,19 @@ function isHelpTrigger(text: string): boolean {
   return false
 }
 
+/** Pide el instructivo / hoja de presupuesto (Partida, Categoría, Monto, Cuenta) para compartir por WhatsApp. */
+function isInstructivoPresupuestoTrigger(text: string): boolean {
+  const t = text.trim().toLowerCase().normalize('NFD').replace(/\u0300-\u036f/g, '').replace(/\s+/g, ' ')
+  if (!t || t.length > 80) return false
+  if (/instructivo\s*(presupuesto|presu)?/.test(t)) return true
+  if (/hoja\s*(del?\s+)?presupuesto/.test(t)) return true
+  if (/que\s+es\s+(partida|categoria|monto|cuenta)/.test(t)) return true
+  if (/qué\s+es\s+(partida|categoría|monto|cuenta)/.test(t)) return true
+  if (/dame\s+(el\s+)?instructivo/.test(t)) return true
+  if (/manda(me)?\s+(la\s+)?(hoja|ilustracion)/.test(t)) return true
+  return false
+}
+
 /** Detecta si el usuario confirma que descarta el comprobante (duplicado/rechazado). Acepta varias formas. */
 function isDiscardReceiptIntent(text: string): boolean {
   const t = text.trim().toLowerCase().normalize('NFD').replace(/\u0300-\u036f/g, '').replace(/\s+/g, ' ')
@@ -507,10 +565,84 @@ export async function POST(request: NextRequest) {
       return createTwiMLResponseMultiple([DOMUS_WHATSAPP_ONBOARDING_PART1, DOMUS_WHATSAPP_ONBOARDING_PART2])
     }
 
+    if (isInstructivoPresupuestoTrigger(body)) {
+      const instructivoUrl = `${DOMUS_APP_URL.replace(/\/$/, '')}/presupuesto-instructivo`
+      return createTwiMLResponse(
+        `*Instructivo Presupuesto:* Partida, Categoría, Monto y Cuenta explicados con un ejemplo.\n\nAbre este enlace (o compártelo por WhatsApp):\n${instructivoUrl}\n\nD+ ${DOMUS_APP_URL}`
+      )
+    }
+
     if (body.trim() && isDiscardReceiptIntent(body)) {
       return createTwiMLResponse(
         'Comprobante descartado. No se registró el gasto. Si tienes el comprobante correcto, envía la foto y lo procesamos.',
       )
+    }
+
+    const thingsInvoiceHint = parseThingsInvoiceIntent(body)
+    if (thingsInvoiceHint) {
+      const things = await prisma.userThing.findMany({
+        where: { userId: user.id },
+        select: { id: true, name: true, type: true, invoiceUrl: true },
+      })
+      const match = things.find(
+        (t) =>
+          t.invoiceUrl &&
+          (t.name.toLowerCase().includes(thingsInvoiceHint) ||
+            t.type.toLowerCase().includes(thingsInvoiceHint) ||
+            thingsInvoiceHint.includes(t.type.toLowerCase()) ||
+            thingsInvoiceHint.includes(t.name.toLowerCase())),
+      )
+      if (match?.invoiceUrl) {
+        const key = extractKeyFromSpacesUrl(match.invoiceUrl)
+        if (key) {
+          try {
+            const signedUrl = await getSignedDownloadUrl({ key, expiresInSeconds: 60 * 30 })
+            await sendWhatsAppWithMediaAndGetSid(phone, signedUrl, {
+              body: `Factura de "${match.name}"${getDomusLinkSuffix()}`,
+            })
+            return createTwiMLResponse('')
+          } catch (e) {
+            console.warn('WhatsApp send thing invoice:', e)
+          }
+        }
+        return createTwiMLResponse(`Enlace a la factura de "${match.name}": ${match.invoiceUrl}${getDomusLinkSuffix()}`)
+      }
+      return createTwiMLResponse(`No tengo guardada una factura para "${thingsInvoiceHint}" en Mis cosas. Súbela en la app (Mis cosas → editar) y vuelve a pedirla.`)
+    }
+
+    const documentRequestCategory = parseDocumentRequestIntent(body)
+    if (documentRequestCategory) {
+      const docs = await prisma.userDocument.findMany({
+        where: { userId: user.id, category: documentRequestCategory },
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        select: { id: true, fileUrl: true, fileName: true, name: true, extractedData: true },
+      })
+      if (docs.length === 0) {
+        return createTwiMLResponse(
+          `No tienes ningún documento en "${documentRequestCategory === 'IDENTIFICACIONES' ? 'Identificaciones' : 'Actas'}" en Mis documentos. Súbelo en la app (DOMUS) y luego pídemelo por aquí.`,
+        )
+      }
+      const doc = docs[0]!
+      const key = extractKeyFromSpacesUrl(doc.fileUrl)
+      if (!key) {
+        return createTwiMLResponse('No se pudo generar el enlace del documento. Revisa en la app.')
+      }
+      const signedUrl = await getSignedDownloadUrl({ key, expiresInSeconds: 60 * 30 })
+      const label = documentRequestCategory === 'IDENTIFICACIONES' ? 'Identificación' : 'Acta'
+      let caption = `Tu ${label} (${doc.name || doc.fileName})`
+      if (doc.extractedData && typeof doc.extractedData === 'object' && Object.keys(doc.extractedData).length > 0) {
+        const dataLines = Object.entries(doc.extractedData).map(([k, v]) => `${k}: ${v}`).join('\n')
+        caption += `\n\nDatos:\n${dataLines}`
+      }
+      caption += getDomusLinkSuffix()
+      try {
+        await sendWhatsAppWithMediaAndGetSid(phone, signedUrl, { body: caption })
+        return createTwiMLResponse('')
+      } catch (e) {
+        console.warn('WhatsApp send document:', e)
+        return createTwiMLResponse(`Enlace para ver o descargar tu ${label}:\n${signedUrl}\n\n${caption}`)
+      }
     }
 
     const bodyNorm = body.trim().toLowerCase().normalize('NFD').replace(/\u0300-\u036f/g, '')
@@ -557,7 +689,7 @@ export async function POST(request: NextRequest) {
         data: {
           familyId,
           createdByUserId: user.id,
-          allocationId: allocation.allocationId,
+          budgetAccountId: allocation.budgetAccountId,
           forName: recipientName ?? undefined,
           date: new Date(),
           reason,
@@ -652,8 +784,8 @@ export async function POST(request: NextRequest) {
           id: true,
           description: true,
           amount: true,
-          allocationId: true,
-          allocation: { select: { entity: { select: { name: true } }, category: { select: { name: true } } } },
+          budgetAccountId: true,
+          budgetAccount: { select: { entity: { select: { name: true } }, service: { select: { name: true } } } },
         },
       })
       if (!txByCode) {
@@ -665,7 +797,7 @@ export async function POST(request: NextRequest) {
         )
       }
       const [entityNamesReassign, categoryNamesReassign] = await Promise.all([
-        prisma.budgetEntity.findMany({
+        prisma.entity.findMany({
           where: { familyId, isActive: true },
           select: { name: true },
         }).then((e) => e.map((x) => x.name)),
@@ -684,11 +816,11 @@ export async function POST(request: NextRequest) {
       if (!allocation) {
         return createTwiMLResponse('No hay asignaciones que coincidan. Configura Presupuesto en la app o usa otros términos.')
       }
-      const prevEntity = (txByCode as any).allocation?.entity?.name ?? '—'
-      const prevCategory = (txByCode as any).allocation?.category?.name ?? '—'
+      const prevEntity = txByCode.budgetAccount?.entity?.name ?? '—'
+      const prevCategory = txByCode.budgetAccount?.service?.name ?? '—'
       await prisma.transaction.update({
         where: { id: txByCode.id },
-        data: { allocationId: allocation.allocationId, pendingReason: null },
+        data: { budgetAccountId: allocation.budgetAccountId, pendingReason: null },
       })
       const now = new Date()
       const ts = now.toLocaleString('es-MX', {
@@ -740,12 +872,13 @@ export async function POST(request: NextRequest) {
       data: {
         familyId,
         userId: user.id,
-        allocationId: allocation.allocationId,
+        budgetAccountId: allocation.budgetAccountId,
         amount: String(parsed.amount),
         date: new Date(),
         description: parsed.concept + (parsed.recipientName ? ` (para ${parsed.recipientName})` : ''),
         registrationCode,
         pendingReason: pendingReasonText,
+        sourceChannel: 'whatsapp',
       },
       select: { id: true, registrationCode: true },
     })
@@ -802,7 +935,7 @@ async function handleMoneyRequestReplyDeliver(args: {
       id: true,
       status: true,
       amount: true,
-      allocationId: true,
+      budgetAccountId: true,
       date: true,
       reason: true,
       registrationCode: true,
@@ -818,7 +951,7 @@ async function handleMoneyRequestReplyDeliver(args: {
   if (mr.status !== 'PENDING' && mr.status !== 'APPROVED') {
     return createTwiMLResponse('Esta solicitud ya fue procesada o rechazada.')
   }
-  if (!mr.allocationId) {
+  if (!mr.budgetAccountId) {
     return createTwiMLResponse('Esta solicitud no tiene partida asignada. Registra la entrega desde la app indicando la partida.')
   }
 
@@ -862,11 +995,12 @@ async function handleMoneyRequestReplyDeliver(args: {
       data: {
         familyId,
         userId: mr.createdByUserId,
-        allocationId: mr.allocationId,
+        budgetAccountId: mr.budgetAccountId,
         amount: String(finalAmount),
         date: mr.date,
         description: txDescription,
         registrationCode,
+        sourceChannel: 'whatsapp',
       },
       select: { id: true, registrationCode: true },
     }),
@@ -978,11 +1112,11 @@ async function processReceiptFromImageBytes(
   const learnedPreference = preferenceKey
     ? await getFamilyCategoryPreference(familyId, preferenceKey)
     : null
-  const allocsForCategories = await prisma.entityBudgetAllocation.findMany({
-    where: { familyId, isActive: true, entity: { isActive: true }, category: { isActive: true } },
-    select: { category: { select: { name: true } } },
+  const allocsForCategories = await prisma.budgetAccount.findMany({
+    where: { familyId, isActive: true, entity: { isActive: true }, service: { isActive: true } },
+    select: { service: { select: { name: true } } },
   })
-  const categoryNames = [...new Set(allocsForCategories.map((a) => a.category.name).filter(Boolean))]
+  const categoryNames = [...new Set(allocsForCategories.map((a) => a.service.name).filter(Boolean))]
   let categoryHint: string | null = learnedPreference ? learnedPreference.categoryName : null
   if (!categoryHint) {
     const aiResult = await suggestCategoryForReceipt(merchantName, rawSnippet, categoryNames)
@@ -1083,12 +1217,13 @@ async function processReceiptFromImageBytes(
     data: {
       familyId,
       userId: user.id,
-      allocationId: allocation.allocationId,
+      budgetAccountId: allocation.budgetAccountId,
       amount: String(Math.round(total * 100) / 100),
       date: new Date(),
       description,
       registrationCode,
       pendingReason,
+      sourceChannel: 'whatsapp',
     },
     select: { id: true, registrationCode: true },
   })
@@ -1370,8 +1505,19 @@ async function handleReplyToCategorySuggestion(args: {
   if (!isFamilyAdmin) {
     return createTwiMLResponse('Solo el administrador de la familia puede aprobar nuevas categorías.')
   }
+  const entities = await prisma.entity.findMany({
+    where: { familyId, isActive: true, participatesInBudget: true },
+    select: { id: true },
+  })
+  if (!entities.length) {
+    await prisma.categorySuggestion.update({
+      where: { id: sug.id },
+      data: { status: 'REJECTED', resolvedAt: new Date() },
+    })
+    return createTwiMLResponse('No hay entidades activas en presupuesto. Configura entidades en la app.')
+  }
   const existingCat = await prisma.budgetCategory.findFirst({
-    where: { familyId, name: sug.suggestedName, isActive: true },
+    where: { familyId, name: sug.suggestedName, isActive: true, userId: null },
     select: { id: true },
   })
   if (existingCat) {
@@ -1381,24 +1527,23 @@ async function handleReplyToCategorySuggestion(args: {
     })
     return createTwiMLResponse(`La categoría "${sug.suggestedName}" ya existe en tu presupuesto.`)
   }
-  const entities = await prisma.budgetEntity.findMany({
-    where: { familyId, isActive: true, participatesInBudget: true },
-    select: { id: true },
-  })
+  const service = await getOrCreateServiceFromBudgetCategoryName(prisma, sug.suggestedName)
   const category = await prisma.budgetCategory.create({
     data: { familyId, name: sug.suggestedName, type: 'EXPENSE', isActive: true },
     select: { id: true, name: true },
   })
   for (const ent of entities) {
-    await prisma.entityBudgetAllocation.create({
-      data: {
+    await prisma.entityService.upsert({
+      where: { entityId_serviceId: { entityId: ent.id, serviceId: service.id } },
+      create: {
         familyId,
         entityId: ent.id,
-        categoryId: category.id,
-        monthlyLimit: 0,
+        serviceId: service.id,
         isActive: true,
       },
+      update: { isActive: true, familyId },
     })
+    await getOrCreateBudgetAccount(familyId, ent.id, service.id)
   }
   await prisma.categorySuggestion.update({
     where: { id: sug.id },
@@ -1426,13 +1571,13 @@ async function handleReplyToReceiptConfirmation(args: {
     select: {
       id: true,
       description: true,
-      allocationId: true,
-      allocation: { select: { entity: { select: { name: true } }, category: { select: { name: true } } } },
+      budgetAccountId: true,
+      budgetAccount: { select: { entity: { select: { name: true } }, service: { select: { name: true } } } },
     },
   })
   if (!txByCode) return null
   const [entityNamesReply, categoryNamesReply] = await Promise.all([
-    prisma.budgetEntity.findMany({
+    prisma.entity.findMany({
       where: { familyId, isActive: true },
       select: { name: true },
     }).then((e) => e.map((x) => x.name)),
@@ -1445,7 +1590,7 @@ async function handleReplyToReceiptConfirmation(args: {
   const fallback = parseConceptAndEntityForReassign(body)
   const categoryHint = hintsFromIa.categoryHint || fallback.categoryHint
   const entityHint = hintsFromIa.entityHint || fallback.entityHint
-  const currentCategory = (txByCode as any).allocation?.category?.name ?? null
+  const currentCategory = (txByCode as { budgetAccount?: { service?: { name?: string } } }).budgetAccount?.service?.name ?? null
   const hasExplicitCategoryInMessage = !!resolveCategoryHint(body)
   const categoryHintToUse = hasExplicitCategoryInMessage
     ? (categoryHint || body)
@@ -1457,15 +1602,15 @@ async function handleReplyToReceiptConfirmation(args: {
   if (!allocation) {
     return createTwiMLResponse('No hay asignaciones que coincidan. Indica partida/categoría (ej. cumpleaños Sofía).')
   }
-  const prevEntity = (txByCode as any).allocation?.entity?.name ?? '—'
-  const prevCategory = (txByCode as any).allocation?.category?.name ?? '—'
+  const prevEntity = (txByCode as { budgetAccount?: { entity?: { name?: string } } }).budgetAccount?.entity?.name ?? '—'
+  const prevCategory = (txByCode as { budgetAccount?: { service?: { name?: string } } }).budgetAccount?.service?.name ?? '—'
   const categoryChanged = prevCategory !== allocation.categoryName
   await prisma.transaction.update({
     where: { id: rec.transactionId },
-    data: { allocationId: allocation.allocationId, pendingReason: null },
+    data: { budgetAccountId: allocation.budgetAccountId, pendingReason: null },
   })
   if (categoryChanged && allocation.categoryId) {
-    const desc = (txByCode as any).description
+    const desc = txByCode.description
     const key = typeof desc === 'string' && desc.trim() ? norm(desc.trim().slice(0, 150)) : null
     if (key && key.length >= 2) {
       const learnedNew = await saveFamilyCategoryPreference(familyId, key, allocation.categoryId)

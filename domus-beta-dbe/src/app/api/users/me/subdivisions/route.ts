@@ -11,10 +11,10 @@ export async function GET(req: NextRequest) {
 
     const list = await prisma.userBudgetSubdivision.findMany({
       where: { userId, familyId },
-      orderBy: [{ allocationId: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }],
+      orderBy: [{ budgetAccountId: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }],
       select: {
         id: true,
-        allocationId: true,
+        budgetAccountId: true,
         name: true,
         sortOrder: true,
         createdAt: true,
@@ -25,34 +25,38 @@ export async function GET(req: NextRequest) {
       ok: true,
       subdivisions: list.map((s) => ({
         id: s.id,
-        allocationId: s.allocationId,
+        budgetAccountId: s.budgetAccountId,
+        allocationId: s.budgetAccountId,
         name: s.name,
         sortOrder: s.sortOrder,
         createdAt: s.createdAt.toISOString(),
       })),
     })
-  } catch (e: any) {
-    return jsonError(e?.message || 'No autenticado', 401)
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : 'No autenticado'
+    return jsonError(msg, 401)
   }
 }
 
-/** POST: crear subdivisión personal. allocationId debe ser de una partida donde el usuario es dueño. */
+/** POST: crear subdivisión personal. budgetAccountId = cuenta donde el usuario es dueño de entidad. */
 export async function POST(req: NextRequest) {
   try {
     const { familyId, userId } = await requireMembership(req)
     const body = await req.json().catch(() => ({}))
-    const allocationId = typeof body.allocationId === 'string' ? body.allocationId.trim() : ''
+    const budgetAccountId =
+      (typeof body.budgetAccountId === 'string' ? body.budgetAccountId.trim() : '') ||
+      (typeof body.allocationId === 'string' ? body.allocationId.trim() : '')
     const name = typeof body.name === 'string' ? body.name.trim() : ''
-    if (!allocationId || !name) return jsonError('allocationId y name son requeridos', 400)
+    if (!budgetAccountId || !name) return jsonError('budgetAccountId (o allocationId) y name son requeridos', 400)
     if (name.length > 80) return jsonError('Nombre muy largo', 400)
 
-    const allocation = await prisma.entityBudgetAllocation.findFirst({
-      where: { id: allocationId, familyId },
+    const allocation = await prisma.budgetAccount.findFirst({
+      where: { id: budgetAccountId, familyId },
       select: { id: true, entityId: true },
     })
-    if (!allocation) return jsonError('Asignación no encontrada', 404)
+    if (!allocation) return jsonError('Cuenta presupuestal no encontrada', 404)
 
-    const isOwner = await prisma.budgetEntityOwner.findUnique({
+    const isOwner = await prisma.entityOwner.findUnique({
       where: { entityId_userId: { entityId: allocation.entityId, userId } },
       select: { userId: true },
     })
@@ -62,11 +66,11 @@ export async function POST(req: NextRequest) {
       data: {
         userId,
         familyId,
-        allocationId,
+        budgetAccountId,
         name,
         sortOrder: typeof body.sortOrder === 'number' ? body.sortOrder : 0,
       },
-      select: { id: true, allocationId: true, name: true, sortOrder: true, createdAt: true },
+      select: { id: true, budgetAccountId: true, name: true, sortOrder: true, createdAt: true },
     })
 
     return NextResponse.json(
@@ -74,7 +78,8 @@ export async function POST(req: NextRequest) {
         ok: true,
         subdivision: {
           id: created.id,
-          allocationId: created.allocationId,
+          budgetAccountId: created.budgetAccountId,
+          allocationId: created.budgetAccountId,
           name: created.name,
           sortOrder: created.sortOrder,
           createdAt: created.createdAt.toISOString(),
@@ -82,8 +87,9 @@ export async function POST(req: NextRequest) {
       },
       { status: 201 }
     )
-  } catch (e: any) {
-    if (e?.code === 'P2002') return jsonError('Ya existe una subdivisión con ese nombre en esa partida', 400)
-    return jsonError(e?.message || 'No se pudo crear', 500)
+  } catch (e: unknown) {
+    const err = e as { code?: string; message?: string }
+    if (err?.code === 'P2002') return jsonError('Ya existe una subdivisión con ese nombre en esa partida', 400)
+    return jsonError(err?.message || 'No se pudo crear', 500)
   }
 }

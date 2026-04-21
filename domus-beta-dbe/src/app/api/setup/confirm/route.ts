@@ -7,13 +7,13 @@ export async function POST(req: NextRequest) {
     const { familyId, isFamilyAdmin } = await requireMembership(req)
     if (!isFamilyAdmin) return jsonError('Solo el administrador puede confirmar el plan', 403)
 
-    const activeEntityCount = await prisma.budgetEntity.count({
+    const activeEntityCount = await prisma.entity.count({
       where: { familyId, isActive: true },
     })
     const categoryCount = await prisma.budgetCategory.count({
       where: { familyId, isActive: true },
     })
-    const allocationCount = await prisma.entityBudgetAllocation.count({
+    const allocationCount = await prisma.budgetAccount.count({
       where: { familyId, isActive: true, monthlyLimit: { gt: 0 } },
     })
 

@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 
 const TicketCaptureModal = dynamic(
@@ -21,6 +21,7 @@ type MeResponse =
       user: { id: string; email: string; name: string | null; city?: string | null; avatarUrl?: string | null }
       activeFamily: { id: string; name: string } | null
       isFamilyAdmin: boolean
+      ownedEntityIds?: string[]
       families: { id: string; name: string; isFamilyAdmin: boolean }[]
     }
   | { detail: string }
@@ -42,7 +43,7 @@ type FakeDataResponse = {
   receipt?: { created: boolean; skipped: boolean; reason?: string; receiptId?: string }
 }
 
-type UiView = 'dashboard' | 'presupuesto' | 'transacciones' | 'calendario' | 'usuarios' | 'configuracion' | 'solicitudes' | 'tx'
+type UiView = 'dashboard' | 'presupuesto' | 'transacciones' | 'calendario' | 'usuarios' | 'configuracion' | 'solicitudes' | 'documentos' | 'cosas' | 'tx'
 type TxTab = 'Detalle' | 'Evidencias'
 
 type EntityType = 'PERSON' | 'HOUSE' | 'PET' | 'VEHICLE' | 'PROJECT' | 'FUND' | 'GROUP' | 'OTHER'
@@ -59,6 +60,85 @@ const ENTITY_TYPE_OPTIONS: { value: EntityType; label: string }[] = [
   { value: 'GROUP', label: 'Grupo' },
   { value: 'OTHER', label: 'Otro' },
 ]
+
+/** Solo UI: sugiere separar concepto (categoría) de destino/bien (BMW, Casa X). No bloquea guardar. */
+function categoryNameCombinedWarning(name: string): string | null {
+  const t = name.trim()
+  if (t.length < 4) return null
+  const words = t.split(/\s+/).filter(Boolean)
+  if (words.length < 2) return null
+  const last = words[words.length - 1]
+  // "Gasolina BMW", "Seguro BMW" — segundo término parece marca/modelo en MAYÚSCULAS
+  if (/^[A-ZÁÉÍÓÚÑ]{2,12}$/.test(last) && last.length <= 8) {
+    return 'Mejor: Destino = el bien (ej. tu BMW) y Categoría = solo el tipo de gasto (ej. «Gasolina»). Así no mezclas vehículo y concepto en el nombre de la categoría.'
+  }
+  if (/\b(Gasolina|Seguro|Mantenimiento|Supermercado|Luz|Agua|Comida)\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+/.test(t)) {
+    return 'Si el segundo término es un modelo o nombre propio, define un Destino para eso y deja la categoría solo con el tipo de gasto.'
+  }
+  const brandLike = /^(bmw|audi|mercedes|toyota|honda|mazda|ford|kia|hyundai|vw|seat|volkswagen|tesla)$/i
+  if (words.length >= 2 && brandLike.test(last.replace(/\.$/, ''))) {
+    return '¿Incluiste marca o modelo en la categoría? Mejor: Destino = el auto/persona y Categoría = solo el tipo (ej. «Gasolina»).'
+  }
+  return null
+}
+
+/**
+ * Solo UI: oculta categorías poco coherentes con el tipo de destino (ej. Colegiaturas en un Vehículo).
+ * Si el usuario activa "Mostrar todas", no se usa. No altera datos ni API.
+ */
+function categoryLooksWrongForDestinationType(entityType: string | undefined, categoryName: string): boolean {
+  if (!entityType || !categoryName.trim()) return false
+  const raw = categoryName.trim()
+  const n = raw
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+  const test = (re: RegExp) => re.test(n) || re.test(raw)
+
+  switch (entityType) {
+    case 'VEHICLE':
+      return (
+        test(/mascota/) ||
+        test(/veterinar/) ||
+        test(/colegiatur/) ||
+        test(/util(es)?\s*escolar/) ||
+        test(/hipoteca/) ||
+        test(/reparaciones?\s+de\s+casa/) ||
+        test(/limpieza\s*\/\s*hogar/) ||
+        test(/^limpieza\s*\/\s*hogar$/i) ||
+        test(/mascotas\b/) ||
+        test(/luz\s*\/\s*agua|agua\s*\/\s*internet|internet\s*\/\s*telefono/) ||
+        test(/servicios\s*\(\s*luz/)
+      )
+    case 'PET':
+      return (
+        test(/\bgasolina\b/) ||
+        test(/combustible/) ||
+        test(/mantenimiento\s+auto/) ||
+        test(/seguro\s*auto/) ||
+        test(/verificaci[oó]n/) ||
+        test(/\bpeaje\b/) ||
+        test(/\bllanta/) ||
+        test(/\btag\b/) ||
+        test(/tenencia/) ||
+        test(/colegiatur/) ||
+        test(/util(es)?\s*escolar/)
+      )
+    case 'HOUSE':
+      return (
+        test(/\bgasolina\b/) ||
+        test(/mantenimiento\s+auto/) ||
+        test(/seguro\s*auto/) ||
+        test(/veterinar/) ||
+        test(/^mascotas?$/) ||
+        test(/\bmascotas\b/)
+      )
+    case 'PERSON':
+      return test(/reparaciones?\s+de\s+casa/) || test(/limpieza\s*\/\s*hogar/)
+    default:
+      return false
+  }
+}
 
 function entityTypeLabel(value: unknown) {
   switch (value) {
@@ -81,6 +161,59 @@ function entityTypeLabel(value: unknown) {
     default:
       return String(value || '—')
   }
+}
+
+/** Agrupa destinos por tipo para `<optgroup>` (orden fijo, nombres en español). */
+const ENTITY_OPTGROUP_ORDER: readonly { type: string; label: string }[] = [
+  { type: 'PERSON', label: 'Personas' },
+  { type: 'HOUSE', label: 'Casas y espacios' },
+  { type: 'VEHICLE', label: 'Vehículos y transporte' },
+  { type: 'PET', label: 'Mascotas' },
+  { type: 'GROUP', label: 'Grupos' },
+  { type: 'FUND', label: 'Fondos' },
+  { type: 'PROJECT', label: 'Proyectos' },
+  { type: 'OTHER', label: 'Otros' },
+]
+
+function groupBudgetEntitiesForOptgroups(entities: readonly unknown[]): { label: string; items: unknown[] }[] {
+  const byType = new Map<string, unknown[]>()
+  for (const row of ENTITY_OPTGROUP_ORDER) byType.set(row.type, [])
+  for (const e of entities) {
+    const t = String((e as { type?: string })?.type || 'OTHER')
+    if (!byType.has(t)) byType.set(t, [])
+    byType.get(t)!.push(e)
+  }
+  const sortByName = (a: unknown, b: unknown) =>
+    String((a as { name?: string })?.name || '').localeCompare(String((b as { name?: string })?.name || ''), 'es', {
+      sensitivity: 'base',
+    })
+  const out: { label: string; items: unknown[] }[] = []
+  const known = new Set(ENTITY_OPTGROUP_ORDER.map((r) => r.type))
+  for (const { type, label } of ENTITY_OPTGROUP_ORDER) {
+    const items = (byType.get(type) || []).slice().sort(sortByName)
+    if (items.length) out.push({ label, items })
+  }
+  for (const [type, items] of byType) {
+    if (!known.has(type) && items.length) {
+      out.push({ label: entityTypeLabel(type), items: items.slice().sort(sortByName) })
+    }
+  }
+  return out
+}
+
+/** Misma regla que en API: moto/auto/mascota deben tener al menos un dueño. */
+function entityTypeNeedsOwnerForCreate(type: string): boolean {
+  return type === 'VEHICLE' || type === 'PET'
+}
+
+function entityOwnerNamesPreview(e: unknown, maxNames = 3): { text: string; truncated: boolean } {
+  const owners = Array.isArray((e as { owners?: unknown })?.owners) ? (e as { owners: any[] }).owners : []
+  const names = owners
+    .map((o) => String(o?.user?.name || o?.user?.email || '').trim())
+    .filter(Boolean)
+  const truncated = names.length > maxNames
+  const text = names.slice(0, maxNames).join(', ') + (truncated ? '…' : '')
+  return { text, truncated }
 }
 
 function rangeDates(key: RangeKey) {
@@ -107,6 +240,32 @@ function monthStart(d = new Date()) {
 
 function addMonths(d: Date, delta: number) {
   return new Date(d.getFullYear(), d.getMonth() + delta, 1)
+}
+
+/** Copia texto al portapapeles; usa fallback execCommand si clipboard API falla (p. ej. Safari, iframe). */
+async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      await navigator.clipboard.writeText(text)
+      return true
+    }
+  } catch {
+    // seguir al fallback
+  }
+  try {
+    const ta = document.createElement('textarea')
+    ta.value = text
+    ta.setAttribute('readonly', '')
+    ta.style.position = 'absolute'
+    ta.style.left = '-9999px'
+    document.body.appendChild(ta)
+    ta.select()
+    const ok = document.execCommand('copy')
+    document.body.removeChild(ta)
+    return ok
+  } catch {
+    return false
+  }
 }
 
 function formatMoney(value: number, currency = 'MXN') {
@@ -174,7 +333,7 @@ function normReceiptExtraction(raw: unknown): any | null {
   }
 }
 
-export default function UiPage() {
+function UiPageContent() {
   const router = useRouter()
   const [me, setMe] = useState<MeResponse | null>(null)
   const [loading, setLoading] = useState(false)
@@ -202,8 +361,17 @@ export default function UiPage() {
   const familyMenuBtnRef = useRef<HTMLButtonElement | null>(null)
   const familyMenuRef = useRef<HTMLDivElement | null>(null)
   const [now, setNow] = useState(() => new Date())
+  const searchParams = useSearchParams()
+  const showBuildSignal = searchParams.get('signal') === '1'
+  const [buildVersion, setBuildVersion] = useState<string | null>(null)
+  const presupuestoCuentasRef = useRef<HTMLDivElement | null>(null)
 
   const [view, setView] = useState<UiView>('dashboard')
+
+  useEffect(() => {
+    const v = searchParams.get('view')
+    if (v === 'presupuesto') setView('presupuesto')
+  }, [searchParams])
   const [moneyRequests, setMoneyRequests] = useState<any[]>([])
   const [moneyRequestsLoading, setMoneyRequestsLoading] = useState(false)
   const [solicitudEfectivoOpen, setSolicitudEfectivoOpen] = useState(false)
@@ -293,6 +461,7 @@ export default function UiPage() {
   const [adminSavingId, setAdminSavingId] = useState<string | null>(null)
   const [inviteLoading, setInviteLoading] = useState(false)
   const [lastInviteUrl, setLastInviteUrl] = useState<string | null>(null)
+  const [usuariosSearchQuery, setUsuariosSearchQuery] = useState('')
   const [onboardingDismissed, setOnboardingDismissed] = useState(false)
   const [viewingAsUser, setViewingAsUser] = useState<{ userId: string; name: string } | null>(() => {
     if (typeof window === 'undefined') return null
@@ -316,6 +485,14 @@ export default function UiPage() {
     return () => clearInterval(t)
   }, [])
 
+  useEffect(() => {
+    if (!showBuildSignal) return
+    fetch('/api/build-info')
+      .then((r) => r.json())
+      .then((data: { version?: string }) => setBuildVersion(data?.version ?? null))
+      .catch(() => setBuildVersion(null))
+  }, [showBuildSignal])
+
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const d = new Date()
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
@@ -338,6 +515,7 @@ export default function UiPage() {
   const [entityNameDraft, setEntityNameDraft] = useState<Record<string, string>>({})
   const [categoryNameDraft, setCategoryNameDraft] = useState<Record<string, string>>({})
   const [allocationLimitDraft, setAllocationLimitDraft] = useState<Record<string, string>>({})
+  const [allocationPaymentDraft, setAllocationPaymentDraft] = useState<Record<string, { defaultPaymentMethod: string; bankAccountLabel: string; providerClabe: string; providerReference: string }>>({})
 
   const isAuthed = useMemo(() => me && 'ok' in me && me.ok === true, [me])
 
@@ -379,16 +557,23 @@ export default function UiPage() {
     return () => { cancelled = true }
   }, [view, calendarMonth, activeFamilyId, calendarRefreshTrigger])
 
-  // Presupuesto (partidas / categorías / montos)
+  // Presupuesto (destinos / categorías / asignación presupuesto)
   const [familyDetails, setFamilyDetails] = useState<any | null>(null)
   const [entities, setEntities] = useState<any[] | null>(null)
   const [categories, setCategories] = useState<any[] | null>(null)
   const [allocations, setAllocations] = useState<any[] | null>(null)
+  const [customEntityTypes, setCustomEntityTypes] = useState<{ id: string; name: string }[]>([])
 
   const [beType, setBeType] = useState<EntityType>('PERSON')
+  const [beCustomTypeId, setBeCustomTypeId] = useState<string | null>(null)
   const [beName, setBeName] = useState('')
+  const [customTypeCreateOpen, setCustomTypeCreateOpen] = useState(false)
+  const [customTypeNewName, setCustomTypeNewName] = useState('')
+  const [customTypeCreating, setCustomTypeCreating] = useState(false)
   const [beInBudget, setBeInBudget] = useState(true)
   const [beInReports, setBeInReports] = useState(true)
+  /** Vehículo / Mascota: integrante dueño (obligatorio en API; encaja el «rompecabezas»). */
+  const [beOwnerUserId, setBeOwnerUserId] = useState('')
 
   const [bcType, setBcType] = useState('EXPENSE')
   const [bcName, setBcName] = useState('')
@@ -396,12 +581,12 @@ export default function UiPage() {
   const [alEntityId, setAlEntityId] = useState('')
   const [alCategoryId, setAlCategoryId] = useState('')
   const [alLimit, setAlLimit] = useState('')
+  /** En pestaña Presupuesto: lista corta de categorías según tipo de destino; el usuario puede ampliar. */
+  const [allocationShowAllCategories, setAllocationShowAllCategories] = useState(false)
   const [budgetYear, setBudgetYear] = useState(() => String(new Date().getFullYear()))
-  const [soloMisPartidas, setSoloMisPartidas] = useState(false)
+  const [soloMisDestinos, setSoloMisDestinos] = useState(false)
   const [budgetWizardMemberId, setBudgetWizardMemberId] = useState<string>('')
   const [budgetWizardBusy, setBudgetWizardBusy] = useState(false)
-  const [budgetDupEntityId, setBudgetDupEntityId] = useState<string>('')
-  const [budgetDupBusy, setBudgetDupBusy] = useState(false)
   const [entityOwnersOpen, setEntityOwnersOpen] = useState(false)
   const [entityOwnersEntityId, setEntityOwnersEntityId] = useState<string>('')
   const [entityOwnersMode, setEntityOwnersMode] = useState<'equal' | 'percent'>('equal')
@@ -421,14 +606,33 @@ export default function UiPage() {
   const [peopleBudgetRows, setPeopleBudgetRows] = useState<'categories' | 'objects' | 'accounts'>('categories')
   const [peopleBudgetTopN, setPeopleBudgetTopN] = useState<number>(12)
   const [peopleBudgetUserId, setPeopleBudgetUserId] = useState<string>('')
-  const [budgetModalOpen, setBudgetModalOpen] = useState(false)
-  const [budgetModalTab, setBudgetModalTab] = useState<'cuentas' | 'objetos' | 'categorias' | 'montos'>('cuentas')
+  const [budgetModalTab, setBudgetModalTab] = useState<'objetos' | 'categorias' | 'montos'>('montos')
   const [budgetModalAllocId, setBudgetModalAllocId] = useState<string | null>(null)
+  const [budgetReturnToIntegranteUserId, setBudgetReturnToIntegranteUserId] = useState<string | null>(null)
   const [budgetModalSearch, setBudgetModalSearch] = useState('')
   const [budgetListQuery, setBudgetListQuery] = useState('')
   const [budgetListEntityId, setBudgetListEntityId] = useState<string>('all')
   const [budgetListCategoryId, setBudgetListCategoryId] = useState<string>('all')
   const [budgetListType, setBudgetListType] = useState<'all' | 'individual' | 'shared'>('all')
+  const [seedMyPartidasBusy, setSeedMyPartidasBusy] = useState(false)
+  const [userDocuments, setUserDocuments] = useState<any[]>([])
+  const [documentsTab, setDocumentsTab] = useState<string>('IDENTIFICACIONES')
+  const [documentsUploadBusy, setDocumentsUploadBusy] = useState(false)
+  const [documentsDeleteId, setDocumentsDeleteId] = useState<string | null>(null)
+  const [documentDetailId, setDocumentDetailId] = useState<string | null>(null)
+  const [documentEditData, setDocumentEditData] = useState<{ extractedData: Record<string, string>; expiresAt: string }>({ extractedData: {}, expiresAt: '' })
+  const [documentSaveBusy, setDocumentSaveBusy] = useState(false)
+  const [documentExtractBusy, setDocumentExtractBusy] = useState(false)
+  const documentsFileInputRef = useRef<HTMLInputElement | null>(null)
+  const [documentNewFieldName, setDocumentNewFieldName] = useState('')
+  const [documentCategoryEditing, setDocumentCategoryEditing] = useState<string | null>(null)
+  const [documentCategoryEditName, setDocumentCategoryEditName] = useState('')
+  const [customDocumentCategory, setCustomDocumentCategory] = useState('')
+  const [userThings, setUserThings] = useState<any[]>([])
+  const [cosasDetailId, setCosasDetailId] = useState<string | null>(null)
+  const [cosasFormOpen, setCosasFormOpen] = useState(false)
+  const [cosasFormThing, setCosasFormThing] = useState<any | null>(null)
+  const [cosasSaveBusy, setCosasSaveBusy] = useState(false)
   const [budgetListSpenderId, setBudgetListSpenderId] = useState<string>('all')
   const [budgetViewMineOnly, setBudgetViewMineOnly] = useState(false)
   const [suggestionOpen, setSuggestionOpen] = useState(false)
@@ -437,6 +641,7 @@ export default function UiPage() {
   const [suggestionSending, setSuggestionSending] = useState(false)
   const [suggestionsList, setSuggestionsList] = useState<any[] | null>(null)
   const [suggestionsOpen, setSuggestionsOpen] = useState(false)
+  const [lastCreatedAllocationId, setLastCreatedAllocationId] = useState<string | null>(null)
 
   // Gastos (transacciones) + recibos
   const [transactions, setTransactions] = useState<any[] | null>(null)
@@ -583,7 +788,7 @@ export default function UiPage() {
   }, [viewingAsUser])
 
   useEffect(() => {
-    const isAnyOverlayOpen = deleteFamilyOpen || reportsOpen || budgetModalOpen || peopleBudgetOpen || mobileNavOpen || txReceiptWizardOpen
+    const isAnyOverlayOpen = deleteFamilyOpen || reportsOpen || peopleBudgetOpen || mobileNavOpen || txReceiptWizardOpen
     if (!isAnyOverlayOpen) return
     const prevBodyOverflow = document.body.style.overflow
     const prevHtmlOverflow = document.documentElement.style.overflow
@@ -593,7 +798,7 @@ export default function UiPage() {
       document.body.style.overflow = prevBodyOverflow
       document.documentElement.style.overflow = prevHtmlOverflow
     }
-  }, [deleteFamilyOpen, reportsOpen, budgetModalOpen, peopleBudgetOpen, mobileNavOpen, txReceiptWizardOpen])
+  }, [deleteFamilyOpen, reportsOpen, peopleBudgetOpen, mobileNavOpen, txReceiptWizardOpen])
 
   useEffect(() => {
     if (view !== 'transacciones') return
@@ -732,9 +937,9 @@ export default function UiPage() {
     setTransactions(null)
     setMembers(null)
 
-    setBudgetModalOpen(false)
-    setBudgetModalTab('cuentas')
+    setBudgetModalTab('montos')
     setBudgetModalAllocId(null)
+    setBudgetReturnToIntegranteUserId(null)
     setBudgetModalSearch('')
 
     setTxAllocationId('')
@@ -806,8 +1011,6 @@ export default function UiPage() {
 
     setBudgetWizardMemberId('')
     setBudgetWizardBusy(false)
-    setBudgetDupEntityId('')
-    setBudgetDupBusy(false)
     setEntityOwnersOpen(false)
     setEntityOwnersEntityId('')
     setEntityOwnersMode('equal')
@@ -827,6 +1030,49 @@ export default function UiPage() {
     refreshMembers()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeFamilyId])
+
+  // Tras cargar sesión (roles), repetir presupuesto: sin esto el primer fetch podía usar ?mine=1 antes de saber si eres Admin.
+  useEffect(() => {
+    if (!activeFamilyId || !isMeOk(me)) return
+    refreshBudget({ silent: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [me, activeFamilyId])
+
+  useEffect(() => {
+    if (view !== 'documentos') return
+    setMessage('')
+    getJson('/api/users/me/documents')
+      .then((r: any) => setUserDocuments(Array.isArray(r?.documents) ? r.documents : []))
+      .catch((e: any) => setMessage(e?.message || 'No se pudieron cargar los documentos'))
+  }, [view])
+
+  useEffect(() => {
+    if (view !== 'cosas') return
+    setMessage('')
+    getJson('/api/users/me/things')
+      .then((r: any) => setUserThings(Array.isArray(r?.things) ? r.things : []))
+      .catch((e: any) => setMessage(e?.message || 'No se pudieron cargar tus cosas'))
+  }, [view])
+
+  const DEFAULT_DOCUMENT_CATEGORIES = ['IDENTIFICACIONES', 'ACTAS', 'VEHICULOS', 'RECETAS', 'PRESCRIPCIONES']
+  const documentCategories = useMemo(() => {
+    const fromDocs = Array.from(new Set((userDocuments as any[]).map((d: any) => d.category).filter(Boolean)))
+    const combined = [...DEFAULT_DOCUMENT_CATEGORIES]
+    for (const c of fromDocs) if (!combined.includes(c)) combined.push(c)
+    if (documentsTab && !combined.includes(documentsTab)) combined.push(documentsTab)
+    const custom = customDocumentCategory.trim()
+    if (custom && !combined.includes(custom)) combined.push(custom)
+    return combined
+  }, [userDocuments, documentsTab, customDocumentCategory])
+
+  function getDocumentCategoryLabel(cat: string) {
+    if (cat === 'IDENTIFICACIONES') return 'Identificaciones'
+    if (cat === 'ACTAS') return 'Actas'
+    if (cat === 'VEHICULOS') return 'Vehículos'
+    if (cat === 'RECETAS') return 'Recetas'
+    if (cat === 'PRESCRIPCIONES') return 'Prescripciones'
+    return cat
+  }
 
   // Auto-sync suave (sin botones "Refrescar")
   useEffect(() => {
@@ -1005,41 +1251,68 @@ export default function UiPage() {
 
   async function refreshBudget(opts: { silent?: boolean; mine?: boolean } = {}) {
     if (!opts.silent) setMessage('')
-    const mineQ = opts.mine ? '?mine=1' : ''
+    // Entidades/asignaciones: ?mine=1 = solo filas donde el usuario está en responsables (budget_entity_owner).
+    // Por defecto eso dejaba al Admin con lista vacía (los POST de destino no añaden responsables) → Destinos: 0 y formularios rotos.
+    // Admin: ver todos los destinos salvo "Solo mis destinos". No admin: solo los suyos.
+    const useMineFilter =
+      opts.mine !== undefined ? opts.mine : soloMisDestinos || !meOk?.isFamilyAdmin
+    const mineQ = useMineFilter ? '?mine=1' : ''
+
+    function isBudgetStructuralError(msg: unknown): boolean {
+      const s = String(msg || '').toLowerCase()
+      return s.includes('objeto presupuestal') || s.includes('partida presupuestal')
+    }
+
     try {
-      const [f, e, c, a] = await Promise.all([
+      // Importante: si aún no hay ningún destino, GET /allocations devuelve 409 y antes rompía todo el Promise.all:
+      // no se llegaban a aplicar entities ni categories → la UI quedaba incoherente (ej. categorías sin cargar).
+      const [f, e, c, ct] = await Promise.all([
         getJson('/api/families/active'),
         getJson(`/api/budget/entities${mineQ}`),
-        getJson('/api/budget/categories'),
-        getJson(`/api/budget/allocations${mineQ}`),
+        getJson('/api/budget/categories?mine=1'),
+        getJson('/api/budget/custom-types').catch(() => ({ types: [] })),
       ])
       setFamilyDetails(f.family || null)
       setEntities(e.entities || [])
       setCategories(c.categories || [])
-      setAllocations(a.allocations || [])
+      setCustomEntityTypes(Array.isArray(ct?.types) ? ct.types : [])
+
+      let allocationsList: any[] = []
+      try {
+        const a = await getJson(`/api/budget/allocations${mineQ}`)
+        allocationsList = a.allocations || []
+      } catch (allocErr: any) {
+        if (!isBudgetStructuralError(allocErr?.message)) throw allocErr
+        allocationsList = []
+      }
+      setAllocations(allocationsList)
     } catch (err: any) {
       const msg = err?.message || 'No se pudo cargar el presupuesto'
-      if (typeof msg === 'string' && msg.toLowerCase().includes('objeto presupuestal') || msg.toLowerCase().includes('partida presupuestal')) {
-        router.push('/setup/objects')
+      const isStructural = isBudgetStructuralError(msg)
+      if (isStructural) {
+        if (!opts.silent) setMessage(msg)
         return
       }
       if (!opts.silent) setMessage(msg)
     }
   }
 
-  async function refreshTransactions(opts: { silent?: boolean } = {}): Promise<any[] | undefined> {
+  async function refreshTransactions(opts: { silent?: boolean; mine?: boolean } = {}): Promise<any[] | undefined> {
     if (!opts.silent) setMessage('')
+    const mine = opts.mine !== false
     try {
-      const t = await getJson('/api/transactions')
+      const t = await getJson(mine ? '/api/transactions?mine=1' : '/api/transactions')
       const list = t.transactions || []
       setTransactions(list)
       if (messageRef.current.includes('DigitalOcean') || messageRef.current.includes('DO_SPACES')) setMessage('')
       return list
     } catch (err: any) {
       const msg = err?.message || 'No se pudieron cargar los gastos'
-      if (typeof msg === 'string' && msg.toLowerCase().includes('objeto presupuestal') || msg.toLowerCase().includes('partida presupuestal')) {
-        router.push('/setup/objects')
-        return
+      const isStructural = typeof msg === 'string' && (msg.toLowerCase().includes('objeto presupuestal') || msg.toLowerCase().includes('partida presupuestal'))
+      if (isStructural) {
+        setTransactions([])
+        if (!opts.silent) setMessage(msg)
+        return undefined
       }
       if (!opts.silent) setMessage(msg)
       return undefined
@@ -1077,7 +1350,7 @@ export default function UiPage() {
       })
       setMessage('Cuenta creada. Sesión iniciada.')
       await refreshMe()
-      router.push('/setup/objects')
+      go('presupuesto')
     } catch (e: any) {
       setMessage(e?.message || 'No se pudo registrar')
     }
@@ -1127,7 +1400,7 @@ export default function UiPage() {
       await refreshMe()
       await refreshMembers()
       await refreshBudget()
-      router.push('/setup/objects')
+      go('presupuesto')
     } catch (e: any) {
       setMessage(e?.message || 'No se pudo crear familia')
     }
@@ -1566,19 +1839,63 @@ export default function UiPage() {
   async function createEntity() {
     setMessage('')
     try {
-      await postJson('/api/budget/entities', {
-        type: beType,
+      const resolvedType: EntityType = beCustomTypeId ? 'OTHER' : beType
+      if (entityTypeNeedsOwnerForCreate(resolvedType)) {
+        if (!beOwnerUserId.trim()) {
+          setMessage('Un vehículo o mascota debe tener al menos un dueño: elige el integrante que corresponde.')
+          return
+        }
+      }
+      const payload: {
+        type: EntityType
+        name: string
+        participatesInBudget: boolean
+        participatesInReports: boolean
+        customTypeId?: string
+        owners?: { userId: string }[]
+      } = {
+        type: resolvedType,
         name: beName,
         participatesInBudget: beInBudget,
         participatesInReports: beInReports,
-      })
+      }
+      if (beCustomTypeId) payload.customTypeId = beCustomTypeId
+      if (entityTypeNeedsOwnerForCreate(resolvedType) && beOwnerUserId.trim()) {
+        payload.owners = [{ userId: beOwnerUserId.trim() }]
+      }
+      await postJson('/api/budget/entities', payload)
       setBeName('')
       setBeInBudget(true)
       setBeInReports(true)
+      setBeCustomTypeId(null)
+      setBeType('PERSON')
+      setBeOwnerUserId('')
       await refreshBudget()
-      setMessage('Partida creada.')
+      setMessage('Destino creado.')
     } catch (e: any) {
-      setMessage(e?.message || 'No se pudo crear la partida')
+      setMessage(e?.message || 'No se pudo crear el destino')
+    }
+  }
+
+  async function createCustomEntityType() {
+    if (!customTypeNewName.trim() || customTypeCreating) return
+    setCustomTypeCreating(true)
+    setMessage('')
+    try {
+      const res = await postJson('/api/budget/custom-types', { name: customTypeNewName.trim() })
+      const newType = (res as any)?.type
+      if (newType?.id) {
+        setCustomEntityTypes((prev) => [...prev, { id: newType.id, name: newType.name }].sort((a, b) => a.name.localeCompare(b.name)))
+        setBeType('OTHER')
+        setBeCustomTypeId(newType.id)
+        setCustomTypeNewName('')
+        setCustomTypeCreateOpen(false)
+        setMessage(`Tipo "${newType.name}" creado. Completa el nombre del destino y pulsa Crear destino.`)
+      }
+    } catch (e: any) {
+      setMessage(e?.message || 'No se pudo crear el tipo')
+    } finally {
+      setCustomTypeCreating(false)
     }
   }
 
@@ -1587,7 +1904,7 @@ export default function UiPage() {
     setMessage('')
     try {
       const isAdmin = !!meOk?.isFamilyAdmin
-      if (!isAdmin) throw new Error('Solo el administrador puede crear partidas / categorías')
+      if (!isAdmin) throw new Error('Solo el administrador puede crear destinos / categorías')
       const member = memberItems.find((m: any) => String(m?.id || '') === String(budgetWizardMemberId || ''))
       const personName = displayPersonName(member?.name || member?.email || '')
       if (!personName) throw new Error('Selecciona una persona')
@@ -1608,6 +1925,7 @@ export default function UiPage() {
               name: vehicleName,
               participatesInBudget: true,
               participatesInReports: true,
+              owners: [{ userId: String(budgetWizardMemberId) }],
             }))?.entity?.id || ''
           )
 
@@ -1631,7 +1949,7 @@ export default function UiPage() {
       setAlEntityId(vehicleId)
       if (gasolinaId) setAlCategoryId(gasolinaId)
       setAlLimit('')
-      setMessage(`Listo: ${vehicleName}. Ahora asigna el monto mensual (ej. Gasolina) y registra los gastos en esa partida.`)
+      setMessage(`Listo: ${vehicleName}. Ahora asigna el monto mensual (ej. Gasolina) en la pestaña Presupuesto y registra los gastos en ese destino.`)
     } catch (e: any) {
       setMessage(e?.message || 'No se pudo preparar el auto personal')
     } finally {
@@ -1651,62 +1969,39 @@ export default function UiPage() {
     }
   }
 
-  async function createAllocation() {
+  async function createCategoryWithName(name: string) {
     setMessage('')
     try {
-      await postJson('/api/budget/allocations', {
+      await postJson('/api/budget/categories', { type: 'EXPENSE', name })
+      await refreshBudget()
+      setMessage(`Categoría "${name}" creada.`)
+    } catch (e: any) {
+      setMessage(e?.message || 'No se pudo crear la categoría')
+    }
+  }
+
+  async function createAllocation() {
+    setMessage('')
+    const entityName = entityItems.find((e: any) => String(e.id) === String(alEntityId))?.name || 'Destino'
+    const categoryName = categoryItems.find((c: any) => String(c.id) === String(alCategoryId))?.name || 'Categoría'
+    try {
+      const res = await postJson('/api/budget/allocations', {
         entityId: alEntityId,
         categoryId: alCategoryId,
         monthlyLimit: alLimit,
       })
+      const newId = res?.id ? String(res.id) : null
       setAlLimit('')
+      setAlEntityId('')
+      setAlCategoryId('')
       await refreshBudget()
-      setMessage('Monto asignado.')
+      if (newId) {
+        setLastCreatedAllocationId(newId)
+        setTimeout(() => setLastCreatedAllocationId(null), 3200)
+      }
+      setMessage(`Asignado: ${entityName} + ${categoryName}. Aparece en el Bloque 2 · Cuentas. Puedes crear otra combinación.`)
     } catch (e: any) {
       setMessage(e?.message || 'No se pudo asignar el monto')
-    }
-  }
-
-  async function duplicateAllocation(fromAllocId: string, toEntityId: string, monthlyLimit: string) {
-    if (budgetDupBusy) return
-    setMessage('')
-    try {
-      const from = allocationItems.find((a: any) => String(a?.id || '') === String(fromAllocId || ''))
-      const fromEntityId = String(from?.entity?.id || '')
-      const fromCategoryId = String(from?.category?.id || '')
-      if (!from || !fromEntityId || !fromCategoryId) throw new Error('Cuenta origen inválida')
-      if (!toEntityId) throw new Error('Selecciona una partida destino')
-      if (String(toEntityId) === String(fromEntityId)) throw new Error('La partida destino debe ser diferente')
-
-      const clean = String(monthlyLimit || '').trim().replace(/,/g, '')
-      const n = Number(clean)
-      if (!Number.isFinite(n) || n <= 0) throw new Error('Monto mensual inválido')
-
-      const existing = allocationItems.find(
-        (a: any) => String(a?.entity?.id || '') === String(toEntityId) && String(a?.category?.id || '') === String(fromCategoryId)
-      )
-      if (existing) {
-        setBudgetModalTab('cuentas')
-        setBudgetModalAllocId(String(existing.id))
-        setMessage('Ya existía la cuenta destino. Se abrió para editar.')
-        return
-      }
-
-      setBudgetDupBusy(true)
-      const res = await postJson('/api/budget/allocations', {
-        entityId: toEntityId,
-        categoryId: fromCategoryId,
-        monthlyLimit: clean,
-      })
-      await refreshBudget()
-      setBudgetModalTab('cuentas')
-      setBudgetModalAllocId(String(res?.id || ''))
-      setBudgetDupEntityId('')
-      setMessage('Cuenta duplicada.')
-    } catch (e: any) {
-      setMessage(e?.message || 'No se pudo duplicar la cuenta')
-    } finally {
-      setBudgetDupBusy(false)
     }
   }
 
@@ -1772,9 +2067,9 @@ export default function UiPage() {
       setAdminSavingId(id)
       await patchJson(`/api/budget/entities/${id}`, patch)
       await refreshBudget({ silent: true })
-      setMessage('Partida actualizada.')
+      setMessage('Destino actualizado.')
     } catch (e: any) {
-      setMessage(e?.message || 'No se pudo actualizar la partida')
+      setMessage(e?.message || 'No se pudo actualizar el destino')
     } finally {
       setAdminSavingId(null)
     }
@@ -1784,14 +2079,14 @@ export default function UiPage() {
     if (adminSavingId) return
     setMessage('')
     try {
-      if (!confirm('¿Eliminar esta partida?')) return
+      if (!confirm('¿Eliminar este destino?')) return
       setAdminSavingId(id)
       await deleteReq(`/api/budget/entities/${id}`)
       await refreshBudget({ silent: true })
       await refreshTransactions({ silent: true })
-      setMessage('Partida eliminada.')
+      setMessage('Destino eliminado.')
     } catch (e: any) {
-      setMessage(e?.message || 'No se pudo eliminar la partida')
+      setMessage(e?.message || 'No se pudo eliminar el destino')
     } finally {
       setAdminSavingId(null)
     }
@@ -2459,8 +2754,24 @@ export default function UiPage() {
 
   const entityItems = useMemo(() => (Array.isArray(entities) ? entities : []), [entities])
   const categoryItems = useMemo(() => (Array.isArray(categories) ? categories : []), [categories])
+  const myPartidasCount = useMemo(
+    () => categoryItems.filter((c: any) => c?.userId && c?.code).length,
+    [categoryItems]
+  )
   const allocationItems = useMemo(() => (Array.isArray(allocations) ? allocations : []), [allocations])
   const memberItems = useMemo(() => (Array.isArray(members) ? members : []), [members])
+
+  const usuariosFilteredMembers = useMemo(() => {
+    const q = usuariosSearchQuery.trim().toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
+    if (!q) return memberItems
+    return memberItems.filter((m: any) => {
+      const name = String(m?.name ?? '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
+      const email = String(m?.email ?? '').toLowerCase()
+      const phone = String(m?.phone ?? '').replace(/\D/g, '')
+      const qNorm = q.replace(/\D/g, '')
+      return name.includes(q) || email.includes(q) || (qNorm.length >= 4 && phone.includes(qNorm))
+    })
+  }, [memberItems, usuariosSearchQuery])
 
   const myPersonEntityId = useMemo(() => {
     if (!meOk?.user) return null
@@ -2509,7 +2820,7 @@ export default function UiPage() {
         .filter((e: any) => e?.isActive !== false)
         .map((e: any) => ({
           id: String(e.id || ''),
-          name: displayPersonName(e.name || 'Partida'),
+          name: displayPersonName(e.name || 'Destino'),
           type: entityTypeLabel(e.type),
           inBudget: !!e.participatesInBudget,
           inReports: !!e.participatesInReports,
@@ -2659,11 +2970,33 @@ export default function UiPage() {
     didAutoScrollBudgetRef.current = true
     const id = setTimeout(() => {
       if (!meOk?.isFamilyAdmin) return
-      setBudgetModalOpen(true)
-      setBudgetModalTab('objetos')
+      if (!setupChecklist.hasObject) setBudgetModalTab('objetos')
+      else if (!setupChecklist.hasCategory) setBudgetModalTab('categorias')
+      else setBudgetModalTab('montos')
+      try {
+        document.getElementById('presupuesto-b1-config')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      } catch {
+        // ignore
+      }
     }, 80)
     return () => clearTimeout(id)
-  }, [meOk?.isFamilyAdmin, setupChecklist.needsSetup, view])
+  }, [meOk?.isFamilyAdmin, setupChecklist.needsSetup, setupChecklist.hasCategory, setupChecklist.hasAllocation, setupChecklist.hasObject, view])
+
+  useEffect(() => {
+    if (budgetModalTab !== 'montos') return
+    const selectableEntities = meOk?.isFamilyAdmin
+      ? entityItems.filter((e: any) => e?.isActive !== false && e?.participatesInBudget !== false)
+      : entityItems.filter((e: any) => e?.isActive !== false && e?.participatesInBudget !== false && (meOk?.ownedEntityIds || []).includes(String(e.id)))
+    const selectableCategories = categoryItems.filter((c: any) => c?.isActive !== false)
+    if (selectableEntities.length === 1 && selectableCategories.length === 1) {
+      setAlEntityId(String(selectableEntities[0]?.id || ''))
+      setAlCategoryId(String(selectableCategories[0]?.id || ''))
+    }
+  }, [budgetModalTab, entityItems, categoryItems, meOk?.isFamilyAdmin, meOk?.ownedEntityIds])
+
+  useEffect(() => {
+    setAllocationShowAllCategories(false)
+  }, [alEntityId])
 
   const selectedTx = useMemo(() => {
     if (!selectedTxId) return null
@@ -3912,17 +4245,26 @@ export default function UiPage() {
   }, [allocationItems, budgetModalAllocId])
 
   useEffect(() => {
-    if (!budgetModalOpen) return
+    if (view !== 'presupuesto') return
     if (budgetModalAllocId && budgetAccounts.some((a) => String(a.id) === String(budgetModalAllocId))) return
     if (budgetAccounts.length) setBudgetModalAllocId(String(budgetAccounts[0]!.id))
-  }, [budgetAccounts, budgetModalAllocId, budgetModalOpen])
+  }, [budgetAccounts, budgetModalAllocId, view])
+
+  useEffect(() => {
+    if (!lastCreatedAllocationId || !allocationItems.some((a: any) => String(a?.id) === String(lastCreatedAllocationId))) return
+    const t = setTimeout(() => {
+      const el = document.querySelector(`[data-allocation-id="${lastCreatedAllocationId}"]`)
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }, 120)
+    return () => clearTimeout(t)
+  }, [lastCreatedAllocationId, allocationItems])
 
   const pageInfo = useMemo(() => {
     switch (view) {
       case 'dashboard':
         return { title: 'Dashboard', subtitle: '' }
       case 'presupuesto':
-        return { title: 'Presupuesto', subtitle: 'List Report: filtros + tabla + panel de estado' }
+        return { title: 'Presupuesto', subtitle: 'Destino → Categoría → Presupuesto, cuentas y análisis' }
       case 'transacciones':
         return { title: 'Transacciones', subtitle: 'Registro de gastos y recibos' }
       case 'calendario':
@@ -3930,9 +4272,16 @@ export default function UiPage() {
       case 'usuarios':
         return { title: 'Usuarios', subtitle: 'Administración de usuarios de la familia' }
       case 'configuracion':
-        return { title: 'Configuración', subtitle: 'Familias, sesión y estado del plan' }
+        return {
+          title: 'Configuración',
+          subtitle: 'Integrantes, destinos, cosas y reglas de familia — luego Presupuesto para montos y cuentas',
+        }
       case 'solicitudes':
         return { title: 'Solicitudes de efectivo o pago', subtitle: 'Solicita efectivo o pago de servicios (colegiatura, cine, préstamo). Crear y gestionar aquí o por WhatsApp.' }
+      case 'documentos':
+        return { title: 'Mis documentos', subtitle: 'Identificaciones, actas, vehículos, recetas y prescripciones en digital' }
+      case 'cosas':
+        return { title: 'Mis cosas', subtitle: 'Dispositivos, auto, bicicleta, servicios: datos, mantenimiento y facturas' }
       case 'tx':
         return { title: 'Detalle de transacción', subtitle: '' }
       default:
@@ -3960,21 +4309,38 @@ export default function UiPage() {
   }
 
   function openBudgetModal(pickAllocationId?: string, tab?: 'cuentas' | 'objetos' | 'categorias' | 'montos') {
-    setBudgetModalOpen(true)
-    setBudgetModalTab(tab ?? (pickAllocationId ? 'montos' : 'cuentas'))
+    go('presupuesto')
+    if (tab && tab !== 'cuentas') setBudgetModalTab(tab)
+    else if (!pickAllocationId && !tab) setBudgetModalTab('montos')
     setBudgetModalSearch('')
+    getJson('/api/budget/custom-types').then((r: any) => setCustomEntityTypes(Array.isArray(r?.types) ? r.types : [])).catch(() => {})
     if (pickAllocationId) {
       setBudgetModalAllocId(String(pickAllocationId))
+      setTimeout(() => {
+        try {
+          presupuestoCuentasRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        } catch {
+          document.getElementById('presupuesto-b2-cuentas')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }, 80)
       return
     }
     if (budgetAccounts.length) setBudgetModalAllocId(String(budgetAccounts[0]!.id))
+    if (tab === 'cuentas') {
+      setTimeout(() => {
+        try {
+          presupuestoCuentasRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        } catch {
+          document.getElementById('presupuesto-b2-cuentas')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }, 80)
+    }
   }
 
   function closeBudgetModal() {
-    setBudgetModalOpen(false)
+    go('dashboard')
+    setBudgetReturnToIntegranteUserId(null)
     setBudgetWizardBusy(false)
-    setBudgetDupBusy(false)
-    setBudgetDupEntityId('')
     setEntityOwnersOpen(false)
     setEntityOwnersEntityId('')
     setEntityOwnersSelected([])
@@ -4255,10 +4621,15 @@ export default function UiPage() {
           {meOk && activeFamilyId ? (
               <span
                 className={`pill sapPillSetup ${setupChecklist.needsSetup ? 'pillWarn' : 'pillOk'}`}
-                title={`Partidas: ${setupChecklist.objectCount} • Categorías: ${setupChecklist.categoryCount} • Montos: ${setupChecklist.allocationCount}`}
+                title={`Destinos: ${setupChecklist.objectCount} • Categorías: ${setupChecklist.categoryCount} • Cuentas: ${setupChecklist.allocationCount}`}
               >
                 Setup: {setupChecklist.needsSetup ? 'Pendiente' : 'Listo'}
               </span>
+          ) : null}
+          {showBuildSignal && buildVersion ? (
+            <span className="pill pillOk" title="Versión del deploy (añade ?signal=1 a la URL para verla)">
+              Build: {buildVersion}
+            </span>
           ) : null}
           {meOk && activeFamilyId ? (
             <label className="sapHeaderSearchWrap" style={{ margin: 0, minWidth: 140, maxWidth: 220 }}>
@@ -4281,7 +4652,7 @@ export default function UiPage() {
             {meOk ? (meOk.user.name || 'Perfil') : 'Perfil'}
           </span>
           {meOk ? (
-            <button className="btn btnDanger btnSm" onClick={logout}>
+            <button type="button" className="btn btnGhost btnSm sapHeaderLogout" onClick={logout}>
               Cerrar sesión
             </button>
           ) : null}
@@ -4335,6 +4706,26 @@ export default function UiPage() {
                   >
                     Reportes
                   </button>
+                  <button className={`mobileNavItem ${view === 'documentos' ? 'mobileNavItemActive' : ''}`} onClick={() => go('documentos')}>
+                    Mis documentos
+                  </button>
+                  <button className={`mobileNavItem ${view === 'cosas' ? 'mobileNavItemActive' : ''}`} onClick={() => go('cosas')}>
+                    Mis cosas
+                  </button>
+                </div>
+              </div>
+              <div className="mobileNavGroup">
+                <div className="mobileNavGroupTitle">Configuración</div>
+                <div className="mobileNavGroupItems">
+                  <button
+                    className="mobileNavItem"
+                    onClick={() => {
+                      setMobileNavOpen(false)
+                      router.push('/setup/objects')
+                    }}
+                  >
+                    Entidades
+                  </button>
                 </div>
               </div>
               <div className="mobileNavGroup">
@@ -4351,15 +4742,6 @@ export default function UiPage() {
               <div className="mobileNavGroup">
                 <div className="mobileNavGroupTitle">Más</div>
                 <div className="mobileNavGroupItems">
-                  <button
-                    className="mobileNavItem"
-                    onClick={() => {
-                      setMobileNavOpen(false)
-                      router.push('/setup/objects')
-                    }}
-                  >
-                    Partidas
-                  </button>
                   <button
                     className="mobileNavItem"
                     onClick={() => {
@@ -4621,7 +5003,7 @@ export default function UiPage() {
               <h2 id="modal-solicitud-efectivo-title" className="cardTitle" style={{ margin: 0 }}>
                 Solicitud de efectivo
               </h2>
-              <p className="cardDesc muted" style={{ marginTop: 4 }}>Motivo, monto y partida. Revisa en Solicitudes o por WhatsApp.</p>
+              <p className="cardDesc muted" style={{ marginTop: 4 }}>Motivo, monto y destino. Revisa en Solicitudes o por WhatsApp.</p>
             </div>
             <div className="cardBody">
               {solicitudEfectivoDone ? (
@@ -4657,7 +5039,7 @@ export default function UiPage() {
                       />
                     </label>
                     <label>
-                      Partida
+                      Cuenta (destino + categoría)
                       <select
                         className="input"
                         value={solicitudEfectivoAllocationId}
@@ -4757,8 +5139,17 @@ export default function UiPage() {
             <button className={`sapNavItem ${view === 'solicitudes' ? 'sapNavItemActive' : ''}`} onClick={() => go('solicitudes')}>
               Solicitudes
             </button>
+            <button className={`sapNavItem ${view === 'documentos' ? 'sapNavItemActive' : ''}`} onClick={() => go('documentos')}>
+              Mis documentos
+            </button>
+            <button className={`sapNavItem ${view === 'cosas' ? 'sapNavItemActive' : ''}`} onClick={() => go('cosas')}>
+              Mis cosas
+            </button>
+            <div className="muted" style={{ fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: 12, marginTop: 'var(--space-12)' }}>
+              Configuración
+            </div>
             <button className="sapNavItem" onClick={() => router.push('/setup/objects')}>
-              Partidas
+              Entidades
             </button>
             <button className="sapNavItem" onClick={() => router.push('/ui/system-architecture')}>
               Arquitectura
@@ -4766,7 +5157,7 @@ export default function UiPage() {
           </nav>
         </aside>
 
-        <section className={`sapContent ${view === 'usuarios' ? 'viewUsuarios' : ''} ${view === 'calendario' ? 'viewCalendario' : ''}`}>
+        <section className={`sapContent ${view === 'usuarios' ? 'viewUsuarios' : ''} ${view === 'calendario' ? 'viewCalendario' : ''} ${view === 'presupuesto' ? 'viewPresupuesto' : ''}`}>
           <div className="pageHead">
             <div>
               <h1 className="pageTitle">{pageInfo.title}</h1>
@@ -4778,7 +5169,7 @@ export default function UiPage() {
           </div>
 
           {message ? (
-            <div className="alert" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+            <div className="alert alertMessage" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
               <span style={{ flex: 1, minWidth: 0 }}>{message}</span>
               {(message.includes('DigitalOcean') || message.includes('DO_SPACES')) ? (
                 <button type="button" className="btn btnGhost btnSm" onClick={() => setMessage('')} aria-label="Cerrar aviso">
@@ -5016,7 +5407,7 @@ export default function UiPage() {
                         <div>
                           <h3 className="chartTitle" style={{ margin: 0 }}>Bienvenido a DOMUS</h3>
                           <p className="muted" style={{ marginTop: 6, marginBottom: 0 }}>
-                            Aquí puedes registrar gastos, subir comprobantes, ver transacciones y gestionar el presupuesto de tu familia. Usa el menú para navegar. Si eres admin, configura partidas y categorías en Presupuesto.
+                            Aquí puedes registrar gastos, subir comprobantes, ver transacciones y gestionar el presupuesto de tu familia. Usa el menú para navegar. Si eres admin, configura destinos y categorías en Presupuesto.
                           </p>
                         </div>
                         <button
@@ -5118,19 +5509,19 @@ export default function UiPage() {
                             Para empezar (flujo)
                           </h3>
                           <div className="sectionRow">
-                            <span className={`pill ${setupChecklist.hasObject ? 'pillOk' : 'pillWarn'}`}>Partidas: {setupChecklist.objectCount}</span>
+                            <span className={`pill ${setupChecklist.hasObject ? 'pillOk' : 'pillWarn'}`}>Destinos: {setupChecklist.objectCount}</span>
                             <span className={`pill ${setupChecklist.hasCategory ? 'pillOk' : 'pillWarn'}`}>Categorías: {setupChecklist.categoryCount}</span>
-                            <span className={`pill ${setupChecklist.hasAllocation ? 'pillOk' : 'pillWarn'}`}>Montos: {setupChecklist.allocationCount}</span>
+                            <span className={`pill ${setupChecklist.hasAllocation ? 'pillOk' : 'pillWarn'}`}>Cuentas: {setupChecklist.allocationCount}</span>
                           </div>
                         </div>
                         <div className="spacer8" />
                         <div className="muted">
-                          1) Crea al menos 1 <b>partida</b> • 2) Crea <b>categorías</b> • 3) Asigna <b>montos</b> • 4) Confirma el plan.
+                          1) Al menos 1 <b>destino</b> • 2) <b>Categorías</b> • 3) Asigna <b>presupuesto</b> (pestaña Presupuesto) • 4) Confirma el plan.
                         </div>
                         <div className="spacer8" />
                         <div className="sectionRow">
-                          <button className="btn btnPrimary btnSm" onClick={() => router.push('/setup/objects')}>
-                            Ir a Partidas
+                          <button className="btn btnPrimary btnSm" onClick={() => go('configuracion')}>
+                            Ir a Configuración
                           </button>
                           <button className="btn btnGhost btnSm" onClick={() => go('presupuesto')}>
                             Ir a Presupuesto
@@ -5398,7 +5789,7 @@ export default function UiPage() {
                         </div>
 
                         <div className="reportsToolbarFilters" role="group" aria-label="Filtros">
-                          <div className="reportsFilterItem" title="Cuenta (persona o partida)">
+                          <div className="reportsFilterItem" title="Cuenta (persona o destino)">
                             <span>Cuenta</span>
                             <select className="select selectXs" value={fltEntityId} onChange={(e) => setFltEntityId(e.target.value)}>
                               <option value="all">Todas</option>
@@ -5427,7 +5818,7 @@ export default function UiPage() {
                                       </optgroup>
                                     ) : null}
                                     {other.length ? (
-                                      <optgroup label="Partidas">
+                                      <optgroup label="Destinos">
                                         {other.map((o: any) => (
                                           <option key={o.id} value={o.id}>
                                             {entityTypeLabel(o.type)}: {o.name}
@@ -5625,7 +6016,7 @@ export default function UiPage() {
                               </select>
                             </label>
                             <label>
-                              Partida
+                              Destino
                               <select className="select" value={fltEntityId} onChange={(e) => setFltEntityId(e.target.value)}>
                                 <option value="all">Todos</option>
                                 {entityItems
@@ -5661,9 +6052,9 @@ export default function UiPage() {
                               background: 'rgba(245, 158, 11, 0.08)',
                             }}
                           >
-                            <div className="subTitle">Partida excluida de reportes</div>
+                            <div className="subTitle">Destino excluido de reportes</div>
                             <div className="muted" style={{ marginTop: 6 }}>
-                              Esta partida está marcada como “no participa en reportes”. Inclúyela para verla aquí.
+                              Este destino está marcado como “no participa en reportes”. Inclúyelo para verlo aquí.
                             </div>
                             <div className="spacer8" />
                             <button
@@ -5692,9 +6083,9 @@ export default function UiPage() {
                               background: 'rgba(245, 158, 11, 0.08)',
                             }}
                           >
-                            <div className="subTitle">Partida excluida de reportes</div>
+                            <div className="subTitle">Destino excluido de reportes</div>
                             <div className="muted" style={{ marginTop: 6 }}>
-                              Esta partida está marcada como “no participa en reportes”. Inclúyela para verla aquí.
+                              Este destino está marcado como “no participa en reportes”. Inclúyelo para verlo aquí.
                             </div>
                             <div className="spacer8" />
                             <button
@@ -5720,7 +6111,7 @@ export default function UiPage() {
                                     Presupuesto (según filtros)
                                   </h3>
                                   <div className="muted" style={{ marginTop: 6 }}>
-                                    Presupuesto = límite configurado de la partida/categoría. Gastado = transacciones filtradas (usuario/recibos/rango).
+                                    Presupuesto = límite configurado del destino/categoría. Gastado = transacciones filtradas (usuario/recibos/rango).
                                   </div>
                                 </div>
                               </div>
@@ -5767,18 +6158,21 @@ export default function UiPage() {
                                           <div className="sectionRow" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
                                             <label style={{ minWidth: 240, flex: 1 }}>
                                               Monto mensual
-                                              <input
-                                                className="input"
-                                                inputMode="decimal"
-                                                value={draft}
-                                                disabled={!meOk?.isFamilyAdmin || adminSavingId === id}
-                                                onChange={(ev) =>
-                                                  setAllocationLimitDraft((prev) => ({
-                                                    ...prev,
-                                                    [id]: ev.target.value,
-                                                  }))
-                                                }
-                                              />
+                                              <span className="budgetAmountInputWrap">
+                                                <span className="budgetAmountPrefix" aria-hidden="true">{currency === 'MXN' ? '$' : currency} </span>
+                                                <input
+                                                  className="input"
+                                                  inputMode="decimal"
+                                                  value={draft}
+                                                  disabled={!meOk?.isFamilyAdmin || adminSavingId === id}
+                                                  onChange={(ev) =>
+                                                    setAllocationLimitDraft((prev) => ({
+                                                      ...prev,
+                                                      [id]: ev.target.value,
+                                                    }))
+                                                  }
+                                                />
+                                              </span>
                                             </label>
                                             <button
                                               className="btn btnPrimary btnSm"
@@ -5809,7 +6203,7 @@ export default function UiPage() {
                                 <>
                                   <div className="spacer8" />
                                   <div className="muted">
-                                    Tip: para editar aquí, selecciona un <b>Partida</b> y una <b>Categoría</b> específicos.
+                                    Tip: para editar aquí, selecciona un <b>destino</b> y una <b>categoría</b> concretos.
                                   </div>
                                 </>
                               )}
@@ -6194,7 +6588,7 @@ export default function UiPage() {
                                   role="tab"
                                   aria-selected={reportsTableTab === 'objetos'}
                                 >
-                                  Partidas
+                                  Destinos
                                 </button>
                                 <button
                                   className={`tabBtn ${reportsTableTab === 'usuarios' ? 'tabBtnActive' : ''}`}
@@ -6244,7 +6638,7 @@ export default function UiPage() {
                                 <table className="table">
                                   <thead>
                                     <tr>
-                                      <th>Partida</th>
+                                      <th>Destino</th>
                                       <th>Presup.</th>
                                       <th>Gastado</th>
                                       <th>Disp.</th>
@@ -6304,72 +6698,127 @@ export default function UiPage() {
 
               {view === 'presupuesto' ? (
                 <>
-                  {budgetModalOpen ? (
-                    <div className="modalOverlay modalOverlayFull modalOverlayOpaque" onClick={closeBudgetModal}>
-                      <div className="modalPanel budgetStudioPanel" onClick={(e) => e.stopPropagation()}>
-                        <button className="btn btnGhost btnSm modalMenuBtn" type="button" onClick={() => { closeBudgetModal(); setMobileNavOpen(true); }} title="Abrir menú">
-                          Menú
-                        </button>
-                        <button className="btn btnDanger btnSm modalClose" onClick={closeBudgetModal} type="button" aria-label="Cerrar">
-                          Cerrar
-                        </button>
-                        <div className="modalToolbar budgetStudioToolbar">
+                  {meOk ? (
+                    <div className="budgetStudioPageRoot" role="region" aria-label="Presupuesto">
+                      <div className="modalPanel budgetStudioPanel budgetStudioPanelInline">
+                        <div className="budgetStudioTopBar">
+                          <button className="btn btnGhost btnSm modalMenuBtn" type="button" onClick={() => setMobileNavOpen(true)} title="Abrir menú">
+                            Menú
+                          </button>
+                          {!entityOwnersOpen ? (
+                            <button className="btn btnGhost btnSm modalClose" onClick={() => go('dashboard')} type="button" aria-label="Volver al inicio">
+                              Inicio
+                            </button>
+                          ) : null}
+                        </div>
+                        <div className="modalToolbar budgetStudioToolbar" id="presupuesto-b1-config">
                           <div className="sectionRow" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
-                            <div>
+                            <div style={{ maxWidth: 560 }}>
+                              <p className="muted" style={{ margin: '0 0 4px 0', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 800 }}>
+                                Bloque 1 · Configuración
+                              </p>
                               <h2 className="cardTitle" style={{ margin: 0 }}>
-                                Presupuesto
+                                Presupuesto familiar
                               </h2>
-                              <div className="muted">Editar cuentas, partidas, categorías y montos desde un solo lugar</div>
+                              <p className="muted" style={{ margin: '6px 0 0 0', lineHeight: 1.45 }}>
+                                Flujo único: <b>Destino</b> → <b>Categoría</b> → <b>Presupuesto</b> (aquí defines el tope y <b>creas</b> la cuenta). Más abajo, <b>Cuentas</b> sirve solo para ver y ajustar límites ya creados.
+                              </p>
+                              <p className="muted" style={{ margin: '10px 0 0 0', fontSize: 13, lineHeight: 1.45, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+                                <span>Orden sugerido: integrantes y destinos (y Mis cosas) desde</span>
+                                <button type="button" className="btn btnGhost btnSm" onClick={() => go('configuracion')}>
+                                  Configuración
+                                </button>
+                                <span className="muted">; aquí solo montos y cuentas.</span>
+                              </p>
+                              <details className="muted" style={{ marginTop: 10, fontSize: 12 }}>
+                                <summary style={{ cursor: 'pointer', fontWeight: 600 }}>¿Qué es qué?</summary>
+                                <ul style={{ margin: '8px 0 0 0', paddingLeft: 18 }}>
+                                  <li><b>Destinos:</b> a quién o a qué asignas dinero (personas, casa, auto…).</li>
+                                  <li><b>Categorías:</b> tipos de gasto (supermercado, luz, gasolina…).</li>
+                                  <li><b>Asignar presupuesto:</b> destino + categoría + monto mensual = nueva <b>cuenta</b> (único lugar donde se crea vía el formulario).</li>
+                                  <li><b>Cuentas (bloque 2):</b> listado de cuentas ya existentes; edita límites, no crees nuevas aquí.</li>
+                                </ul>
+                                <div className="budgetExampleInstructivo">
+                                  <div className="budgetExampleTitle">Ejemplo</div>
+                                  <div className="budgetExampleFlow">
+                                    <div className="budgetExampleBlock">
+                                      <div className="budgetExampleBlockLabel">Destino</div>
+                                      <div className="budgetExampleBlockValue">Diego (Persona)</div>
+                                      <div className="budgetExampleArrow" aria-hidden="true">↓</div>
+                                      <div className="budgetExampleDesc">A qué o a quién asignas (persona, casa, auto…).</div>
+                                    </div>
+                                    <div className="budgetExampleArrowRight" aria-hidden="true">→</div>
+                                    <div className="budgetExampleBlock">
+                                      <div className="budgetExampleBlockLabel">Categoría</div>
+                                      <div className="budgetExampleBlockValue">Supermercado</div>
+                                      <div className="budgetExampleArrow" aria-hidden="true">↓</div>
+                                      <div className="budgetExampleDesc">Tipo de gasto (super, luz, gasolina…).</div>
+                                    </div>
+                                    <div className="budgetExampleArrowRight" aria-hidden="true">→</div>
+                                    <div className="budgetExampleBlock">
+                                    <div className="budgetExampleBlockLabel">Presupuesto</div>
+                                    <div className="budgetExampleBlockValue">{formatMoney(5000, currency)}/mes</div>
+                                    <div className="budgetExampleArrow" aria-hidden="true">↓</div>
+                                    <div className="budgetExampleDesc">Tope mensual (en la pestaña Presupuesto).</div>
+                                    </div>
+                                    <div className="budgetExampleArrowRight" aria-hidden="true">→</div>
+                                    <div className="budgetExampleBlock budgetExampleBlockResult">
+                                      <div className="budgetExampleBlockLabel">Cuenta</div>
+                                      <div className="budgetExampleBlockValue">Diego + Super → {formatMoney(5000, currency)}</div>
+                                      <div className="budgetExampleArrow" aria-hidden="true">↓</div>
+                                      <div className="budgetExampleDesc">Donde ves gastado y disponible.</div>
+                                    </div>
+                                  </div>
+                                  <div className="budgetExampleShare">
+                                    <a href="/presupuesto-instructivo" target="_blank" rel="noopener noreferrer" className="budgetExampleShareLink">
+                                      Compartir instructivo (enlace para WhatsApp)
+                                    </a>
+                                  </div>
+                                </div>
+                              </details>
                             </div>
                           </div>
 
                           <div className="spacer8" />
 
                           <div className="sectionRow" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
-                            <div className="tabRow" role="tablist" aria-label="Tabs de presupuesto">
-                              <button
-                                className={`tabBtn ${budgetModalTab === 'cuentas' ? 'tabBtnActive' : ''}`}
-                                onClick={() => setBudgetModalTab('cuentas')}
-                                type="button"
-                                role="tab"
-                                aria-selected={budgetModalTab === 'cuentas'}
-                              >
-                                Cuentas
-                              </button>
-                              <button
+                            <div className="budgetTabsByFrequency" role="tablist" aria-label="Pasos de configuración">
+                              <div className="tabRow tabRowConfig" role="group" aria-label="Destino categoría y presupuesto">
+                                <button
                                   className={`tabBtn ${budgetModalTab === 'objetos' ? 'tabBtnActive' : ''}`}
                                   onClick={() => setBudgetModalTab('objetos')}
-                                type="button"
-                                role="tab"
-                                aria-selected={budgetModalTab === 'objetos'}
-                              >
-                                  Partidas
-                              </button>
-                              <button
-                                className={`tabBtn ${budgetModalTab === 'categorias' ? 'tabBtnActive' : ''}`}
-                                onClick={() => setBudgetModalTab('categorias')}
-                                type="button"
-                                role="tab"
-                                aria-selected={budgetModalTab === 'categorias'}
-                              >
-                                Categorías
-                              </button>
-                              <button
-                                className={`tabBtn ${budgetModalTab === 'montos' ? 'tabBtnActive' : ''}`}
-                                onClick={() => setBudgetModalTab('montos')}
-                                type="button"
-                                role="tab"
-                                aria-selected={budgetModalTab === 'montos'}
-                              >
-                                Montos
-                              </button>
+                                  type="button"
+                                  role="tab"
+                                  aria-selected={budgetModalTab === 'objetos'}
+                                >
+                                  Destinos
+                                </button>
+                                <button
+                                  className={`tabBtn ${budgetModalTab === 'categorias' ? 'tabBtnActive' : ''}`}
+                                  onClick={() => setBudgetModalTab('categorias')}
+                                  type="button"
+                                  role="tab"
+                                  aria-selected={budgetModalTab === 'categorias'}
+                                >
+                                  Categorías
+                                </button>
+                                <button
+                                  className={`tabBtn ${budgetModalTab === 'montos' ? 'tabBtnActive' : ''}`}
+                                  onClick={() => setBudgetModalTab('montos')}
+                                  type="button"
+                                  role="tab"
+                                  aria-selected={budgetModalTab === 'montos'}
+                                >
+                                  Presupuesto
+                                </button>
+                              </div>
                             </div>
 
                             <div className="sectionRow" style={{ flexWrap: 'wrap' }}>
                               <span className="pill">Año: {budgetConcentrado.year}</span>
-                              <span className={`pill ${setupChecklist.hasObject ? 'pillOk' : 'pillWarn'}`}>Partidas: {setupChecklist.objectCount}</span>
+                              <span className={`pill ${setupChecklist.hasObject ? 'pillOk' : 'pillWarn'}`}>Destinos: {setupChecklist.objectCount}</span>
                               <span className={`pill ${setupChecklist.hasCategory ? 'pillOk' : 'pillWarn'}`}>Categorías: {setupChecklist.categoryCount}</span>
-                              <span className={`pill ${setupChecklist.hasAllocation ? 'pillOk' : 'pillWarn'}`}>Montos: {setupChecklist.allocationCount}</span>
+                              <span className={`pill ${setupChecklist.hasAllocation ? 'pillOk' : 'pillWarn'}`}>Cuentas: {setupChecklist.allocationCount}</span>
                             </div>
                           </div>
                         </div>
@@ -6378,19 +6827,19 @@ export default function UiPage() {
                           {!meOk.isFamilyAdmin ? (
                             <div className="sectionRow" style={{ flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
                               <div className="muted">
-                                Tu usuario no es <b>Admin</b>. Puedes ver el presupuesto, pero no editarlo. Pide al Admin que te cambie el rol en “Usuarios”.
+                                No eres <b>Admin</b>. Puedes ver el presupuesto y crear o ajustar límites en tus destinos (los que te asignaron como responsable en Destinos → Responsables). Pide al Admin que te cambie el rol en “Usuarios”.
                               </div>
                               <label className="sectionRow" style={{ alignItems: 'center', gap: 6, cursor: 'pointer' }}>
                                 <input
                                   type="checkbox"
-                                  checked={soloMisPartidas}
+                                  checked={soloMisDestinos}
                                   onChange={(e) => {
                                     const next = e.target.checked
-                                    setSoloMisPartidas(next)
+                                    setSoloMisDestinos(next)
                                     refreshBudget({ mine: next, silent: true })
                                   }}
                                 />
-                                <span style={{ fontSize: 13 }}>Solo mis partidas</span>
+                                <span style={{ fontSize: 13 }}>Solo mis destinos</span>
                               </label>
                               {!suggestionOpen ? (
                                 <button type="button" className="btn btnGhost btnSm" onClick={() => setSuggestionOpen(true)}>
@@ -6477,7 +6926,7 @@ export default function UiPage() {
 
                               {(() => {
                                 const ent = entityItems.find((x: any) => String(x?.id || '') === String(entityOwnersEntityId || ''))
-                                if (!ent) return <div className="muted">Partida no encontrada.</div>
+                                if (!ent) return <div className="muted">Destino no encontrado.</div>
 
                                 const pctSum =
                                   entityOwnersMode === 'percent'
@@ -6633,378 +7082,38 @@ export default function UiPage() {
                           </div>
                         ) : null}
 
-                        {budgetModalTab === 'cuentas' ? (
-                          <div className="budgetManageGrid">
-                            <div className="chartBox">
-                              <div className="sectionRow" style={{ justifyContent: 'space-between', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                                <div>
-                                  <h3 className="chartTitle" style={{ margin: 0 }}>
-                                    Cuentas del presupuesto
-                                  </h3>
-                                  <div className="muted" style={{ marginTop: 6 }}>
-                                    Haz clic en un renglón para abrirlo y editarlo.
-                                  </div>
-                                </div>
-                                <label style={{ maxWidth: 260 }}>
-                                  Buscar
-                                  <input
-                                    className="input inputSm"
-                                    placeholder="Ej. supermercado, colegiaturas, casa…"
-                                    value={budgetModalSearch}
-                                    onChange={(e) => setBudgetModalSearch(e.target.value)}
-                                  />
-                                </label>
-                              </div>
-
-                              <div className="spacer8" />
-
-                              {budgetModalAccounts.length ? (
-                                <div className="budgetListScroll">
-                                  <table className="table">
-                                    <thead>
-                                      <tr>
-                                        <th>Cuenta</th>
-                                        <th style={{ textAlign: 'right' }}>Presupuesto</th>
-                                        <th style={{ textAlign: 'right' }}>Gastado</th>
-                                        <th style={{ textAlign: 'right' }}>Disponible</th>
-                                        <th style={{ textAlign: 'center' }}>Estado</th>
-                                        <th title="Se define por el tipo de partida (Persona = Individual; otros = Compartido)">Tipo (auto)</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {budgetModalAccounts.map((a: any) => {
-                                        const selected = String(budgetModalAllocId || '') === String(a.id)
-                                        return (
-                                          <tr
-                                            key={a.id}
-                                            onClick={() => setBudgetModalAllocId(String(a.id))}
-                                            style={{
-                                              cursor: 'pointer',
-                                              background: selected ? 'rgba(15, 61, 145, 0.06)' : undefined,
-                                            }}
-                                          >
-                                            <td style={{ fontWeight: 950 }}>
-                                              {a.categoryName}
-                                              <div className="muted" style={{ fontWeight: 800, marginTop: 2 }}>
-                                                {a.entityName} ({entityTypeLabel(a.entityType)})
-                                              </div>
-                                            </td>
-                                            <td style={{ fontWeight: 900, textAlign: 'right' }}>{formatMoney(Number(a.budget), currency)}</td>
-                                            <td className="muted" style={{ textAlign: 'right' }}>
-                                              {formatMoney(Number(a.spent), currency)}
-                                            </td>
-                                            <td style={{ fontWeight: 900, textAlign: 'right' }}>{formatMoney(Number(a.remaining), currency)}</td>
-                                            <td style={{ textAlign: 'center' }}>
-                                              <span className={`pill ${a.status === 'OK' ? 'pillOk' : a.status === 'Over' ? 'pillBad' : 'pillWarn'}`}>
-                                                {a.status === 'OK' ? 'OK' : a.status === 'Over' ? 'En rojo' : 'Pendiente'}
-                                              </span>
-                                            </td>
-                                            <td className="muted">{a.type}</td>
-                                          </tr>
-                                        )
-                                      })}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              ) : (
-                                <div className="muted">No hay resultados.</div>
-                              )}
-                            </div>
-
-                            <div className="chartBox">
-                              <h3 className="chartTitle" style={{ margin: 0 }}>
-                                Editar cuenta
-                              </h3>
-                              <div className="spacer8" />
-                              {(() => {
-                                const acc = budgetModalSelectedAccount as any
-                                const alloc = budgetModalSelectedAlloc as any
-                                if (!acc || !alloc) return <div className="muted">Selecciona una cuenta del listado.</div>
-
-                                const draft = allocationLimitDraft[String(alloc.id)] ?? String(alloc.monthlyLimit || '')
-                                const changed = draft.trim() !== String(alloc.monthlyLimit || '')
-                                const nMonthly = Number(draft)
-                                const annual = (Number.isFinite(nMonthly) ? nMonthly : 0) * 12
-                                return (
-                                  <>
-                                    <div className="sectionRow" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
-                                      <div>
-                                        <div style={{ fontWeight: 950, fontSize: 16 }}>{acc.categoryName}</div>
-                                        <div className="muted" style={{ fontWeight: 850, marginTop: 4 }}>
-                                          {acc.entityName} ({entityTypeLabel(acc.entityType)}) • {acc.type}
-                                        </div>
-                                      </div>
-                                      <span className={`pill ${acc.status === 'OK' ? 'pillOk' : acc.status === 'Over' ? 'pillBad' : 'pillWarn'}`}>
-                                        {acc.status === 'OK' ? 'OK' : acc.status === 'Over' ? 'En rojo' : 'Pendiente'}
-                                      </span>
-                                    </div>
-
-                                    <div className="spacer12" />
-
-                                    <div className="cardSub" style={{ padding: 12 }}>
-                                      <div className="subTitle">Ajuste de presupuesto</div>
-                                      <div className="spacer8" />
-                                      <div className="sectionRow" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
-                                        <label style={{ minWidth: 220, flex: 1 }}>
-                                          Monto mensual (obligatorio)
-                                          <input
-                                            className="input"
-                                            inputMode="decimal"
-                                            value={draft}
-                                            disabled={!meOk.isFamilyAdmin || adminSavingId === String(alloc.id)}
-                                            onChange={(ev) =>
-                                              setAllocationLimitDraft((prev) => ({
-                                                ...prev,
-                                                [String(alloc.id)]: ev.target.value,
-                                              }))
-                                            }
-                                          />
-                                        </label>
-                                        <button
-                                          className="btn btnPrimary btnSm"
-                                          disabled={!meOk.isFamilyAdmin || adminSavingId === String(alloc.id) || !changed}
-                                          onClick={() => patchBudgetAllocation(String(alloc.id), { monthlyLimit: draft.trim() })}
-                                          type="button"
-                                        >
-                                          Guardar
-                                        </button>
-                                        <button
-                                          className="btn btnDanger btnSm"
-                                          disabled={!meOk.isFamilyAdmin || adminSavingId === String(alloc.id)}
-                                          onClick={() => deleteBudgetAllocation(String(alloc.id))}
-                                          type="button"
-                                        >
-                                          Eliminar
-                                        </button>
-                                      </div>
-
-                                      <div className="spacer8" />
-
-                                      <div className="sectionRow" style={{ flexWrap: 'wrap' }}>
-                                        <span className="pill">Anual: {formatMoney(annual, currency)}</span>
-                                        <span className="pill">Gastado: {formatMoney(Number(acc.spent), currency)}</span>
-                                        <span className="pill">Disponible: {formatMoney(Number(acc.remaining), currency)}</span>
-                                      </div>
-
-                                      <div className="spacer8" />
-
-                                      <label className="muted" style={{ fontWeight: 900 }}>
-                                        <input
-                                          type="checkbox"
-                                          checked={!!alloc.isActive}
-                                          disabled={!meOk.isFamilyAdmin || adminSavingId === String(alloc.id)}
-                                          onChange={(ev) => patchBudgetAllocation(String(alloc.id), { isActive: ev.target.checked })}
-                                          style={{ marginRight: 8 }}
-                                        />
-                                        Activa (participa en el presupuesto)
-                                      </label>
-                                    </div>
-
-                                    <div className="spacer12" />
-
-                                    {acc.type === 'Compartido' && Number(acc.spent) > 0 && Array.isArray((acc as any).spenders) && (acc as any).spenders.length ? (
-                                      <>
-                                        <div className="cardSub" style={{ padding: 12 }}>
-                                          <div className="subTitle">División por integrante (quién gastó)</div>
-                                          <div className="spacer8" />
-                                          <div className="muted" style={{ marginBottom: 10 }}>
-                                            Se calcula automáticamente por quién registró los gastos de esta cuenta.
-                                          </div>
-                                          <div className="peopleBreakdown">
-                                            {(acc as any).spenders.slice(0, 6).map((s: any) => {
-                                              const full = String(s?.name || '—')
-                                              const amt = Number(s?.amount) || 0
-                                              return (
-                                                <span key={String(s?.userId || full)} className="peopleChip" title={`${full}: ${formatMoney(amt, currency)}`}>
-                                                  {full}: {formatMoney(amt, currency)}
-                                                </span>
-                                              )
-                                            })}
-                                            {(acc as any).spenders.length > 6 ? (
-                                              <span className="peopleChip peopleChipMuted">+{(acc as any).spenders.length - 6} más</span>
-                                            ) : null}
-                                          </div>
-                                        </div>
-
-                                        <div className="spacer12" />
-                                      </>
-                                    ) : null}
-
-                                    <div className="cardSub" style={{ padding: 12 }}>
-                                      <div className="subTitle">Dividir (personal vs compartido)</div>
-                                      <div className="spacer8" />
-                                      <div className="muted" style={{ marginBottom: 10 }}>
-                                        “Individual / Compartido” se define por el <b>Partida</b>. Para separar (ej. Gasolina personal vs Casa), duplica la
-                                        cuenta a otra partida.
-                                      </div>
-                                      <div className="fieldGrid">
-                                        <label>
-                                          Duplicar esta cuenta a otra partida
-                                          <select
-                                            className="select"
-                                            value={budgetDupEntityId}
-                                            onChange={(e) => setBudgetDupEntityId(e.target.value)}
-                                            disabled={!meOk.isFamilyAdmin || budgetDupBusy || loading}
-                                          >
-                                            <option value="">Selecciona…</option>
-                                            {entityItems
-                                              .filter((e: any) => e?.isActive !== false && e?.participatesInBudget !== false)
-                                              .filter((e: any) => String(e?.id || '') !== String(alloc?.entity?.id || ''))
-                                              .map((e: any) => (
-                                                <option key={e.id} value={e.id}>
-                                                  {e.name} ({entityTypeLabel(e.type)})
-                                                </option>
-                                              ))}
-                                          </select>
-                                        </label>
-                                        <div className="sectionRow" style={{ justifyContent: 'space-between', flexWrap: 'wrap', alignItems: 'center' }}>
-                                          <span className="muted">Copia la misma categoría y el monto mensual actual.</span>
-                                          <button
-                                            className="btn btnGhost btnSm"
-                                            disabled={!meOk.isFamilyAdmin || budgetDupBusy || !budgetDupEntityId || !draft.trim()}
-                                            onClick={() => duplicateAllocation(String(alloc.id), String(budgetDupEntityId), draft.trim())}
-                                            type="button"
-                                          >
-                                            {budgetDupBusy ? 'Duplicando…' : 'Duplicar cuenta'}
-                                          </button>
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    <div className="spacer12" />
-
-                                    <div className="sectionRow" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
-                                      <button className="btn btnGhost btnSm" onClick={() => setBudgetModalTab('montos')} type="button">
-                                        Agregar otra cuenta
-                                      </button>
-                                      <button className="btn btnGhost btnSm" onClick={() => setBudgetModalTab('objetos')} type="button">
-                                        Agregar / editar partidas
-                                      </button>
-                                    </div>
-                                  </>
-                                )
-                              })()}
-                            </div>
-                          </div>
-                        ) : null}
 
                         {budgetModalTab === 'objetos' ? (
                           <div className="chartBox">
                             <div className="sectionRow" style={{ justifyContent: 'space-between', flexWrap: 'wrap', alignItems: 'flex-end' }}>
                               <div>
                                 <h3 className="chartTitle" style={{ margin: 0 }}>
-                                  Partidas
+                                  Destinos
                                 </h3>
                                 <div className="muted" style={{ marginTop: 6 }}>
-                                  Crea, edita o elimina partidas (personas, casa, auto, etc.).
+                                  <strong>Para qué sirve:</strong> definir a quién o a qué asignas dinero (persona, casa, mascota, vehículo…). Un bien (bici, auto) no tiene “dueño” en el nombre: usa la columna <b>Responsables</b> o el botón homónimo. Luego <b>Categorías</b> y en <b>Presupuesto</b> el tope por destino + categoría.
                                 </div>
                               </div>
+                              <p className="muted" style={{ margin: 0, maxWidth: 420, fontSize: 13 }}>
+                                Los destinos se gestionan aquí; no necesitas otra pantalla.
+                              </p>
                             </div>
 
                             <div className="spacer12" />
 
                             <div className="cardSub">
-                              <div className="subTitle">Agregar partida</div>
-                              <div className="spacer8" />
-                              <div className="grid grid2">
-                                <label>
-                                  Tipo
-                                  <select className="select" value={beType} onChange={(e) => setBeType(e.target.value as any)} disabled={!meOk.isFamilyAdmin || loading}>
-                                    <option value="PERSON">Persona</option>
-                                    <option value="HOUSE">Casa</option>
-                                    <option value="PET">Mascota</option>
-                                    <option value="VEHICLE">Vehículo</option>
-                                    <option value="PROJECT">Proyecto</option>
-                                    <option value="FUND">Fondo</option>
-                                    <option value="GROUP">Grupo</option>
-                                    <option value="OTHER">Otro</option>
-                                  </select>
-                                </label>
-                                <label>
-                                  Nombre
-                                  <input className="input" value={beName} onChange={(e) => setBeName(e.target.value)} disabled={!meOk.isFamilyAdmin || loading} placeholder="Ej. Sofía / Casa / Auto" />
-                                </label>
+                              <div className="subTitle">Destinos existentes ({entityItems.length})</div>
+                              <div className="muted" style={{ marginTop: 4, marginBottom: 8 }}>
+                                Todos los destinos de la familia. Para crear uno nuevo, usa el formulario de abajo.
                               </div>
-                              <div className="spacer8" />
-                              <div className="sectionRow" style={{ flexWrap: 'wrap' }}>
-                                <label className="muted" style={{ fontWeight: 900 }}>
-                                  <input type="checkbox" checked={beInBudget} onChange={(e) => setBeInBudget(e.target.checked)} disabled={!meOk.isFamilyAdmin || loading} style={{ marginRight: 8 }} />
-                                  Participa en presupuesto
-                                </label>
-                                <label className="muted" style={{ fontWeight: 900 }}>
-                                  <input type="checkbox" checked={beInReports} onChange={(e) => setBeInReports(e.target.checked)} disabled={!meOk.isFamilyAdmin || loading} style={{ marginRight: 8 }} />
-                                  Participa en reportes
-                                </label>
-                                <button className="btn btnPrimary btnSm" onClick={createEntity} disabled={!meOk.isFamilyAdmin || loading} type="button">
-                                  Crear partida
-                                </button>
-                              </div>
-                            </div>
-
-                            <div className="spacer12" />
-
-                            <div className="cardSub">
-                              <div className="subTitle">Asistente: Auto personal</div>
-                              <div className="muted" style={{ marginTop: 6 }}>
-                                Recomendado para modelar un auto “de alguien” sin confusión. Crea <b>Vehículo</b> con nombre tipo <b>Auto (Mamá)</b> y deja lista
-                                la asignación (en “Montos”) para capturar <b>Gasolina</b> (y categorías típicas si no existen).
-                              </div>
-                              <div className="spacer8" />
-                              <div className="grid grid2">
-                                <label>
-                                  Persona
-                                  <select
-                                    className="select"
-                                    value={budgetWizardMemberId}
-                                    onChange={(e) => setBudgetWizardMemberId(e.target.value)}
-                                    disabled={!meOk.isFamilyAdmin || budgetWizardBusy || loading}
-                                  >
-                                    <option value="">Selecciona…</option>
-                                    {memberItems.map((m: any) => (
-                                      <option key={String(m.id)} value={String(m.id)}>
-                                        {displayPersonName(m.name || m.email || 'Integrante')}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </label>
-                                <label>
-                                  Nombre sugerido
-                                  <input
-                                    className="input"
-                                    value={(() => {
-                                      const member = memberItems.find((m: any) => String(m?.id || '') === String(budgetWizardMemberId || ''))
-                                      const personName = displayPersonName(member?.name || member?.email || '')
-                                      return personName ? `Auto (${personName})` : 'Auto (…)'
-                                    })()}
-                                    disabled
-                                  />
-                                </label>
-                              </div>
-                              <div className="spacer8" />
-                              <div className="sectionRow" style={{ justifyContent: 'space-between', flexWrap: 'wrap', alignItems: 'center' }}>
-                                <div className="muted">
-                                  Al terminar, te llevo a <b>Montos</b> para que solo pongas el monto mensual y listes.
-                                </div>
-                                <button
-                                  className="btn btnPrimary btnSm"
-                                  onClick={setupPersonalVehicle}
-                                  disabled={!meOk.isFamilyAdmin || budgetWizardBusy || loading || !budgetWizardMemberId}
-                                  type="button"
-                                >
-                                  {budgetWizardBusy ? 'Preparando…' : 'Crear auto personal'}
-                                </button>
-                              </div>
-                            </div>
-
-                            <div className="spacer12" />
-
-                            {entityItems.length ? (
+                              {entityItems.length ? (
                               <div className="budgetListScroll">
                                 <table className="table">
                                   <thead>
                                     <tr>
                                       <th>Nombre</th>
                                       <th>Tipo</th>
+                                      <th className="budgetDestOwnersCol">Responsables</th>
                                       <th>Presupuesto</th>
                                       <th>Reportes</th>
                                       <th>Activo</th>
@@ -7066,7 +7175,34 @@ export default function UiPage() {
                                               }}
                                             />
                                           </td>
-                                          <td className="muted">{entityTypeLabel(e.type)}</td>
+                                          <td className="muted">{e.customType?.name || entityTypeLabel(e.type)}</td>
+                                          <td className="budgetDestOwnersCell muted">
+                                            {String(e?.type || '') === 'PERSON' ? (
+                                              <span title="La persona es el destino; no aplica «dueño»">—</span>
+                                            ) : (() => {
+                                              const { text } = entityOwnerNamesPreview(e, 3)
+                                              if (text) {
+                                                return <span title="Responsables / dueños del bien (Esperado vs real)">{text}</span>
+                                              }
+                                              if (meOk.isFamilyAdmin) {
+                                                return (
+                                                  <button
+                                                    type="button"
+                                                    className="budgetDestOwnersMissing"
+                                                    onClick={() => openEntityOwnersModal(String(e.id))}
+                                                    title="Asigna al menos un responsable"
+                                                  >
+                                                    Sin responsables
+                                                  </button>
+                                                )
+                                              }
+                                              return (
+                                                <span className="muted" title="Pide al administrador que asigne responsables en este destino">
+                                                  Sin responsables
+                                                </span>
+                                              )
+                                            })()}
+                                          </td>
                                           <td className="muted">
                                             <input
                                               type="checkbox"
@@ -7159,8 +7295,202 @@ export default function UiPage() {
                                 </table>
                               </div>
                             ) : (
-                              <div className="muted">Aún no hay partidas.</div>
+                              <div className="muted">Aún no hay destinos.</div>
                             )}
+                            </div>
+
+                            <div className="spacer12" />
+
+                            <div className="cardSub">
+                              <div className="subTitle">Agregar destino</div>
+                              <div className="spacer8" />
+                              <div className="grid grid2">
+                                <label>
+                                  Tipo
+                                  <select
+                                    className="select"
+                                    value={beCustomTypeId ? `custom:${beCustomTypeId}` : beType}
+                                    onChange={(e) => {
+                                      const v = e.target.value
+                                      if (v.startsWith('custom:')) {
+                                        setBeType('OTHER')
+                                        setBeCustomTypeId(v.slice(7))
+                                        setBeOwnerUserId('')
+                                      } else {
+                                        setBeType(v as EntityType)
+                                        setBeCustomTypeId(null)
+                                        if (v !== 'VEHICLE' && v !== 'PET') setBeOwnerUserId('')
+                                      }
+                                    }}
+                                    disabled={!meOk.isFamilyAdmin || loading}
+                                  >
+                                    <option value="PERSON">Persona</option>
+                                    <option value="HOUSE">Casa</option>
+                                    <option value="PET">Mascota</option>
+                                    <option value="VEHICLE">Vehículo</option>
+                                    <option value="PROJECT">Proyecto</option>
+                                    <option value="FUND">Fondo</option>
+                                    <option value="GROUP">Grupo</option>
+                                    <option value="OTHER">Otro</option>
+                                    {customEntityTypes.length > 0 ? (
+                                      <>
+                                        <option disabled>—</option>
+                                        {customEntityTypes.map((t) => (
+                                          <option key={t.id} value={`custom:${t.id}`}>
+                                            {t.name}
+                                          </option>
+                                        ))}
+                                      </>
+                                    ) : null}
+                                  </select>
+                                  {beType === 'OTHER' && !beCustomTypeId ? (
+                                    <p className="muted" style={{ fontSize: 11, marginTop: 6, marginBottom: 0 }}>
+                                      <strong>Otro</strong> es la excepción: escribe en <strong>Nombre</strong> el detalle o crea un tipo abajo.
+                                    </p>
+                                  ) : null}
+                                  {meOk.isFamilyAdmin ? (
+                                    <div style={{ marginTop: 8 }}>
+                                      {!customTypeCreateOpen ? (
+                                        <button type="button" className="btn btnGhost btnSm" onClick={() => setCustomTypeCreateOpen(true)}>
+                                          + Crear tipo
+                                        </button>
+                                      ) : (
+                                        <div className="sectionRow" style={{ flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                                          <input
+                                            className="input"
+                                            placeholder="Nombre del tipo (ej. Electrodoméstico)"
+                                            value={customTypeNewName}
+                                            onChange={(e) => setCustomTypeNewName(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), createCustomEntityType())}
+                                            style={{ maxWidth: 220 }}
+                                          />
+                                          <button type="button" className="btn btnPrimary btnSm" onClick={createCustomEntityType} disabled={!customTypeNewName.trim() || customTypeCreating}>
+                                            {customTypeCreating ? 'Creando…' : 'Crear tipo'}
+                                          </button>
+                                          <button type="button" className="btn btnGhost btnSm" onClick={() => { setCustomTypeCreateOpen(false); setCustomTypeNewName(''); setMessage(''); }}>
+                                            Cancelar
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : null}
+                                </label>
+                                <label>
+                                  Nombre
+                                  <input
+                                    className="input"
+                                    value={beName}
+                                    onChange={(e) => setBeName(e.target.value)}
+                                    disabled={!meOk.isFamilyAdmin || loading}
+                                    placeholder={beType === 'OTHER' ? 'Ej. Electrodoméstico, Negocio, ...' : 'Ej. Sofía / Casa / Moto familiar'}
+                                  />
+                                </label>
+                              </div>
+                              {entityTypeNeedsOwnerForCreate(beCustomTypeId ? 'OTHER' : beType) && !beCustomTypeId ? (
+                                <div className="cardSub budgetOwnerPuzzle" style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                                  <p className="muted" style={{ margin: '0 0 8px', fontSize: 13, lineHeight: 1.45 }}>
+                                    <strong>Dueño (integrante)</strong> — obligatorio: un vehículo o mascota encaja en el presupuesto cuando ya sabes de quién es (como un rompecabezas).
+                                  </p>
+                                  <label>
+                                    ¿De quién es?
+                                    <select
+                                      className="select"
+                                      value={beOwnerUserId}
+                                      onChange={(e) => setBeOwnerUserId(e.target.value)}
+                                      disabled={!meOk.isFamilyAdmin || loading}
+                                      aria-required
+                                    >
+                                      <option value="">Selecciona un integrante…</option>
+                                      {memberItems.map((m: any) => (
+                                        <option key={String(m.id)} value={String(m.id)}>
+                                          {displayPersonName(m.name || m.email || 'Integrante')}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </label>
+                                </div>
+                              ) : null}
+                              <div className="spacer8" />
+                              <div className="sectionRow" style={{ flexWrap: 'wrap' }}>
+                                <label className="muted" style={{ fontWeight: 900 }}>
+                                  <input type="checkbox" checked={beInBudget} onChange={(e) => setBeInBudget(e.target.checked)} disabled={!meOk.isFamilyAdmin || loading} style={{ marginRight: 8 }} />
+                                  Participa en presupuesto
+                                </label>
+                                <label className="muted" style={{ fontWeight: 900 }}>
+                                  <input type="checkbox" checked={beInReports} onChange={(e) => setBeInReports(e.target.checked)} disabled={!meOk.isFamilyAdmin || loading} style={{ marginRight: 8 }} />
+                                  Participa en reportes
+                                </label>
+                                <button
+                                  className="btn btnPrimary btnSm"
+                                  onClick={createEntity}
+                                  disabled={
+                                    !meOk.isFamilyAdmin ||
+                                    loading ||
+                                    (entityTypeNeedsOwnerForCreate(beCustomTypeId ? 'OTHER' : beType) &&
+                                      !beCustomTypeId &&
+                                      !beOwnerUserId.trim())
+                                  }
+                                  type="button"
+                                >
+                                  Crear destino
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="spacer12" />
+
+                            <div className="cardSub">
+                              <div className="subTitle">Asistente: Auto personal</div>
+                              <div className="muted" style={{ marginTop: 6 }}>
+                                Recomendado para modelar un auto “de alguien” sin confusión. Crea <b>Vehículo</b> con nombre tipo <b>Auto (Mamá)</b> y deja lista
+                                la asignación (pestaña <b>Presupuesto</b>) para capturar <b>Gasolina</b> (y categorías típicas si no existen).
+                              </div>
+                              <div className="spacer8" />
+                              <div className="grid grid2">
+                                <label>
+                                  Persona
+                                  <select
+                                    className="select"
+                                    value={budgetWizardMemberId}
+                                    onChange={(e) => setBudgetWizardMemberId(e.target.value)}
+                                    disabled={!meOk.isFamilyAdmin || budgetWizardBusy || loading}
+                                  >
+                                    <option value="">Selecciona…</option>
+                                    {memberItems.map((m: any) => (
+                                      <option key={String(m.id)} value={String(m.id)}>
+                                        {displayPersonName(m.name || m.email || 'Integrante')}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </label>
+                                <label>
+                                  Nombre sugerido
+                                  <input
+                                    className="input"
+                                    value={(() => {
+                                      const member = memberItems.find((m: any) => String(m?.id || '') === String(budgetWizardMemberId || ''))
+                                      const personName = displayPersonName(member?.name || member?.email || '')
+                                      return personName ? `Auto (${personName})` : 'Auto (…)'
+                                    })()}
+                                    disabled
+                                  />
+                                </label>
+                              </div>
+                              <div className="spacer8" />
+                              <div className="sectionRow" style={{ justifyContent: 'space-between', flexWrap: 'wrap', alignItems: 'center' }}>
+                                <div className="muted">
+                                  Al terminar, abrimos la pestaña <b>Presupuesto</b> para que pongas el monto mensual.
+                                </div>
+                                <button
+                                  className="btn btnPrimary btnSm"
+                                  onClick={setupPersonalVehicle}
+                                  disabled={!meOk.isFamilyAdmin || budgetWizardBusy || loading || !budgetWizardMemberId}
+                                  type="button"
+                                >
+                                  {budgetWizardBusy ? 'Preparando…' : 'Crear auto personal'}
+                                </button>
+                              </div>
+                            </div>
                           </div>
                         ) : null}
 
@@ -7181,6 +7511,24 @@ export default function UiPage() {
 
                             <div className="cardSub">
                               <div className="subTitle">Agregar categoría</div>
+                              <div className="muted" style={{ fontSize: 12, marginBottom: 8 }}>Añadir en un clic:</div>
+                              <div className="sectionRow" style={{ flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                                {['Supermercado', 'Servicios', 'Gasolina', 'Salud', 'Otros'].map((suggestedName) => {
+                                  const exists = categoryItems.some((c: any) => String(c?.name || '').trim().toLowerCase() === suggestedName.trim().toLowerCase())
+                                  return (
+                                    <button
+                                      key={suggestedName}
+                                      type="button"
+                                      className="btn btnGhost btnSm"
+                                      onClick={() => !exists && createCategoryWithName(suggestedName)}
+                                      disabled={!meOk.isFamilyAdmin || loading || exists}
+                                      title={exists ? `"${suggestedName}" ya existe` : `Crear categoría "${suggestedName}"`}
+                                    >
+                                      {exists ? `${suggestedName} ✓` : `+ ${suggestedName}`}
+                                    </button>
+                                  )
+                                })}
+                              </div>
                               <div className="spacer8" />
                               <div className="grid grid2">
                                 <label>
@@ -7195,6 +7543,11 @@ export default function UiPage() {
                                   <input className="input" value={bcName} onChange={(e) => setBcName(e.target.value)} disabled={!meOk.isFamilyAdmin || loading} placeholder="Ej. Supermercado / Colegiaturas" />
                                 </label>
                               </div>
+                              {categoryNameCombinedWarning(bcName) ? (
+                                <div className="muted" role="status" style={{ fontSize: 12, marginTop: 8, padding: 10, borderRadius: 8, border: '1px dashed var(--border)' }}>
+                                  {categoryNameCombinedWarning(bcName)}
+                                </div>
+                              ) : null}
                               <div className="spacer8" />
                               <button className="btn btnPrimary btnSm" onClick={createCategory} disabled={!meOk.isFamilyAdmin || loading} type="button">
                                 Crear categoría
@@ -7218,6 +7571,7 @@ export default function UiPage() {
                                     {categoryItems.slice(0, 160).map((c: any) => {
                                       const draft = categoryNameDraft[c.id] ?? String(c.name || '')
                                       const changed = draft.trim() !== String(c.name || '')
+                                      const catWarn = categoryNameCombinedWarning(draft)
                                       return (
                                         <tr key={c.id}>
                                           <td style={{ minWidth: 240 }}>
@@ -7232,6 +7586,11 @@ export default function UiPage() {
                                                 }))
                                               }
                                             />
+                                            {catWarn ? (
+                                              <div className="muted" role="status" style={{ fontSize: 11, marginTop: 6, lineHeight: 1.35 }}>
+                                                {catWarn}
+                                              </div>
+                                            ) : null}
                                           </td>
                                           <td className="muted">{c.type || '—'}</td>
                                           <td className="muted">
@@ -7279,155 +7638,538 @@ export default function UiPage() {
                             <div className="sectionRow" style={{ justifyContent: 'space-between', flexWrap: 'wrap', alignItems: 'flex-end' }}>
                               <div>
                                 <h3 className="chartTitle" style={{ margin: 0 }}>
-                                  Montos / asignaciones
+                                  Asignar presupuesto (crear cuenta)
                                 </h3>
                                 <div className="muted" style={{ marginTop: 6 }}>
-                                  Asigna un monto mensual por partida + categoría. Aquí creas las “cuentas” del presupuesto.
+                                  <strong>Aquí se crea el presupuesto en el sentido práctico:</strong> eliges destino y categoría y un tope mensual. Eso genera la fila en la base de datos (una <b>cuenta</b>) mediante el mismo guardado de siempre.
                                 </div>
+                                <p style={{ marginTop: 8, fontSize: 13, fontWeight: 600 }}>
+                                  1. Destino → 2. Categoría → 3. Tope mensual (presupuesto)
+                                </p>
                               </div>
                             </div>
 
                             <div className="spacer12" />
 
+                            {(!setupChecklist.hasObject || !setupChecklist.hasCategory) ? (
+                              <div className="cardSub" style={{ padding: 12, marginBottom: 12, background: 'var(--surface-warn, rgba(220,160,0,0.08))', border: '1px solid var(--border)' }}>
+                                <div className="subTitle" style={{ marginBottom: 8 }}>Falta configuración previa</div>
+                                {!setupChecklist.hasObject ? (
+                                  <p className="muted" style={{ margin: '0 0 8px 0', fontSize: 13 }}>Necesitas al menos un destino (persona, casa, auto…).</p>
+                                ) : null}
+                                {!setupChecklist.hasCategory ? (
+                                  <p className="muted" style={{ margin: '0 0 8px 0', fontSize: 13 }}>Necesitas al menos una categoría de gasto (supermercado, servicios…).</p>
+                                ) : null}
+                                <div className="sectionRow" style={{ flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+                                  {!setupChecklist.hasObject ? (
+                                    <button type="button" className="btn btnGhost btnSm" onClick={() => setBudgetModalTab('objetos')}>
+                                      Ir a Destinos
+                                    </button>
+                                  ) : null}
+                                  {!setupChecklist.hasCategory ? (
+                                    <button type="button" className="btn btnGhost btnSm" onClick={() => setBudgetModalTab('categorias')}>
+                                      Ir a Categorías
+                                    </button>
+                                  ) : null}
+                                </div>
+                              </div>
+                            ) : null}
+
                             <div className="cardSub">
-                              <div className="subTitle">Agregar monto</div>
+                              <div className="subTitle">Nueva asignación</div>
+                              <p className="muted budgetNuevaAsignHint" style={{ fontSize: 12, marginTop: 4, marginBottom: 8 }}>
+                                Elige destino y categoría; la otra lista evita duplicar la misma combinación. El desplegable de destinos va <b>agrupado por tipo</b> (personas, vehículos…).
+                                {alEntityId
+                                  ? ` Para este tipo (${entityTypeLabel(entityItems.find((e: any) => String(e?.id) === String(alEntityId))?.type)}) puedes ocultar categorías poco habituales con la casilla de abajo.`
+                                  : ''}
+                              </p>
+                              {!meOk.isFamilyAdmin && (meOk.ownedEntityIds || []).length === 0 ? (
+                                <p className="muted" style={{ marginTop: 8 }}>Solo puedes asignar presupuesto a destinos que son tuyos. Pide al Admin que te asigne un destino (ej. tu persona) en Destinos → Responsables.</p>
+                              ) : null}
                               <div className="spacer8" />
                               <div className="grid grid2">
                                 <label>
-                                  Partida
-                                  <select className="select" value={alEntityId} onChange={(e) => setAlEntityId(e.target.value)} disabled={!meOk.isFamilyAdmin || loading}>
+                                  Destino
+                                  <select
+                                    className="select budgetEntitySelect"
+                                    value={alEntityId}
+                                    onChange={(e) => setAlEntityId(e.target.value)}
+                                    disabled={!!loading}
+                                  >
                                     <option value="">Selecciona…</option>
-                                    {entityItems
-                                      .filter((e: any) => e?.isActive !== false && e?.participatesInBudget !== false)
-                                      .map((e: any) => (
-                                        <option key={e.id} value={e.id}>
-                                          {e.name} ({entityTypeLabel(e.type)})
-                                        </option>
-                                      ))}
+                                    {(() => {
+                                      const base = meOk.isFamilyAdmin
+                                        ? entityItems.filter((e: any) => e?.isActive !== false && e?.participatesInBudget !== false)
+                                        : entityItems.filter(
+                                            (e: any) =>
+                                              e?.isActive !== false &&
+                                              e?.participatesInBudget !== false &&
+                                              (meOk.ownedEntityIds || []).includes(String(e.id))
+                                          )
+                                      const filtered = base.filter((e: any) => {
+                                        if (!alCategoryId) return true
+                                        if (String(e.id) === String(alEntityId)) return true
+                                        const yaTiene = allocationItems.some(
+                                          (a: any) => String(a.entity?.id) === String(e.id) && String(a.category?.id) === String(alCategoryId)
+                                        )
+                                        return !yaTiene
+                                      })
+                                      const groups = groupBudgetEntitiesForOptgroups(filtered)
+                                      return groups.map((g) => (
+                                        <optgroup key={g.label} label={g.label}>
+                                          {g.items.map((raw: any) => (
+                                            <option key={raw.id} value={raw.id}>
+                                              {raw.name} ({raw?.customType?.name || entityTypeLabel(raw.type)})
+                                            </option>
+                                          ))}
+                                        </optgroup>
+                                      ))
+                                    })()}
                                   </select>
                                 </label>
                                 <label>
                                   Categoría
-                                  <select className="select" value={alCategoryId} onChange={(e) => setAlCategoryId(e.target.value)} disabled={!meOk.isFamilyAdmin || loading}>
+                                  <select className="select" value={alCategoryId} onChange={(e) => setAlCategoryId(e.target.value)} disabled={!!loading}>
                                     <option value="">Selecciona…</option>
-                                    {categoryItems.filter((c: any) => c?.isActive !== false).map((c: any) => (
+                                    {categoryItems
+                                    .filter((c: any) => c?.isActive !== false)
+                                    .filter((c: any) => {
+                                      if (!alEntityId) return true
+                                      if (String(c.id) === String(alCategoryId)) return true
+                                      const yaTiene = allocationItems.some((a: any) => String(a.entity?.id) === String(alEntityId) && String(a.category?.id) === String(c.id))
+                                      if (yaTiene) return false
+                                      if (allocationShowAllCategories) return true
+                                      const ent = entityItems.find((e: any) => String(e?.id) === String(alEntityId))
+                                      const et = String(ent?.type || '')
+                                      const nm = String(c?.name || '')
+                                      if (categoryLooksWrongForDestinationType(et, nm)) return false
+                                      return true
+                                    })
+                                    .map((c: any) => (
                                       <option key={c.id} value={c.id}>
-                                        {c.name}
+                                        {c.code ? `${c.code} ${c.name}` : c.name}
                                       </option>
                                     ))}
                                   </select>
                                 </label>
+                                {alEntityId ? (() => {
+                                  const catsWithMonto = allocationItems.filter((a: any) => String(a.entity?.id) === String(alEntityId)).map((a: any) => a.category?.name).filter(Boolean)
+                                  return catsWithMonto.length > 0 ? <p className="muted" style={{ fontSize: 12, marginTop: 4, gridColumn: '1 / -1' }}>En este destino ya tienen monto: {catsWithMonto.join(', ')}</p> : null
+                                })() : null}
+                                {alCategoryId ? (() => {
+                                  const destinosConMonto = allocationItems.filter((a: any) => String(a.category?.id) === String(alCategoryId)).map((a: any) => entityItems.find((e: any) => String(e.id) === String(a.entity?.id))).filter(Boolean)
+                                  const names = destinosConMonto.map((e: any) => `${e?.name} (${(e as any)?.customType?.name || entityTypeLabel(e?.type)})`)
+                                  return names.length > 0 ? <p className="muted" style={{ fontSize: 12, marginTop: 4, gridColumn: '1 / -1' }}>En esta categoría ya tienen asignación: {names.join(', ')}</p> : null
+                                })() : null}
                               </div>
+                              {alEntityId ? (
+                                <label className="muted" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, fontSize: 13, cursor: 'pointer' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={allocationShowAllCategories}
+                                    onChange={(e) => setAllocationShowAllCategories(e.target.checked)}
+                                  />
+                                  Mostrar todas las categorías (incluye las poco habituales para este tipo de destino)
+                                </label>
+                              ) : null}
                               <div className="spacer8" />
                               <div className="sectionRow" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
                                 <label style={{ minWidth: 240, flex: 1 }}>
-                                  Monto mensual
-                                  <input className="input" value={alLimit} onChange={(e) => setAlLimit(e.target.value)} inputMode="decimal" disabled={!meOk.isFamilyAdmin || loading} placeholder="Ej. 5000" />
+                                  Tope mensual (presupuesto)
+                                  <span className="budgetAmountInputWrap">
+                                    <span className="budgetAmountPrefix" aria-hidden="true">{currency === 'MXN' ? '$' : currency} </span>
+                                    <input
+                                      className="input"
+                                      value={alLimit}
+                                      onChange={(e) => setAlLimit(e.target.value)}
+                                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (alEntityId && alCategoryId && alLimit.trim()) createAllocation(); } }}
+                                      inputMode="decimal"
+                                      disabled={!!loading}
+                                      placeholder="5,000"
+                                      aria-label="Tope mensual de presupuesto para esta cuenta"
+                                    />
+                                  </span>
                                 </label>
-                                <button className="btn btnPrimary btnSm" onClick={createAllocation} disabled={!meOk.isFamilyAdmin || loading} type="button">
-                                  Asignar monto
+                                <button
+                                  className="btn btnPrimary btnSm"
+                                  onClick={createAllocation}
+                                  disabled={!!loading || !alEntityId || !alCategoryId || !alLimit.trim() || (!meOk.isFamilyAdmin && !(meOk.ownedEntityIds || []).includes(alEntityId))}
+                                  type="button"
+                                >
+                                  Crear cuenta de presupuesto
+                                </button>
+                                <button
+                                  className="btn btnGhost btnSm"
+                                  type="button"
+                                  onClick={() => { setAlEntityId(''); setAlCategoryId(''); setAlLimit(''); setMessage(''); }}
+                                  disabled={!!loading}
+                                  title="Limpiar el formulario para otra combinación destino + categoría"
+                                >
+                                  Limpiar formulario
                                 </button>
                               </div>
                             </div>
 
-                            <div className="spacer12" />
+                            <div className="muted" style={{ marginTop: 12, fontSize: 13 }}>
+                              Las cuentas que crees aparecen en el <b>Bloque 2 · Cuentas</b> (más abajo). Ahí puedes ver y ajustar límites; en esta pestaña solo creas nuevas cuentas (nuevo par destino + categoría + tope).
+                            </div>
+                          </div>
+                        ) : null}
 
-                            {allocationItems.length ? (
-                              <div className="budgetListScroll">
-                                <table className="table">
-                                  <thead>
-                                    <tr>
-                                      <th>Partida</th>
-                                      <th>Categoría</th>
-                                      <th>Monto mensual</th>
-                                      <th>Activo</th>
-                                      <th>Acciones</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {allocationItems.slice(0, 180).map((a: any) => {
-                                      const draft = allocationLimitDraft[a.id] ?? String(a.monthlyLimit || '')
-                                      const changed = draft.trim() !== String(a.monthlyLimit || '')
-                                      return (
-                                        <tr key={a.id}>
-                                          <td style={{ fontWeight: 950 }}>
-                                            {a.entity?.name || '—'} <span className="muted">({entityTypeLabel(a.entity?.type)})</span>
-                                          </td>
-                                          <td className="muted">{a.category?.name || '—'}</td>
-                                          <td style={{ minWidth: 160 }}>
+                        <div ref={presupuestoCuentasRef} id="presupuesto-b2-cuentas" className="presupuestoOuterBlock">
+                          <p className="muted" style={{ margin: '0 0 8px 0', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 800 }}>
+                            Bloque 2 · Cuentas
+                          </p>
+                          <div className="budgetManageGrid">
+                            <div className="chartBox">
+                              <div className="sectionRow" style={{ justifyContent: 'space-between', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                                <div>
+                                  <h3 className="chartTitle" style={{ margin: 0 }}>
+                                    Cuentas del presupuesto
+                                  </h3>
+                                  <div className="muted" style={{ marginTop: 6 }}>
+                                    Cada fila es un destino + categoría con tope mensual. Haz clic para ver y editar el monto (no se crean cuentas nuevas aquí; usa el Bloque 1 → pestaña Presupuesto).
+                                  </div>
+                                </div>
+                                <label style={{ maxWidth: 260 }}>
+                                  Buscar por categoría o destino
+                                  <input
+                                    className="input inputSm"
+                                    placeholder="Ej. supermercado, Casa, Gonzalo…"
+                                    value={budgetModalSearch}
+                                    onChange={(e) => setBudgetModalSearch(e.target.value)}
+                                  />
+                                </label>
+                              </div>
+
+                              <div className="spacer8" />
+
+                              {budgetModalAccounts.length ? (
+                                <div className="budgetListScroll">
+                                  <table className="table">
+                                    <thead>
+                                      <tr>
+                                        <th>Cuenta</th>
+                                        <th style={{ textAlign: 'right' }}>Presupuesto</th>
+                                        <th style={{ textAlign: 'right' }}>Gastado</th>
+                                        <th style={{ textAlign: 'right' }}>Disponible</th>
+                                        <th style={{ textAlign: 'center' }}>Estado</th>
+                                        <th title="Se define por el tipo de destino (Persona = Individual; otros = Compartido)">Tipo (auto)</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {budgetModalAccounts.map((a: any) => {
+                                        const selected = String(budgetModalAllocId || '') === String(a.id)
+                                        return (
+                                          <tr
+                                            key={a.id}
+                                            className={selected ? 'budgetAccountRowSelected' : ''}
+                                            onClick={() => setBudgetModalAllocId(String(a.id))}
+                                            style={{ cursor: 'pointer' }}
+                                          >
+                                            <td style={{ fontWeight: 950 }}>
+                                              {a.categoryName}
+                                              <div className="muted" style={{ fontWeight: 800, marginTop: 2 }}>
+                                                {a.entityName} ({entityTypeLabel(a.entityType)})
+                                              </div>
+                                            </td>
+                                            <td style={{ fontWeight: 900, textAlign: 'right' }}>{formatMoney(Number(a.budget), currency)}</td>
+                                            <td className="muted" style={{ textAlign: 'right' }}>
+                                              {formatMoney(Number(a.spent), currency)}
+                                            </td>
+                                            <td style={{ fontWeight: 900, textAlign: 'right' }}>{formatMoney(Number(a.remaining), currency)}</td>
+                                            <td style={{ textAlign: 'center' }}>
+                                              <span className={`pill ${a.status === 'OK' ? 'pillOk' : a.status === 'Over' ? 'pillBad' : 'pillWarn'}`}>
+                                                {a.status === 'OK' ? 'OK' : a.status === 'Over' ? 'En rojo' : 'Pendiente'}
+                                              </span>
+                                            </td>
+                                            <td className="muted">{a.type}</td>
+                                          </tr>
+                                        )
+                                      })}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              ) : (
+                                <div className="muted" style={{ padding: 'var(--space-16) 0' }}>
+                                  {!budgetAccounts.length
+                                    ? 'Aún no hay cuentas. Ve al Bloque 1 → pestaña Presupuesto y crea destino + categoría + monto (ej. Casa + CFE).'
+                                    : budgetModalSearch.trim()
+                                      ? `Ninguna cuenta coincide con «${budgetModalSearch.trim()}». Borra la búsqueda o prueba otro término (categoría o destino).`
+                                      : 'No hay resultados.'}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="chartBox">
+                              <h3 className="chartTitle" style={{ margin: 0 }}>
+                                Editar cuenta
+                              </h3>
+                              <div className="muted" style={{ marginTop: 6, marginBottom: 0 }}>Cambia el monto mensual o desactiva esta cuenta.</div>
+                              <div className="spacer8" />
+                              {(() => {
+                                const acc = budgetModalSelectedAccount as any
+                                const alloc = budgetModalSelectedAlloc as any
+                                if (!acc || !alloc) return <div className="muted" style={{ padding: 'var(--space-12) 0' }}>Selecciona una cuenta en la lista de la izquierda para ver y editar su monto.</div>
+
+                                const draft = allocationLimitDraft[String(alloc.id)] ?? String(alloc.monthlyLimit || '')
+                                const changed = draft.trim() !== String(alloc.monthlyLimit || '')
+                                const nMonthly = Number(draft)
+                                const annual = (Number.isFinite(nMonthly) ? nMonthly : 0) * 12
+                                const ownedIds = meOk.ownedEntityIds || []
+                                const canEditThisAccount = meOk.isFamilyAdmin || (acc && ownedIds.includes(String((acc as any).entityId)))
+                                return (
+                                  <>
+                                    <div className="sectionRow" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                                      <div>
+                                        <div style={{ fontWeight: 950, fontSize: 16 }}>{acc.categoryName}</div>
+                                        <div className="muted" style={{ fontWeight: 850, marginTop: 4 }}>
+                                          {acc.entityName} ({entityTypeLabel(acc.entityType)}) • {acc.type}
+                                        </div>
+                                      </div>
+                                      <span className={`pill ${acc.status === 'OK' ? 'pillOk' : acc.status === 'Over' ? 'pillBad' : 'pillWarn'}`}>
+                                        {acc.status === 'OK' ? 'OK' : acc.status === 'Over' ? 'En rojo' : 'Pendiente'}
+                                      </span>
+                                    </div>
+
+                                    <div className="spacer12" />
+
+                                    <div className="cardSub" style={{ padding: 12 }}>
+                                      <div className="subTitle">Ajuste de presupuesto</div>
+                                      <div className="spacer8" />
+                                      <div className="sectionRow" style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                                        <label style={{ minWidth: 220, flex: 1 }}>
+                                          Monto mensual (obligatorio)
+                                          <span className="budgetAmountInputWrap">
+                                            <span className="budgetAmountPrefix" aria-hidden="true">{currency === 'MXN' ? '$' : currency} </span>
                                             <input
                                               className="input"
-                                              value={draft}
                                               inputMode="decimal"
-                                              disabled={!meOk.isFamilyAdmin || adminSavingId === a.id}
+                                              value={draft}
+                                              disabled={!canEditThisAccount || adminSavingId === String(alloc.id)}
                                               onChange={(ev) =>
                                                 setAllocationLimitDraft((prev) => ({
                                                   ...prev,
-                                                  [a.id]: ev.target.value,
+                                                  [String(alloc.id)]: ev.target.value,
                                                 }))
                                               }
                                             />
-                                          </td>
-                                          <td className="muted">
-                                            <input
-                                              type="checkbox"
-                                              checked={!!a.isActive}
-                                              disabled={!meOk.isFamilyAdmin || adminSavingId === a.id}
-                                              onChange={(ev) => patchBudgetAllocation(a.id, { isActive: ev.target.checked })}
-                                            />
-                                          </td>
-                                          <td>
-                                            <div className="sectionRow">
-                                              <button
-                                                className="btn btnGhost btnSm"
-                                                disabled={!meOk.isFamilyAdmin || adminSavingId === a.id || !changed}
-                                                onClick={() => patchBudgetAllocation(a.id, { monthlyLimit: draft.trim() })}
-                                                type="button"
-                                              >
-                                                Guardar
-                                              </button>
-                                              <button
-                                                className="btn btnDanger btnSm"
-                                                disabled={!meOk.isFamilyAdmin || adminSavingId === a.id}
-                                                onClick={() => deleteBudgetAllocation(a.id)}
-                                                type="button"
-                                              >
-                                                Eliminar
-                                              </button>
+                                          </span>
+                                        </label>
+                                        <button
+                                          className="btn btnPrimary btnSm"
+                                          disabled={!canEditThisAccount || adminSavingId === String(alloc.id) || !changed}
+                                          onClick={() => patchBudgetAllocation(String(alloc.id), { monthlyLimit: draft.trim() })}
+                                          type="button"
+                                        >
+                                          Guardar
+                                        </button>
+                                        {budgetReturnToIntegranteUserId ? (
+                                          <button
+                                            className="btn btnGhost btnSm"
+                                            type="button"
+                                            onClick={() => {
+                                              const userId = budgetReturnToIntegranteUserId
+                                              setBudgetReturnToIntegranteUserId(null)
+                                              go('dashboard')
+                                              setPeopleBudgetUserId(userId)
+                                              setPeopleBudgetOpen(true)
+                                            }}
+                                            title={`Volver a ${displayPersonName(budgetPeople.members.find((m: any) => String(m?.userId) === String(budgetReturnToIntegranteUserId))?.name ?? 'integrante')}`}
+                                          >
+                                            Regresar al mismo lugar
+                                          </button>
+                                        ) : null}
+                                        <button
+                                          className="btn btnDanger btnSm"
+                                          disabled={!canEditThisAccount || adminSavingId === String(alloc.id)}
+                                          onClick={() => deleteBudgetAllocation(String(alloc.id))}
+                                          type="button"
+                                        >
+                                          Eliminar
+                                        </button>
+                                      </div>
+
+                                      <div className="spacer8" />
+
+                                      <div className="sectionRow" style={{ flexWrap: 'wrap' }}>
+                                        <span className="pill">Anual: {formatMoney(annual, currency)}</span>
+                                        <span className="pill">Gastado: {formatMoney(Number(acc.spent), currency)}</span>
+                                        <span className="pill">Disponible: {formatMoney(Number(acc.remaining), currency)}</span>
+                                      </div>
+
+                                      <div className="spacer8" />
+
+                                      <label className="muted" style={{ fontWeight: 900 }}>
+                                        <input
+                                          type="checkbox"
+                                          checked={!!alloc.isActive}
+                                          disabled={!canEditThisAccount || adminSavingId === String(alloc.id)}
+                                          onChange={(ev) => patchBudgetAllocation(String(alloc.id), { isActive: ev.target.checked })}
+                                          style={{ marginRight: 8 }}
+                                        />
+                                        Activa (participa en el presupuesto)
+                                      </label>
+                                    </div>
+
+                                    <div className="spacer12" />
+
+                                    <div className="cardSub" style={{ padding: 12 }}>
+                                      <div className="subTitle">Pago a proveedor (cómo y con qué se paga)</div>
+                                      <div className="muted" style={{ marginBottom: 10 }}>
+                                        Indica el medio de pago y la cuenta con la que se paga esta cuenta (destino + categoría); opcionalmente CLABE y referencia del proveedor para generar pagos.
+                                      </div>
+                                      {(() => {
+                                        const aid = String(alloc.id)
+                                        const base = { defaultPaymentMethod: String(alloc?.defaultPaymentMethod ?? ''), bankAccountLabel: String(alloc?.bankAccountLabel ?? ''), providerClabe: String(alloc?.providerClabe ?? ''), providerReference: String(alloc?.providerReference ?? '') }
+                                        const draft = allocationPaymentDraft[aid] ?? base
+                                        const changed = draft.defaultPaymentMethod !== base.defaultPaymentMethod || draft.bankAccountLabel !== base.bankAccountLabel || draft.providerClabe !== base.providerClabe || draft.providerReference !== base.providerReference
+                                        return (
+                                          <>
+                                            <div className="fieldGrid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                                              <label>
+                                                Medio de pago
+                                                <select
+                                                  className="select"
+                                                  value={draft.defaultPaymentMethod}
+                                                  disabled={!canEditThisAccount || adminSavingId === aid}
+                                                  onChange={(e) => setAllocationPaymentDraft((prev) => ({ ...prev, [aid]: { ...(prev[aid] ?? base), defaultPaymentMethod: e.target.value } }))}
+                                                >
+                                                  <option value="">—</option>
+                                                  <option value="efectivo">Efectivo</option>
+                                                  <option value="transferencia">Transferencia</option>
+                                                  <option value="tarjeta">Tarjeta</option>
+                                                  <option value="deposito">Depósito</option>
+                                                  <option value="otro">Otro</option>
+                                                </select>
+                                              </label>
+                                              <label>
+                                                Cuenta con la que se paga
+                                                <input
+                                                  type="text"
+                                                  className="input"
+                                                  placeholder="Ej. Cuenta principal, Tarjeta débito"
+                                                  value={draft.bankAccountLabel}
+                                                  disabled={!canEditThisAccount || adminSavingId === aid}
+                                                  onChange={(e) => setAllocationPaymentDraft((prev) => ({ ...prev, [aid]: { ...(prev[aid] ?? base), bankAccountLabel: e.target.value } }))}
+                                                />
+                                              </label>
+                                              <label>
+                                                CLABE del proveedor (transferencias)
+                                                <input
+                                                  type="text"
+                                                  className="input"
+                                                  placeholder="18 dígitos"
+                                                  value={draft.providerClabe}
+                                                  disabled={!canEditThisAccount || adminSavingId === aid}
+                                                  onChange={(e) => setAllocationPaymentDraft((prev) => ({ ...prev, [aid]: { ...(prev[aid] ?? base), providerClabe: e.target.value.replace(/\s/g, '').slice(0, 18) } }))}
+                                                />
+                                              </label>
+                                              <label>
+                                                Referencia del proveedor
+                                                <input
+                                                  type="text"
+                                                  className="input"
+                                                  placeholder="Referencia o convenio"
+                                                  value={draft.providerReference}
+                                                  disabled={!canEditThisAccount || adminSavingId === aid}
+                                                  onChange={(e) => setAllocationPaymentDraft((prev) => ({ ...prev, [aid]: { ...(prev[aid] ?? base), providerReference: e.target.value } }))}
+                                                />
+                                              </label>
                                             </div>
-                                          </td>
-                                        </tr>
-                                      )
-                                    })}
-                                  </tbody>
-                                </table>
-                              </div>
-                            ) : (
-                              <div className="muted">Aún no hay montos.</div>
-                            )}
+                                            <div className="spacer8" />
+                                            <button
+                                              className="btn btnPrimary btnSm"
+                                              disabled={!canEditThisAccount || adminSavingId === aid || !changed}
+                                              onClick={async () => {
+                                                await patchBudgetAllocation(aid, { defaultPaymentMethod: draft.defaultPaymentMethod || undefined, bankAccountLabel: draft.bankAccountLabel || undefined, providerClabe: draft.providerClabe || undefined, providerReference: draft.providerReference || undefined })
+                                                setAllocationPaymentDraft((prev) => { const next = { ...prev }; delete next[aid]; return next })
+                                              }}
+                                              type="button"
+                                            >
+                                              Guardar pago / cuenta
+                                            </button>
+                                          </>
+                                        )
+                                      })()}
+                                    </div>
+
+                                    <div className="spacer12" />
+
+                                    {acc.type === 'Compartido' && Number(acc.spent) > 0 && Array.isArray((acc as any).spenders) && (acc as any).spenders.length ? (
+                                      <>
+                                        <div className="cardSub" style={{ padding: 12 }}>
+                                          <div className="subTitle">División por integrante (quién gastó)</div>
+                                          <div className="spacer8" />
+                                          <div className="muted" style={{ marginBottom: 10 }}>
+                                            Se calcula automáticamente por quién registró los gastos de esta cuenta.
+                                          </div>
+                                          <div className="peopleBreakdown">
+                                            {(acc as any).spenders.slice(0, 6).map((s: any) => {
+                                              const full = String(s?.name || '—')
+                                              const amt = Number(s?.amount) || 0
+                                              return (
+                                                <span key={String(s?.userId || full)} className="peopleChip" title={`${full}: ${formatMoney(amt, currency)}`}>
+                                                  {full}: {formatMoney(amt, currency)}
+                                                </span>
+                                              )
+                                            })}
+                                            {(acc as any).spenders.length > 6 ? (
+                                              <span className="peopleChip peopleChipMuted">+{(acc as any).spenders.length - 6} más</span>
+                                            ) : null}
+                                          </div>
+                                        </div>
+
+                                        <div className="spacer12" />
+                                      </>
+                                    ) : null}
+
+                                    <div className="muted" style={{ marginBottom: 10, fontSize: 12 }}>
+                                      ¿Nueva cuenta (nuevo par destino + categoría)? Solo en <button type="button" className="btn btnLinkInline" onClick={() => { setBudgetModalTab('montos'); document.getElementById('presupuesto-b1-config')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }}>Bloque 1 → pestaña Presupuesto</button>. Aquí solo ajustas límites de cuentas ya creadas.
+                                    </div>
+                                  </>
+                                )
+                              })()}
+                            </div>
                           </div>
-                        ) : null}
+                        </div>
                         </div>
                       </div>
                     </div>
                   ) : null}
 
-                  <div className="chartBox">
-                    <div className="sectionRow" style={{ justifyContent: 'space-between', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                      <div>
-                        <h3 className="chartTitle" style={{ margin: 0 }}>
+                  <div className="chartBox presupuestoAccionesCard">
+                    <h2 className="chartTitle presupuestoAccionesTitle">
+                      Resumen y análisis
+                    </h2>
+                    <p className="muted presupuestoAccionesLead">
+                      El flujo de creación está arriba (<strong>Bloque 1</strong>: Destino → Categoría → pestaña Presupuesto). Aquí solo ves estado, KPIs y herramientas de análisis.
+                    </p>
+                    <div className="presupuestoStatusRow sectionRow" aria-label="Estado del presupuesto">
+                        <span className={`pill ${setupChecklist.hasObject ? 'pillOk' : 'pillWarn'}`}>Destinos: {setupChecklist.objectCount}</span>
+                        <span className={`pill ${setupChecklist.hasCategory ? 'pillOk' : 'pillWarn'}`}>Categorías: {setupChecklist.categoryCount}</span>
+                        <span className={`pill ${setupChecklist.hasAllocation ? 'pillOk' : 'pillWarn'}`}>Cuentas: {setupChecklist.allocationCount}</span>
+                        {myPartidasCount > 0 ? (
+                          <span className="pill pillOk" title="Códigos 6xxx–9xxx en categorías (plantilla contable); compatible con seed-my-partidas">
+                            Tu entorno: {myPartidasCount} categorías (códigos)
+                          </span>
+                        ) : null}
+                    </div>
+
+                    <div className="spacer16" />
+
+                    <p className="muted" id="presupuesto-b3-resumen" style={{ margin: '0 0 8px 0', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 800 }}>
+                      Bloque 3 · Resumen
+                    </p>
+                    {setupChecklist.hasAllocation ? (
+                      <>
+                        <h3 className="chartTitle" style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>
                           Concentrado del presupuesto
                         </h3>
-                        <div className="muted" style={{ marginTop: 6 }}>
+                        <div className="muted" style={{ marginTop: 4, marginBottom: 8 }}>
                           Año {budgetConcentrado.year} • Cuentas: {budgetConcentrado.accounts}
                         </div>
-                      </div>
-
-                      <div className="sectionRow" style={{ flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-                        <span className={`pill ${setupChecklist.hasObject ? 'pillOk' : 'pillWarn'}`}>Partidas: {setupChecklist.objectCount}</span>
-                        <span className={`pill ${setupChecklist.hasCategory ? 'pillOk' : 'pillWarn'}`}>Categorías: {setupChecklist.categoryCount}</span>
-                        <span className={`pill ${setupChecklist.hasAllocation ? 'pillOk' : 'pillWarn'}`}>Montos: {setupChecklist.allocationCount}</span>
-                        <div className="presupuestoConcentradoActions">
+                        <div className="sectionRow" style={{ marginBottom: 12 }}>
                           <label style={{ maxWidth: 140 }}>
                             Año
                             <select className="select" value={String(budgetConcentrado.year)} onChange={(e) => setBudgetYear(e.target.value)} disabled={loading}>
@@ -7442,39 +8184,88 @@ export default function UiPage() {
                               })()}
                             </select>
                           </label>
-                          <button
-                            className="btn btnGhost btnSm"
-                            onClick={() => setPeopleBudgetOpen(true)}
-                            disabled={loading}
-                            type="button"
-                            title="Análisis por integrante (presupuesto individual)"
-                          >
-                            Integrantes
-                          </button>
-                          {meOk.isFamilyAdmin ? (
-                            <>
-                              <button
-                                className="btn btnGhost btnSm"
-                                onClick={() => openBudgetModal(undefined, 'montos')}
-                                type="button"
-                                title="Crea/edita los montos del presupuesto (por cuenta y categoría)"
-                              >
-                                {setupChecklist.needsSetup ? 'Crear presupuesto' : 'Editar presupuesto'}
-                              </button>
-                              <button
-                                className={`btn btnPrimary btnSm ${
-                                  !setupChecklist.needsSetup && familyDetails && !familyDetails.setupComplete ? 'pulseAction' : ''
-                                }`}
-                                onClick={confirmPlan}
-                                disabled={loading || setupChecklist.needsSetup}
-                                type="button"
-                                title={setupChecklist.needsSetup ? 'Completa partidas/categorías/montos antes de confirmar' : 'Confirma el plan'}
-                              >
-                                Confirmar plan
-                              </button>
-                            </>
-                          ) : null}
                         </div>
+                        <div className="kpiStrip">
+                          <div className="kpiCard">
+                            <div className="kpiTitle">Presupuesto anual</div>
+                            <div className="kpiValue">{formatMoney(budgetConcentrado.annualTotal, currency)}</div>
+                            <div className="kpiDelta">promedio mensual: {formatMoney(budgetConcentrado.monthlyTotal, currency)}</div>
+                          </div>
+                          <div className="kpiCard kpiWarn">
+                            <div className="kpiTitle">Gastado (año)</div>
+                            <div className="kpiValue">{formatMoney(budgetConcentrado.spent, currency)}</div>
+                            <div className="kpiDelta">rango: {budgetConcentrado.year}-01-01 a {budgetConcentrado.year}-12-31</div>
+                          </div>
+                          <div className="kpiCard kpiSuccess">
+                            <div className="kpiTitle">Disponible (año)</div>
+                            <div className="kpiValue">{formatMoney(Math.max(0, budgetConcentrado.remaining), currency)}</div>
+                            <div className="kpiDelta">saldo</div>
+                          </div>
+                          <div className={`kpiCard ${budgetConcentrado.remaining >= 0 ? 'kpiSuccess' : 'kpiDanger'}`}>
+                            <div className="kpiTitle">{budgetConcentrado.remaining >= 0 ? 'Ahorro / margen' : 'En rojo'}</div>
+                            <div className="kpiValue">{formatMoney(budgetConcentrado.remaining, currency)}</div>
+                            <div className="kpiDelta">diferencia anual</div>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="muted" style={{ padding: '12px 0' }}>
+                        Sin cuentas no hay concentrado. En el <strong>Bloque 1</strong> crea destino + categoría y asigna presupuesto (pestaña Presupuesto) para ver KPIs aquí.
+                      </div>
+                    )}
+
+                    <div className="spacer16" />
+
+                    <div className="presupuestoConcentradoActions" role="toolbar" aria-label="Acciones de presupuesto">
+                      {meOk.isFamilyAdmin ? (
+                        <div className="presupuestoActionsRow presupuestoActionsRowPrimary" style={{ marginBottom: 12 }}>
+                          <button
+                            className={`btn btnPrimary btnSm presupuestoCtaSecondary ${
+                              !setupChecklist.needsSetup && familyDetails && !familyDetails.setupComplete ? 'pulseAction' : ''
+                            }`}
+                            onClick={confirmPlan}
+                            disabled={loading || setupChecklist.needsSetup}
+                            type="button"
+                            title={setupChecklist.needsSetup ? 'Completa destino, categoría y al menos una cuenta antes de confirmar' : 'Confirma el plan'}
+                          >
+                            Confirmar plan
+                          </button>
+                        </div>
+                      ) : null}
+                      <p className="muted" id="presupuesto-b4-analisis" style={{ margin: '0 0 8px 0', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 800 }}>
+                        Bloque 4 · Análisis
+                      </p>
+                      <div className="presupuestoActionsRow presupuestoActionsRowSecondary">
+                        <button
+                          className="btn btnGhost btnSm"
+                          onClick={() => setPeopleBudgetOpen(true)}
+                          disabled={loading}
+                          type="button"
+                          title="Análisis por integrante (presupuesto individual)"
+                        >
+                          Integrantes
+                        </button>
+                        <button
+                          className="btn btnGhost btnSm"
+                          onClick={async () => {
+                            setSeedMyPartidasBusy(true)
+                            setMessage('')
+                            try {
+                              const r = await postJson('/api/budget/seed-my-partidas', {})
+                              setMessage((r as any)?.message || 'Categorías con código creadas.')
+                              await refreshBudget()
+                            } catch (e: any) {
+                              setMessage(e?.message || 'No se pudo completar el seed de categorías')
+                            } finally {
+                              setSeedMyPartidasBusy(false)
+                            }
+                          }}
+                          disabled={loading || seedMyPartidasBusy}
+                          type="button"
+                          title="Crea categorías jerárquicas 6xxx–9xxx (tu plantilla); no reemplaza destinos ni asignaciones"
+                        >
+                          {seedMyPartidasBusy ? 'Creando…' : 'Plantilla de categorías (códigos)'}
+                        </button>
                       </div>
                     </div>
 
@@ -7482,35 +8273,10 @@ export default function UiPage() {
                       <>
                         <div className="spacer8" />
                         <div className="muted">
-                          Tu usuario no es <b>Admin</b>. Solo Admin puede crear partidas/categorías/montos. Pide al Admin que te cambie a Admin en “Usuarios”.
+                          Tu usuario no es <b>Admin</b>. Solo Admin puede crear destinos/categorías/presupuesto (cuentas). Pide al Admin que te cambie a Admin en “Usuarios”.
                         </div>
                       </>
                     ) : null}
-
-                    <div className="spacer16" />
-
-                    <div className="kpiStrip">
-                      <div className="kpiCard">
-                        <div className="kpiTitle">Presupuesto anual</div>
-                        <div className="kpiValue">{formatMoney(budgetConcentrado.annualTotal, currency)}</div>
-                        <div className="kpiDelta">promedio mensual: {formatMoney(budgetConcentrado.monthlyTotal, currency)}</div>
-                      </div>
-                      <div className="kpiCard kpiWarn">
-                        <div className="kpiTitle">Gastado (año)</div>
-                        <div className="kpiValue">{formatMoney(budgetConcentrado.spent, currency)}</div>
-                        <div className="kpiDelta">rango: {budgetConcentrado.year}-01-01 a {budgetConcentrado.year}-12-31</div>
-                      </div>
-                      <div className="kpiCard kpiSuccess">
-                        <div className="kpiTitle">Disponible (año)</div>
-                        <div className="kpiValue">{formatMoney(Math.max(0, budgetConcentrado.remaining), currency)}</div>
-                        <div className="kpiDelta">saldo</div>
-                      </div>
-                      <div className={`kpiCard ${budgetConcentrado.remaining >= 0 ? 'kpiSuccess' : 'kpiDanger'}`}>
-                        <div className="kpiTitle">{budgetConcentrado.remaining >= 0 ? 'Ahorro / margen' : 'En rojo'}</div>
-                        <div className="kpiValue">{formatMoney(budgetConcentrado.remaining, currency)}</div>
-                        <div className="kpiDelta">diferencia anual</div>
-                      </div>
-                    </div>
                   </div>
 
                   <div className="spacer16" />
@@ -7555,7 +8321,7 @@ export default function UiPage() {
                               <div className="cardHeader">
                                 <div>
                                   <h3 className="cardTitle">Controles</h3>
-                                  <div className="cardDesc">Personas ↔ Partidas • Detalle ↔ Matriz • filtros rápidos</div>
+                                  <div className="cardDesc">Personas ↔ Destinos • Detalle ↔ Matriz • filtros rápidos</div>
                                 </div>
                               </div>
                               <div className="cardBody peopleControls">
@@ -7576,7 +8342,7 @@ export default function UiPage() {
                                     role="tab"
                                     aria-selected={peopleBudgetPivot === 'objects'}
                                   >
-                                    Partidas
+                                    Destinos
                                   </button>
                                 </div>
 
@@ -7731,7 +8497,7 @@ export default function UiPage() {
                                   <>
                                     <div className="spacer12" />
                                     <label>
-                                      Partida
+                                      Destino
                                       <select
                                         className="select"
                                         value={peopleBudgetEntityId}
@@ -7747,7 +8513,7 @@ export default function UiPage() {
                                     </label>
 
                                     <label>
-                                      Categoría (en esta partida)
+                                      Categoría (en este destino)
                                       <select
                                         className="select"
                                         value={peopleBudgetCategoryFocusId}
@@ -7772,7 +8538,7 @@ export default function UiPage() {
                                       onClick={() => setPeopleBudgetNamesOpen((v) => !v)}
                                       disabled={loading || !budgetObjects.objects.length}
                                       type="button"
-                                      title="Abrir lista rápida de partidas"
+                                      title="Abrir lista rápida de destinos"
                                     >
                                       {peopleBudgetNamesOpen ? 'Ocultar lista' : 'Ver lista'}
                                     </button>
@@ -7784,10 +8550,10 @@ export default function UiPage() {
                                           className="input inputSm"
                                           value={peopleBudgetQuery}
                                           onChange={(e) => setPeopleBudgetQuery(e.target.value)}
-                                          placeholder="Buscar partida…"
+                                          placeholder="Buscar destino…"
                                         />
                                         <div className="spacer8" />
-                                        <div className="peopleList" role="listbox" aria-label="Lista de partidas">
+                                        <div className="peopleList" role="listbox" aria-label="Lista de destinos">
                                           {peopleBudgetObjectsFiltered.length ? (
                                             peopleBudgetObjectsFiltered.map((o: any) => {
                                               const active = String(peopleBudgetEntityId || '') === String(o.entityId)
@@ -7892,7 +8658,7 @@ export default function UiPage() {
                                           <option value="categories">Categorías</option>
                                           {peopleBudgetPivot === 'people' ? (
                                             <>
-                                              <option value="objects">Partidas</option>
+                                              <option value="objects">Destinos</option>
                                               <option value="accounts">Cuentas</option>
                                             </>
                                           ) : null}
@@ -7915,7 +8681,7 @@ export default function UiPage() {
                                 <div className="peopleHint">
                                   {peopleBudgetPivot === 'people'
                                     ? 'Tip: “Todo (según historial)” agrega cuentas compartidas (Casa/Auto) si el integrante las usó.'
-                                    : 'Tip: en “Detalle” verás “A quién” por cuenta (ej. Gasolina/Supermercado). En “Matriz” verás Consumo → Partida.'}
+                                    : 'Tip: en “Detalle” verás “A quién” por cuenta (ej. Gasolina/Supermercado). En “Matriz” verás Consumo → destino.'}
                                 </div>
                               </div>
                             </div>
@@ -8041,6 +8807,7 @@ export default function UiPage() {
                                                             type="button"
                                                             disabled={!meOk?.isFamilyAdmin}
                                                             onClick={() => {
+                                                              setBudgetReturnToIntegranteUserId(peopleBudgetUserId || null)
                                                               setPeopleBudgetOpen(false)
                                                               setPeopleBudgetNamesOpen(false)
                                                               setPeopleBudgetQuery('')
@@ -8061,7 +8828,7 @@ export default function UiPage() {
                                           ) : (
                                             <div className="peopleEmpty">
                                               <div className="muted">
-                                                Sin cuentas para este integrante con la cobertura actual. Tip: crea una partida <b>PERSON</b> con su nombre y
+                                                Sin cuentas para este integrante con la cobertura actual. Tip: crea un destino <b>Persona</b> con su nombre y
                                                 asigna categorías (ej. Colegiaturas, Gasolina, etc.).
                                               </div>
                                             </div>
@@ -8081,7 +8848,7 @@ export default function UiPage() {
                                         <h3 className="cardTitle">Matriz (comparación)</h3>
                                         <div className="cardDesc">
                                         {peopleBudgetRows === 'objects'
-                                          ? 'Partidas → Personas'
+                                          ? 'Destinos → Personas'
                                           : peopleBudgetRows === 'accounts'
                                             ? 'Cuentas → Personas'
                                             : 'Categorías → Personas'}{' '}
@@ -8102,7 +8869,7 @@ export default function UiPage() {
                                             <tr>
                                               <th>
                                                 {budgetPeopleMatrix.effectiveRows === 'objects'
-                                                  ? 'De qué (Partida)'
+                                                  ? 'De qué (destino)'
                                                   : budgetPeopleMatrix.effectiveRows === 'accounts'
                                                     ? 'De qué (Cuenta)'
                                                     : 'De qué (Categoría)'}
@@ -8220,7 +8987,7 @@ export default function UiPage() {
                                             <div className="kpiValue">
                                               {formatMoney(Number(budgetObjectsSelectedView.budgetAnnualView) || 0, currency)}
                                             </div>
-                                            <div className="kpiDelta">Asignado a la partida</div>
+                                            <div className="kpiDelta">Asignado al destino</div>
                                           </div>
                                           <div className="kpiCard kpiWarn">
                                             <div className="kpiTitle">Gastado</div>
@@ -8342,7 +9109,7 @@ export default function UiPage() {
                                                         <span
                                                           key={uid}
                                                           className="peopleChip"
-                                                          title="Gastó en esta partida, pero no está marcado como responsable"
+                                                          title="Gastó en este destino, pero no está marcado como responsable"
                                                         >
                                                           {nm}: {formatMoney(Number(s?.amount) || 0, currency)}
                                                         </span>
@@ -8358,7 +9125,7 @@ export default function UiPage() {
                                           </>
                                         ) : (
                                           <div className="muted">
-                                            Opcional: define responsables en <b>Presupuesto → Partidas → Responsables</b>.
+                                            Opcional: define responsables en <b>Presupuesto → Destinos → Responsables</b>.
                                           </div>
                                         )}
                                       </div>
@@ -8367,7 +9134,7 @@ export default function UiPage() {
                                     <div className="card">
                                       <div className="cardHeader">
                                         <div>
-                                          <h3 className="cardTitle">Cuentas de la partida</h3>
+                                          <h3 className="cardTitle">Cuentas del destino</h3>
                                           <div className="cardDesc">Presupuesto vs Gastado vs Disponible + “A quién”.</div>
                                         </div>
                                         <span className="pill">Editar abre configuración</span>
@@ -8430,6 +9197,7 @@ export default function UiPage() {
                                                           type="button"
                                                           disabled={!meOk?.isFamilyAdmin}
                                                           onClick={() => {
+                                                            setBudgetReturnToIntegranteUserId(null)
                                                             setPeopleBudgetOpen(false)
                                                             setPeopleBudgetNamesOpen(false)
                                                             setPeopleBudgetQuery('')
@@ -8451,9 +9219,9 @@ export default function UiPage() {
                                           <div className="peopleEmpty">
                                             <div className="muted">
                                               {budgetObjectsSelectedView.categoryNameView
-                                                ? `Sin cuentas para ${budgetObjectsSelectedView.categoryNameView} en esta partida.`
-                                                : 'Sin cuentas para esta partida.'}{' '}
-                                              Tip: asigna montos en “Configurar presupuesto”.
+                                                ? `Sin cuentas para ${budgetObjectsSelectedView.categoryNameView} en este destino.`
+                                                : 'Sin cuentas para este destino.'}{' '}
+                                              Tip: crea la cuenta en Presupuesto (Bloque 1, pestaña Presupuesto).
                                             </div>
                                           </div>
                                         )}
@@ -8462,7 +9230,7 @@ export default function UiPage() {
                                   </>
                                 ) : (
                                   <div className="card">
-                                    <div className="cardBody muted">Selecciona una partida.</div>
+                                    <div className="cardBody muted">Selecciona un destino.</div>
                                   </div>
                                 )
                               ) : (
@@ -8477,7 +9245,7 @@ export default function UiPage() {
                                           : peopleBudgetMetric === 'available'
                                             ? 'Disponible'
                                             : 'Gastado'}{' '}
-                                        • Columnas: Partidas
+                                        • Columnas: Destinos
                                       </div>
                                     </div>
                                     <span className="pill">Scroll horizontal</span>
@@ -8554,7 +9322,7 @@ export default function UiPage() {
                               )
                             ) : (
                               <div className="card">
-                                <div className="cardBody muted">Aún no hay partidas con presupuesto en esta familia.</div>
+                                <div className="cardBody muted">Aún no hay destinos con presupuesto asignado en esta familia.</div>
                               </div>
                             )}
                           </main>
@@ -8588,7 +9356,7 @@ export default function UiPage() {
                         />
                       </label>
                       <label>
-                        Partida
+                        Destino
                         <select className="select" value={budgetListEntityId} onChange={(e) => setBudgetListEntityId(e.target.value)}>
                           <option value="all">Todos</option>
                           {budgetListEntityOptions.map((o) => (
@@ -8604,7 +9372,7 @@ export default function UiPage() {
                           <option value="all">Todas</option>
                           {budgetListCategoryOptions.map((c) => (
                             <option key={c.id} value={c.id}>
-                              {c.name}
+                              {(c as any).code ? `${(c as any).code} ${c.name}` : c.name}
                             </option>
                           ))}
                         </select>
@@ -8656,7 +9424,8 @@ export default function UiPage() {
                     </div>
                     <div className="spacer8" />
                     {budgetAccounts.length ? (
-                      <table className="table">
+                      <div className="budgetAccountsTableWrap" role="region" aria-label="Tabla de cuentas">
+                        <table className="table">
                         <thead>
                           <tr>
                             <th>Cuenta</th>
@@ -8664,7 +9433,7 @@ export default function UiPage() {
                             <th style={{ textAlign: 'right' }}>Gastado</th>
                             <th style={{ textAlign: 'right' }}>Disponible</th>
                             <th style={{ textAlign: 'center' }}>Estado</th>
-                            <th title="Se define por el tipo de partida (Persona = Individual; otros = Compartido)">Tipo (auto)</th>
+                            <th title="Se define por el tipo de destino (Persona = Individual; otros = Compartido)">Tipo (auto)</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -8733,8 +9502,9 @@ export default function UiPage() {
                           })}
                         </tbody>
                       </table>
+                      </div>
                     ) : (
-                      <div className="muted">Aún no hay cuentas/montos asignados. Ve a “Configurar presupuesto”.</div>
+                      <div className="muted">Aún no hay cuentas con presupuesto asignado. Ve a Presupuesto (Bloque 1 → pestaña Presupuesto).</div>
                     )}
                   </div>
 
@@ -8774,7 +9544,7 @@ export default function UiPage() {
                             </tbody>
                           </table>
                         ) : (
-                          <div className="muted">Aún no hay categorías o montos asignados.</div>
+                          <div className="muted">Aún no hay categorías con presupuesto asignado en el mes.</div>
                         )}
                       </div>
 
@@ -8808,7 +9578,7 @@ export default function UiPage() {
                         <thead>
                           <tr>
                             <th>Fecha</th>
-                            <th>Partida</th>
+                            <th>Destino</th>
                             <th>Categoría</th>
                             <th>Usuario</th>
                             <th>Monto</th>
@@ -8837,272 +9607,624 @@ export default function UiPage() {
                     )}
                   </details>
 
-                  {/*
-                  <div className="spacer16" />
+                </>
+              ) : null}
 
-                  <details ref={budgetAdminRef} className="details">
-                    <summary>Configurar presupuesto (Partidas, Categorías y Montos)</summary>
-                    <div className="spacer16" />
-                    <div className="sectionRow" style={{ justifyContent: 'space-between' }}>
-                      <div className="tabRow" role="tablist" aria-label="Tabs de configuración de presupuesto">
-                        <button
-                          className={`tabBtn ${budgetAdminTab === 'objetos' ? 'tabBtnActive' : ''}`}
-                          onClick={() => setBudgetAdminTab('objetos')}
-                          type="button"
-                          role="tab"
-                          aria-selected={budgetAdminTab === 'objetos'}
-                        >
-                          Partidas
-                        </button>
-                        <button
-                          className={`tabBtn ${budgetAdminTab === 'categorias' ? 'tabBtnActive' : ''}`}
-                          onClick={() => setBudgetAdminTab('categorias')}
-                          type="button"
-                          role="tab"
-                          aria-selected={budgetAdminTab === 'categorias'}
-                        >
-                          Categorías
-                        </button>
-                        <button
-                          className={`tabBtn ${budgetAdminTab === 'montos' ? 'tabBtnActive' : ''}`}
-                          onClick={() => setBudgetAdminTab('montos')}
-                          type="button"
-                          role="tab"
-                          aria-selected={budgetAdminTab === 'montos'}
-                        >
-                          Montos
-                        </button>
+              {view === 'documentos' ? (
+                <div className="chartBox">
+                  <div className="sectionRow" style={{ flexWrap: 'wrap', gap: 8, marginBottom: 16, alignItems: 'center' }}>
+                    {documentCategories.map((cat) => {
+                      const isDefault = DEFAULT_DOCUMENT_CATEGORIES.includes(cat)
+                      const isEditing = documentCategoryEditing === cat
+                      if (isEditing) {
+                        return (
+                          <div key={cat} className="sectionRow" style={{ gap: 6, alignItems: 'center' }}>
+                            <input
+                              type="text"
+                              value={documentCategoryEditName}
+                              onChange={(e) => setDocumentCategoryEditName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault()
+                                  const v = documentCategoryEditName.trim()
+                                  if (v && v !== cat) {
+                                    fetch('/api/users/me/documents/rename-category', {
+                                      method: 'POST',
+                                      credentials: 'include',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ oldCategory: cat, newCategory: v }),
+                                    })
+                                      .then((r) => r.json())
+                                      .then((data) => {
+                                        if (data?.ok) {
+                                          return getJson('/api/users/me/documents')
+                                        }
+                                        throw new Error(data?.detail || 'Error')
+                                      })
+                                      .then((r: any) => {
+                                        setUserDocuments(Array.isArray(r?.documents) ? r.documents : [])
+                                        if (documentsTab === cat) setDocumentsTab(v)
+                                        setDocumentCategoryEditing(null)
+                                        setDocumentCategoryEditName('')
+                                        setMessage('Categoría renombrada.')
+                                      })
+                                      .catch((err: any) => setMessage(err?.message || 'No se pudo renombrar'))
+                                  }
+                                }
+                                if (e.key === 'Escape') { setDocumentCategoryEditing(null); setDocumentCategoryEditName('') }
+                              }}
+                              autoFocus
+                              style={{ width: 140, padding: '6px 8px', fontSize: 14 }}
+                            />
+                            <button
+                              type="button"
+                              className="btn btnSm btnPrimary"
+                              onClick={() => {
+                                const v = documentCategoryEditName.trim()
+                                if (!v || v === cat) { setDocumentCategoryEditing(null); return }
+                                fetch('/api/users/me/documents/rename-category', {
+                                  method: 'POST',
+                                  credentials: 'include',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ oldCategory: cat, newCategory: v }),
+                                })
+                                  .then((r) => r.json())
+                                  .then((data) => {
+                                    if (data?.ok) return getJson('/api/users/me/documents')
+                                    throw new Error(data?.detail || 'Error')
+                                  })
+                                  .then((r: any) => {
+                                    setUserDocuments(Array.isArray(r?.documents) ? r.documents : [])
+                                    if (documentsTab === cat) setDocumentsTab(v)
+                                    setDocumentCategoryEditing(null)
+                                    setDocumentCategoryEditName('')
+                                    setMessage('Categoría renombrada.')
+                                  })
+                                  .catch((err: any) => setMessage(err?.message || 'No se pudo renombrar'))
+                              }}
+                            >
+                              Guardar
+                            </button>
+                            <button type="button" className="btn btnSm btnGhost" onClick={() => { setDocumentCategoryEditing(null); setDocumentCategoryEditName('') }}>Cancelar</button>
+                          </div>
+                        )
+                      }
+                      return (
+                        <div key={cat} className="sectionRow" style={{ gap: 4, alignItems: 'center' }}>
+                          <button
+                            type="button"
+                            className={`btn btnSm ${documentsTab === cat ? 'btnPrimary' : 'btnGhost'}`}
+                            onClick={() => setDocumentsTab(cat)}
+                          >
+                            {getDocumentCategoryLabel(cat)}
+                          </button>
+                          {!isDefault ? (
+                            <button
+                              type="button"
+                              className="btn btnGhost btnSm"
+                              style={{ padding: '2px 6px', minWidth: 0 }}
+                              title="Editar nombre de categoría"
+                              onClick={(e) => { e.stopPropagation(); setDocumentCategoryEditing(cat); setDocumentCategoryEditName(cat) }}
+                              aria-label="Editar categoría"
+                            >
+                              ✎
+                            </button>
+                          ) : null}
+                        </div>
+                      )
+                    })}
+                    <div className="sectionRow" style={{ alignItems: 'center', gap: 6 }}>
+                      <input
+                        type="text"
+                        placeholder="Nueva categoría (ej. Motocicletas)"
+                        value={customDocumentCategory}
+                        onChange={(e) => setCustomDocumentCategory(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { const v = customDocumentCategory.trim(); if (v) setDocumentsTab(v); setCustomDocumentCategory(''); } }}
+                        style={{ width: 180, padding: '6px 8px', fontSize: 14 }}
+                      />
+                      <button
+                        type="button"
+                        className="btn btnSm btnGhost"
+                        onClick={() => { const v = customDocumentCategory.trim(); if (v) { setDocumentsTab(v); setCustomDocumentCategory(''); } }}
+                      >
+                        Ir
+                      </button>
+                    </div>
+                  </div>
+                  {(() => {
+                    const inSixMonths = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000)
+                    const expiring = userDocuments.filter((d: any) => d.expiresAt && new Date(d.expiresAt) <= inSixMonths && new Date(d.expiresAt) >= new Date()).length
+                    const expired = userDocuments.filter((d: any) => d.expiresAt && new Date(d.expiresAt) < new Date()).length
+                    const warnCount = expiring + expired
+                    if (warnCount === 0) return null
+                    return (
+                      <div className="alert" style={{ marginBottom: 12, background: 'var(--color-warning-bg, #fff8e1)', borderColor: 'var(--color-warning, #f59e0b)', color: '#92400e' }} role="alert">
+                        <span>
+                          {expired > 0
+                            ? `Tienes ${expired} documento(s) vencido(s) y ${expiring} por vencer en 6 meses. Sube la nueva versión en Mis documentos.`
+                            : `Tienes ${expiring} documento(s) por vencer en los próximos 6 meses. Te avisaremos por WhatsApp; sube la nueva versión cuando la tengas.`}
+                        </span>
+                      </div>
+                    )
+                  })()}
+                  <div className="sectionRow" style={{ alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+                    <span className="muted" style={{ width: '100%', marginBottom: 4 }}>Cargar documento (cualquier archivo o imagen, máx 15 MB):</span>
+                    <input
+                      ref={documentsFileInputRef}
+                      type="file"
+                      accept="*"
+                      style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
+                      disabled={documentsUploadBusy}
+                      onChange={async (e) => {
+                        const f = e.target.files?.[0]
+                        if (!f) return
+                        const categoryToUse = documentsTab || customDocumentCategory.trim() || 'IDENTIFICACIONES'
+                        setDocumentsUploadBusy(true)
+                        setMessage('')
+                        try {
+                          const fd = new FormData()
+                          fd.set('file', f)
+                          fd.set('category', categoryToUse)
+                          const res = await fetch('/api/users/me/documents', {
+                            method: 'POST',
+                            credentials: 'include',
+                            body: fd,
+                          })
+                          const data = await res.json().catch(() => ({}))
+                          if (!res.ok) throw new Error(data.detail || `Error ${res.status}`)
+                          const r = await getJson('/api/users/me/documents')
+                          setUserDocuments(Array.isArray(r?.documents) ? r.documents : [])
+                          setMessage('Listo, documento guardado.')
+                          e.target.value = ''
+                        } catch (err: any) {
+                          setMessage(err?.message || 'Error al subir')
+                        } finally {
+                          setDocumentsUploadBusy(false)
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btnPrimary"
+                      style={{ padding: '10px 20px', fontSize: 15 }}
+                      disabled={documentsUploadBusy}
+                      onClick={() => documentsFileInputRef.current?.click()}
+                    >
+                      {documentsUploadBusy ? 'Subiendo…' : 'Subir archivo'}
+                    </button>
+                    {documentsUploadBusy ? <span className="muted">Subiendo…</span> : null}
+                  </div>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                    {userDocuments
+                      .filter((d: any) => d.category === documentsTab)
+                      .map((d: any) => (
+                        <li key={d.id} className="sectionRow" style={{ alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
+                          <div style={{ width: 96, height: 96, flexShrink: 0, borderRadius: 6, overflow: 'hidden', background: 'var(--border)' }}>
+                            {d.thumbnailSignedUrl ? (
+                              <img src={d.thumbnailSignedUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: 24 }}>📄</div>
+                            )}
+                          </div>
+                          <span style={{ flex: 1, minWidth: 0 }}>{d.name || d.fileName}</span>
+                          {d.expiresAt ? <span className="muted" style={{ fontSize: 12 }}>Vence: {new Date(d.expiresAt).toLocaleDateString('es-MX')}</span> : null}
+                          <span className="muted" style={{ fontSize: 12 }}>{new Date(d.createdAt).toLocaleDateString('es-MX')}</span>
+                          <button
+                            type="button"
+                            className="btn btnGhost btnSm"
+                            onClick={() => {
+                              setDocumentDetailId(d.id)
+                              setDocumentNewFieldName('')
+                              setDocumentEditData({
+                                extractedData: (typeof d.extractedData === 'object' && d.extractedData && !Array.isArray(d.extractedData)) ? { ...d.extractedData } : {},
+                                expiresAt: d.expiresAt ? new Date(d.expiresAt).toISOString().slice(0, 10) : '',
+                              })
+                            }}
+                          >
+                            Ver
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btnGhost btnSm"
+                            disabled={documentsDeleteId === d.id}
+                            onClick={async () => {
+                              if (!confirm('¿Eliminar este documento?')) return
+                              setDocumentsDeleteId(d.id)
+                              try {
+                                await fetch(`/api/users/me/documents/${d.id}`, { method: 'DELETE', credentials: 'include' })
+                                setUserDocuments((prev) => prev.filter((x: any) => x.id !== d.id))
+                                if (documentDetailId === d.id) { setDocumentDetailId(null); setDocumentNewFieldName('') }
+                              } catch (err: any) {
+                                setMessage(err?.message || 'Error al eliminar')
+                              } finally {
+                                setDocumentsDeleteId(null)
+                              }
+                            }}
+                          >
+                            {documentsDeleteId === d.id ? '…' : 'Eliminar'}
+                          </button>
+                        </li>
+                      ))}
+                  </ul>
+                  {userDocuments.filter((d: any) => d.category === documentsTab).length === 0 ? (
+                    <p className="muted" style={{ padding: '12px 0' }}>Aún no hay documentos en esta categoría. Puedes crear una nueva categoría arriba (ej. Motocicletas) y subir cualquier archivo.</p>
+                  ) : null}
+                  {documentDetailId ? (() => {
+                    const doc = userDocuments.find((d: any) => d.id === documentDetailId)
+                    if (!doc) return null
+                    return (
+                      <div role="dialog" aria-modal="true" aria-label="Detalle del documento" style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+                        <div style={{ background: 'var(--bg)', borderRadius: 12, maxWidth: 520, width: '100%', maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.2)' }}>
+                          <div className="sectionRow" style={{ justifyContent: 'space-between', alignItems: 'center', padding: 12, borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+                            <h3 style={{ margin: 0, fontSize: 16, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.name || doc.fileName}</h3>
+                            <button type="button" className="btn btnGhost btnSm" onClick={() => { setDocumentDetailId(null); setDocumentNewFieldName('') }} aria-label="Cerrar">×</button>
+                          </div>
+                          <div style={{ padding: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0 }}>
+                            <div style={{ flexShrink: 0 }}>
+                              <p className="muted" style={{ margin: '0 0 4px', fontSize: 12 }}>Documento</p>
+                              <button
+                                type="button"
+                                className="btn btnSm btnPrimary"
+                                onClick={async () => {
+                                  try {
+                                    const urlRes = await getJson(`/api/users/me/documents/${doc.id}/download`)
+                                    const url = (urlRes as any)?.url
+                                    if (!url) {
+                                      setMessage('No se pudo obtener el enlace del archivo.')
+                                      return
+                                    }
+                                    const fullUrl = url.startsWith('http') ? url : `${window.location.origin}${url.startsWith('/') ? '' : '/'}${url}`
+                                    const a = document.createElement('a')
+                                    a.href = fullUrl
+                                    a.target = '_blank'
+                                    a.rel = 'noopener noreferrer'
+                                    a.click()
+                                  } catch {
+                                    setMessage('No se pudo abrir el archivo. Revisa tu conexión.')
+                                  }
+                                }}
+                              >
+                                Abrir archivo
+                              </button>
+                            </div>
+                            <div style={{ flexShrink: 0 }}>
+                              <p className="muted" style={{ margin: '0 0 4px', fontSize: 12 }}>Fecha de vencimiento</p>
+                              <input
+                                type="date"
+                                value={documentEditData.expiresAt}
+                                onChange={(e) => setDocumentEditData((prev) => ({ ...prev, expiresAt: e.target.value }))}
+                                style={{ padding: '5px 8px', fontSize: 13 }}
+                              />
+                            </div>
+                            <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                              <p className="muted" style={{ margin: '0 0 4px', fontSize: 12, flexShrink: 0 }}>Datos extraídos (nombre, número, etc.)</p>
+                              <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                {Object.entries(documentEditData.extractedData).map(([k]) => (
+                                  <div key={k} className="sectionRow" style={{ gap: 6, alignItems: 'center', flexShrink: 0 }}>
+                                    <input
+                                      type="text"
+                                      value={documentEditData.extractedData[k] ?? ''}
+                                      onChange={(e) => setDocumentEditData((prev) => ({
+                                        ...prev,
+                                        extractedData: { ...prev.extractedData, [k]: e.target.value },
+                                      }))}
+                                      placeholder={k}
+                                      style={{ flex: 1, padding: '5px 8px', fontSize: 13 }}
+                                    />
+                                    <button
+                                      type="button"
+                                      className="btn btnGhost btnSm"
+                                      onClick={() => setDocumentEditData((prev) => {
+                                        const next = { ...prev.extractedData }; delete next[k]; return { ...prev, extractedData: next }
+                                      })}
+                                    >
+                                      Quitar
+                                    </button>
+                                  </div>
+                                ))}
+                                <div className="sectionRow" style={{ gap: 6, flexShrink: 0, alignItems: 'center' }}>
+                                  <input
+                                    type="text"
+                                    placeholder="Nombre del campo (ej. Notas, Referencia)"
+                                    value={documentNewFieldName}
+                                    onChange={(e) => setDocumentNewFieldName(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault()
+                                        const key = documentNewFieldName.trim()
+                                        if (key) {
+                                          setDocumentEditData((prev) => ({ ...prev, extractedData: { ...prev.extractedData, [key]: '' } }))
+                                          setDocumentNewFieldName('')
+                                        }
+                                      }
+                                    }}
+                                    style={{ flex: 1, minWidth: 120, padding: '5px 8px', fontSize: 13 }}
+                                  />
+                                  <button
+                                    type="button"
+                                    className="btn btnSm btnGhost"
+                                    onClick={() => {
+                                      const key = documentNewFieldName.trim()
+                                      if (key) {
+                                        setDocumentEditData((prev) => ({ ...prev, extractedData: { ...prev.extractedData, [key]: '' } }))
+                                        setDocumentNewFieldName('')
+                                      }
+                                    }}
+                                  >
+                                    Añadir campo
+                                  </button>
+                                </div>
+                              </div>
+                              {(() => {
+                                const docExpires = doc.expiresAt ? new Date(doc.expiresAt).toISOString().slice(0, 10) : ''
+                                const editExpires = (documentEditData.expiresAt || '').slice(0, 10)
+                                const docData = (typeof doc.extractedData === 'object' && doc.extractedData && !Array.isArray(doc.extractedData)) ? doc.extractedData : {}
+                                const editData = documentEditData.extractedData || {}
+                                const sameKeys = Object.keys(docData).length === Object.keys(editData).length && Object.keys(docData).every((k) => editData[k] !== undefined)
+                                const sameValues = Object.keys(editData).every((k) => String(editData[k] ?? '') === String(docData[k] ?? ''))
+                                const noChanges = editExpires === docExpires && sameKeys && sameValues
+                                return (
+                                  <button
+                                    type="button"
+                                    className="btn btnSm btnPrimary"
+                                    style={{ marginTop: 8 }}
+                                    disabled={documentSaveBusy || noChanges}
+                                    onClick={async () => {
+                                      setDocumentSaveBusy(true)
+                                      try {
+                                        await fetch(`/api/users/me/documents/${doc.id}`, {
+                                          method: 'PATCH',
+                                          credentials: 'include',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({
+                                            extractedData: documentEditData.extractedData,
+                                            expiresAt: documentEditData.expiresAt || null,
+                                          }),
+                                        })
+                                        const r = await getJson('/api/users/me/documents')
+                                        setUserDocuments(Array.isArray(r?.documents) ? r.documents : [])
+                                        setMessage('Datos y vencimiento guardados.')
+                                      } catch (err: any) {
+                                        setMessage(err?.message || 'Error al guardar')
+                                      } finally {
+                                        setDocumentSaveBusy(false)
+                                      }
+                                    }}
+                                  >
+                                    {documentSaveBusy ? '…' : 'Guardar datos y vencimiento'}
+                                  </button>
+                                )
+                              })()}
+                              {(doc.category === 'IDENTIFICACIONES' || doc.category === 'ACTAS') && (doc.contentType === 'application/pdf' || (doc.contentType && doc.contentType.startsWith('image/'))) ? (
+                                <button
+                                  type="button"
+                                  className="btn btnSm btnGhost"
+                                  style={{ marginLeft: 8 }}
+                                  disabled={documentExtractBusy}
+                                  onClick={async () => {
+                                    setDocumentExtractBusy(true)
+                                    setMessage('')
+                                    try {
+                                      const res = await fetch(`/api/users/me/documents/${doc.id}/extract`, { method: 'POST', credentials: 'include' })
+                                      const data = await res.json().catch(() => ({}))
+                                      if (data.ok) {
+                                        const r = await getJson('/api/users/me/documents')
+                                        setUserDocuments(Array.isArray(r?.documents) ? r.documents : [])
+                                        setDocumentEditData({ extractedData: (data.document?.extractedData && typeof data.document.extractedData === 'object') ? data.document.extractedData : {}, expiresAt: data.document?.expiresAt ? new Date(data.document.expiresAt).toISOString().slice(0, 10) : '' })
+                                        setMessage('Datos extraídos correctamente')
+                                      } else {
+                                        setMessage(data.message || 'No se pudieron extraer datos')
+                                      }
+                                    } catch (err: any) {
+                                      setMessage(err?.message || 'Error')
+                                    } finally {
+                                      setDocumentExtractBusy(false)
+                                    }
+                                  }}
+                                >
+                                  {documentExtractBusy ? '…' : 'Intentar extraer datos de nuevo'}
+                                </button>
+                              ) : null}
+                            </div>
+                            <div style={{ flexShrink: 0, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+                              <div className="sectionRow" style={{ flexWrap: 'wrap', gap: 8 }}>
+                                <span className="muted" style={{ width: '100%', marginBottom: 4, fontSize: 12 }}>Compartir</span>
+                              <button
+                                type="button"
+                                className="btn btnSm btnGhost"
+                                onClick={async () => {
+                                  try {
+                                    const urlRes = await getJson(`/api/users/me/documents/${doc.id}/download`)
+                                    const url = (urlRes as any)?.url
+                                    if (!url) {
+                                      setMessage('No se pudo generar el enlace. Revisa la configuración del almacenamiento.')
+                                      return
+                                    }
+                                    const copied = await copyToClipboard(url)
+                                    setMessage(copied ? 'Enlace copiado al portapapeles' : 'No se pudo copiar. Se abrió el enlace en una nueva pestaña.')
+                                    if (!copied) {
+                                      try {
+                                        const fullUrl = url.startsWith('http') ? url : `${window.location.origin}${url.startsWith('/') ? '' : '/'}${url}`
+                                        const a = document.createElement('a')
+                                        a.href = fullUrl
+                                        a.target = '_blank'
+                                        a.rel = 'noopener noreferrer'
+                                        a.click()
+                                      } catch { /* solo informar */ }
+                                    }
+                                  } catch {
+                                    setMessage('No se pudo obtener el enlace. Revisa tu conexión.')
+                                  }
+                                }}
+                              >
+                                Compartir documento (enlace)
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btnSm btnGhost"
+                                onClick={async () => {
+                                  if (doc.extractedData && typeof doc.extractedData === 'object') {
+                                    const text = Object.entries(doc.extractedData).map(([k, v]) => `${k}: ${v}`).join('\n')
+                                    const copied = await copyToClipboard(text)
+                                    setMessage(copied ? 'Datos copiados' : 'No se pudo copiar. Selecciona el texto y cópialo manualmente.')
+                                  } else setMessage('No hay datos extraídos')
+                                }}
+                              >
+                                Compartir datos
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btnSm btnGhost"
+                                onClick={async () => {
+                                  try {
+                                    const urlRes = await getJson(`/api/users/me/documents/${doc.id}/download`)
+                                    const url = (urlRes as any)?.url || ''
+                                    const text = (doc.extractedData && typeof doc.extractedData === 'object')
+                                      ? Object.entries(doc.extractedData).map(([k, v]) => `${k}: ${v}`).join('\n')
+                                      : ''
+                                    const toCopy = url ? (text ? `${text}\n\nEnlace: ${url}` : url) : text
+                                    if (!toCopy) {
+                                      setMessage('No hay enlace ni datos para copiar.')
+                                      return
+                                    }
+                                    const copied = await copyToClipboard(toCopy)
+                                    setMessage(copied ? 'Copiado (datos y enlace)' : 'No se pudo copiar. Cópialo manualmente.')
+                                  } catch {
+                                    setMessage('No se pudo obtener el enlace. Revisa tu conexión.')
+                                  }
+                                }}
+                              >
+                                Compartir ambos
+                              </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })() : null}
+                </div>
+              ) : null}
+
+              {view === 'cosas' ? (
+                <div className="chartBox">
+                  <div className="sectionRow" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+                    <p className="muted" style={{ margin: 0 }}>Dispositivos, auto, bicicleta, servicios: marca, modelo, serie, fecha de adquisición, factura, garantía, contacto del proveedor y registros de mantenimiento. Pregunta por WhatsApp: &quot;¿qué serie es mi computadora?&quot;, &quot;¿cuánto le falta al servicio?&quot;, &quot;¿qué placas tiene mi carro?&quot;</p>
+                    <button type="button" className="btn btnPrimary btnSm" onClick={() => { setCosasFormThing(null); setCosasFormOpen(true) }}>
+                      Añadir cosa
+                    </button>
+                  </div>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                    {userThings.map((t: any) => (
+                      <li key={t.id} style={{ borderBottom: '1px solid var(--border)', padding: '12px 0' }}>
+                        <div className="sectionRow" style={{ flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                          <span className="pill" style={{ fontSize: 11 }}>{t.type}</span>
+                          <strong>{t.name}</strong>
+                          {t.brand || t.model ? <span className="muted">{[t.brand, t.model].filter(Boolean).join(' ')}</span> : null}
+                          {t.serialNumber ? <span className="muted" style={{ fontSize: 12 }}>Serie: {t.serialNumber}</span> : null}
+                          <button type="button" className="btn btnGhost btnSm" onClick={() => { setCosasDetailId(cosasDetailId === t.id ? null : t.id) }}>{cosasDetailId === t.id ? 'Ocultar' : 'Ver'}</button>
+                          <button type="button" className="btn btnGhost btnSm" onClick={() => { setCosasFormThing(t); setCosasFormOpen(true) }}>Editar</button>
+                          <button type="button" className="btn btnGhost btnSm" onClick={async () => { if (!confirm('¿Eliminar esta cosa y sus registros?')) return; try { await fetch(`/api/users/me/things/${t.id}`, { method: 'DELETE', credentials: 'include' }); setUserThings((prev: any[]) => prev.filter((x: any) => x.id !== t.id)); if (cosasDetailId === t.id) setCosasDetailId(null); } catch (e: any) { setMessage(e?.message || 'Error') } }}>Eliminar</button>
+                        </div>
+                        {cosasDetailId === t.id ? (
+                          <div style={{ marginTop: 12, padding: 12, background: 'var(--bg-subtle)', borderRadius: 8 }}>
+                            <p style={{ margin: '0 0 8px' }}><strong>Marca:</strong> {t.brand || '—'} <strong>Modelo:</strong> {t.model || '—'} <strong>Serie:</strong> {t.serialNumber || '—'}</p>
+                            <p style={{ margin: '0 0 8px' }}><strong>Fecha adquisición:</strong> {t.acquisitionDate ? new Date(t.acquisitionDate).toLocaleDateString('es-MX') : '—'} <strong>Garantía:</strong> {t.warrantyInfo || '—'}</p>
+                            <p style={{ margin: '0 0 8px' }}><strong>Contacto proveedor/servicio:</strong> {t.serviceProviderContact || '—'}</p>
+                            {t.notes ? <p style={{ margin: '0 0 8px' }}><strong>Notas:</strong> {t.notes}</p> : null}
+                            {t.extraJson && typeof t.extraJson === 'object' ? <p style={{ margin: '0 0 8px' }}><strong>Datos extra (placas, llantas, etc.):</strong> {JSON.stringify(t.extraJson)}</p> : null}
+                            {t.invoiceUrl ? <p style={{ margin: '0 0 8px' }}><a href={t.invoiceUrl} target="_blank" rel="noopener noreferrer">Ver factura</a></p> : null}
+                            <p style={{ margin: '0 0 8px' }}>
+                              <input type="file" accept=".pdf,image/*,.heic,.HEIC,image/heic" style={{ fontSize: 12 }} onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; const fd = new FormData(); fd.set('file', f); try { await fetch(`/api/users/me/things/${t.id}/invoice`, { method: 'POST', credentials: 'include', body: fd }); const res = await getJson('/api/users/me/things'); setUserThings(Array.isArray(res?.things) ? res.things : []); setMessage('Factura subida'); } catch (err: any) { setMessage(err?.message || 'Error'); } e.target.value = ''; }} />
+                              Subir factura (PDF o imagen)
+                            </p>
+                            <p style={{ margin: '8px 0 4px' }}><strong>Registros de mantenimiento</strong></p>
+                            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                              {(t.records || []).map((r: any) => (
+                                <li key={r.id} className="sectionRow" style={{ gap: 8, padding: '4px 0', borderBottom: '1px solid var(--border)' }}>
+                                  <span>{r.recordType}</span>
+                                  <span>{new Date(r.date).toLocaleDateString('es-MX')}</span>
+                                  {r.nextDueDate ? <span>Próximo: {new Date(r.nextDueDate).toLocaleDateString('es-MX')}</span> : null}
+                                  {r.amount ? <span>${r.amount}</span> : null}
+                                  {r.description ? <span>{r.description}</span> : null}
+                                  <button type="button" className="btn btnGhost btnSm" onClick={async () => { if (!confirm('¿Eliminar este registro?')) return; try { await fetch(`/api/users/me/things/${t.id}/records/${r.id}`, { method: 'DELETE', credentials: 'include' }); const res = await getJson(`/api/users/me/things`); setUserThings(Array.isArray(res?.things) ? res.things : []); } catch (e: any) { setMessage(e?.message || 'Error') } }}>Eliminar</button>
+                                </li>
+                              ))}
+                            </ul>
+                            <button type="button" className="btn btnSm btnGhost" style={{ marginTop: 8 }} onClick={async () => {
+                              const recordType = prompt('Tipo de registro (ej. SERVICIO, CAMBIO_LLANTAS, VISITA_MEDICA, PAGO)', 'SERVICIO') || 'SERVICIO'
+                              const date = prompt('Fecha (YYYY-MM-DD)', new Date().toISOString().slice(0, 10)) || new Date().toISOString().slice(0, 10)
+                              const nextDue = prompt('Próximo servicio (YYYY-MM-DD o vacío)', '') || undefined
+                              const amount = prompt('Monto (opcional)', '') || undefined
+                              const desc = prompt('Descripción', '') || undefined
+                              try {
+                                await fetch(`/api/users/me/things/${t.id}/records`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ recordType, date, nextDueDate: nextDue || undefined, amount, description: desc }) })
+                                const res = await getJson('/api/users/me/things')
+                                setUserThings(Array.isArray(res?.things) ? res.things : [])
+                              } catch (e: any) { setMessage(e?.message || 'Error') }
+                            }}>+ Añadir registro</button>
+                          </div>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                  {userThings.length === 0 ? <p className="muted" style={{ padding: '12px 0' }}>Aún no tienes nada registrado. Añade dispositivos, tu auto, bicicleta o servicios (Internet, médico) para llevar datos y mantenimiento.</p> : null}
+                  {cosasFormOpen ? (
+                    <div role="dialog" aria-modal="true" style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+                      <div style={{ background: 'var(--bg)', borderRadius: 12, maxWidth: 480, width: '100%', maxHeight: '90vh', overflow: 'auto' }}>
+                        <div style={{ padding: 16, borderBottom: '1px solid var(--border)' }}>
+                          <h3 style={{ margin: 0 }}>{cosasFormThing ? 'Editar cosa' : 'Nueva cosa'}</h3>
+                        </div>
+                        <form style={{ padding: 16 }} onSubmit={async (e) => {
+                          e.preventDefault()
+                          const form = e.currentTarget
+                          const type = (form as any).type?.value || 'OTRO'
+                          const name = (form as any).name?.value?.trim()
+                          if (!name) return setMessage('Nombre requerido')
+                          setCosasSaveBusy(true)
+                          try {
+                            let extraJson: Record<string, string> | undefined
+                            try { const ex = (form as any).extraJson?.value?.trim(); extraJson = ex ? JSON.parse(ex) : undefined } catch { setMessage('Datos extra: escribe JSON válido (ej. {"placas": "ABC-123"})'); setCosasSaveBusy(false); return }
+                            if (cosasFormThing) {
+                              await fetch(`/api/users/me/things/${cosasFormThing.id}`, { method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type, name, brand: (form as any).brand?.value?.trim(), model: (form as any).model?.value?.trim(), serialNumber: (form as any).serialNumber?.value?.trim(), acquisitionDate: (form as any).acquisitionDate?.value || null, warrantyInfo: (form as any).warrantyInfo?.value?.trim(), serviceProviderContact: (form as any).serviceProviderContact?.value?.trim(), notes: (form as any).notes?.value?.trim(), extraJson }) })
+                            } else {
+                              await fetch('/api/users/me/things', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type, name, brand: (form as any).brand?.value?.trim(), model: (form as any).model?.value?.trim(), serialNumber: (form as any).serialNumber?.value?.trim(), acquisitionDate: (form as any).acquisitionDate?.value || null, warrantyInfo: (form as any).warrantyInfo?.value?.trim(), serviceProviderContact: (form as any).serviceProviderContact?.value?.trim(), notes: (form as any).notes?.value?.trim(), extraJson }) })
+                            }
+                            const res = await getJson('/api/users/me/things')
+                            setUserThings(Array.isArray(res?.things) ? res.things : [])
+                            setCosasFormOpen(false)
+                            setCosasFormThing(null)
+                          } catch (err: any) { setMessage(err?.message || 'Error') }
+                          finally { setCosasSaveBusy(false) }
+                        }}>
+                          <label className="sectionRow" style={{ marginBottom: 8 }}><span style={{ width: 140 }}>Tipo</span>
+                            <select name="type" defaultValue={cosasFormThing?.type || 'DISPOSITIVO'} style={{ padding: 6 }}>
+                              <option value="DISPOSITIVO">Dispositivo</option>
+                              <option value="AUTO">Auto</option>
+                              <option value="BICICLETA">Bicicleta</option>
+                              <option value="SERVICIO_INTERNET">Servicio Internet</option>
+                              <option value="VISITA_MEDICA">Visita médica / Doctor</option>
+                              <option value="OTRO">Otro</option>
+                            </select>
+                          </label>
+                          <label className="sectionRow" style={{ marginBottom: 8 }}><span style={{ width: 140 }}>Nombre *</span><input name="name" type="text" defaultValue={cosasFormThing?.name} required style={{ flex: 1, padding: 6 }} placeholder="Ej. Mi laptop, Carro, Internet casa" /></label>
+                          <label className="sectionRow" style={{ marginBottom: 8 }}><span style={{ width: 140 }}>Marca</span><input name="brand" type="text" defaultValue={cosasFormThing?.brand} style={{ flex: 1, padding: 6 }} /></label>
+                          <label className="sectionRow" style={{ marginBottom: 8 }}><span style={{ width: 140 }}>Modelo</span><input name="model" type="text" defaultValue={cosasFormThing?.model} style={{ flex: 1, padding: 6 }} /></label>
+                          <label className="sectionRow" style={{ marginBottom: 8 }}><span style={{ width: 140 }}>Número de serie</span><input name="serialNumber" type="text" defaultValue={cosasFormThing?.serialNumber} style={{ flex: 1, padding: 6 }} /></label>
+                          <label className="sectionRow" style={{ marginBottom: 8 }}><span style={{ width: 140 }}>Fecha adquisición</span><input name="acquisitionDate" type="date" defaultValue={cosasFormThing?.acquisitionDate ? new Date(cosasFormThing.acquisitionDate).toISOString().slice(0, 10) : ''} style={{ flex: 1, padding: 6 }} /></label>
+                          <label className="sectionRow" style={{ marginBottom: 8 }}><span style={{ width: 140 }}>Garantía</span><input name="warrantyInfo" type="text" defaultValue={cosasFormThing?.warrantyInfo} style={{ flex: 1, padding: 6 }} placeholder="Ej. 2 años, hasta 2026" /></label>
+                          <label className="sectionRow" style={{ marginBottom: 8 }}><span style={{ width: 140 }}>Contacto proveedor/servicio</span><input name="serviceProviderContact" type="text" defaultValue={cosasFormThing?.serviceProviderContact} style={{ flex: 1, padding: 6 }} placeholder="Teléfono o nombre del taller, médico, etc." /></label>
+                          <label className="sectionRow" style={{ marginBottom: 12 }}><span style={{ width: 140 }}>Notas</span><textarea name="notes" defaultValue={cosasFormThing?.notes} rows={2} style={{ flex: 1, padding: 6 }} /></label>
+                          {cosasFormThing ? <label className="sectionRow" style={{ marginBottom: 12 }}><span style={{ width: 140 }}>Datos extra (placas, llantas…)</span><textarea name="extraJson" rows={2} style={{ flex: 1, padding: 6, fontFamily: 'monospace' }} placeholder='{"placas": "ABC-123", "llantasMarca": "Michelin"}' defaultValue={cosasFormThing?.extraJson ? JSON.stringify(cosasFormThing.extraJson, null, 0) : ''} /></label> : null}
+                          <div className="sectionRow" style={{ gap: 8 }}>
+                            <button type="submit" className="btn btnPrimary" disabled={cosasSaveBusy}>{cosasSaveBusy ? '…' : 'Guardar'}</button>
+                            <button type="button" className="btn btnGhost" onClick={() => { setCosasFormOpen(false); setCosasFormThing(null) }}>Cancelar</button>
+                          </div>
+                        </form>
                       </div>
                     </div>
-
-                    <div className="spacer16" />
-
-                    {budgetAdminTab === 'objetos' ? (
-                      <section className="card">
-                        <div className="cardHeader">
-                          <div>
-                            <h2 className="cardTitle">Partidas presupuestales</h2>
-                            <p className="cardDesc">Ej. Persona, Casa, Mascota, Vehículo, Fondo</p>
-                          </div>
-                        </div>
-                        <div className="cardBody">
-                          <div className="fieldGrid">
-                            <label>
-                              Tipo
-                              <select className="select" value={beType} onChange={(e) => setBeType(e.target.value as EntityType)}>
-                                {ENTITY_TYPE_OPTIONS.map((o) => (
-                                  <option key={o.value} value={o.value}>
-                                    {o.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                            <label>
-                              Nombre
-                              <input className="input" placeholder="Nombre" value={beName} onChange={(e) => setBeName(e.target.value)} />
-                            </label>
-                            <label className="checkboxRow">
-                              <input type="checkbox" checked={beInBudget} onChange={(e) => setBeInBudget(e.target.checked)} />
-                              Participa en presupuesto
-                            </label>
-                            <label className="checkboxRow">
-                              <input type="checkbox" checked={beInReports} onChange={(e) => setBeInReports(e.target.checked)} />
-                              Participa en reportes
-                            </label>
-                            <div className="sectionRow">
-                              <button
-                                className="btn btnPrimary"
-                                onClick={createEntity}
-                                disabled={loading || !meOk.isFamilyAdmin || !beName.trim()}
-                              >
-                                Crear partida
-                              </button>
-                            </div>
-                          </div>
-                          <div className="spacer16" />
-                          <div
-                            className="muted"
-                            style={{ fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: 12 }}
-                          >
-                            Existentes
-                          </div>
-                          <div className="spacer8" />
-                          {entityItems.length ? (
-                            <table className="table">
-                              <thead>
-                                <tr>
-                                  <th>Tipo</th>
-                                  <th>Nombre</th>
-                                  <th>Presupuesto</th>
-                                  <th>Reportes</th>
-                                  <th>Activo</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {entityItems.map((e: any) => (
-                                  <tr key={e.id}>
-                                    <td>{entityTypeLabel(e.type)}</td>
-                                    <td>{e.name}</td>
-                                    <td className="muted">{e.participatesInBudget ? 'Sí' : 'No'}</td>
-                                    <td className="muted">{e.participatesInReports ? 'Sí' : 'No'}</td>
-                                    <td className="muted">{e.isActive ? 'Sí' : 'No'}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          ) : (
-                            <div className="muted">Aún no hay partidas. Crea al menos 1 partida.</div>
-                          )}
-                        </div>
-                      </section>
-                    ) : null}
-
-                    {budgetAdminTab === 'categorias' ? (
-                      <section className="card">
-                        <div className="cardHeader">
-                          <div>
-                            <h2 className="cardTitle">Categorías</h2>
-                            <p className="cardDesc">Ej. EXPENSE</p>
-                          </div>
-                        </div>
-                        <div className="cardBody">
-                          <div className="fieldGrid">
-                            <label>
-                              Tipo
-                              <input className="input" placeholder="EXPENSE" value={bcType} onChange={(e) => setBcType(e.target.value)} />
-                            </label>
-                            <label>
-                              Nombre
-                              <input className="input" placeholder="Nombre" value={bcName} onChange={(e) => setBcName(e.target.value)} />
-                            </label>
-                            <div className="sectionRow">
-                              <button className="btn btnPrimary" onClick={createCategory} disabled={loading || !meOk.isFamilyAdmin || !bcName.trim()}>
-                                Crear categoría
-                              </button>
-                            </div>
-                          </div>
-                          <div className="spacer16" />
-                          <div
-                            className="muted"
-                            style={{ fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: 12 }}
-                          >
-                            Existentes
-                          </div>
-                          <div className="spacer8" />
-                          {categoryItems.length ? (
-                            <table className="table">
-                              <thead>
-                                <tr>
-                                  <th>Tipo</th>
-                                  <th>Nombre</th>
-                                  <th>Activo</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {categoryItems.map((c: any) => (
-                                  <tr key={c.id}>
-                                    <td>{c.type}</td>
-                                    <td>{c.name}</td>
-                                    <td className="muted">{c.isActive ? 'Sí' : 'No'}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          ) : (
-                            <div className="muted">Aún no hay categorías. Crea al menos 1 categoría.</div>
-                          )}
-                        </div>
-                      </section>
-                    ) : null}
-
-                    {budgetAdminTab === 'montos' ? (
-                      <section className="card">
-                      <div className="cardHeader">
-                        <div>
-                          <h2 className="cardTitle">Asignar montos</h2>
-                          <p className="cardDesc">Partida + Categoría + Monto mensual</p>
-                        </div>
-                      </div>
-                      <div className="cardBody">
-                        <div className="fieldRow">
-                          <label>
-                            Partida
-                            <select className="select" value={alEntityId} onChange={(e) => setAlEntityId(e.target.value)}>
-                              <option value="">Partida…</option>
-                              {entityItems.map((e: any) => (
-                                <option key={e.id} value={e.id}>
-                                  {entityTypeLabel(e.type)}: {e.name}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                          <label>
-                            Categoría
-                            <select className="select" value={alCategoryId} onChange={(e) => setAlCategoryId(e.target.value)}>
-                              <option value="">Categoría…</option>
-                              {categoryItems.map((c: any) => (
-                                <option key={c.id} value={c.id}>
-                                  {c.name}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                        </div>
-                        <div className="spacer8" />
-                        <label>
-                          Monto mensual
-                          <input className="input" placeholder="Ej. 1000" value={alLimit} onChange={(e) => setAlLimit(e.target.value)} />
-                        </label>
-                        <div className="spacer8" />
-                        <div className="sectionRow">
-                          <button
-                            className="btn btnPrimary"
-                            onClick={createAllocation}
-                            disabled={loading || !meOk.isFamilyAdmin || !alEntityId || !alCategoryId || !alLimit.trim()}
-                          >
-                            Guardar monto
-                          </button>
-                        </div>
-                        <div className="spacer16" />
-                        <div
-                          className="muted"
-                          style={{ fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: 12 }}
-                        >
-                          Asignaciones existentes
-                        </div>
-                        <div className="spacer8" />
-                        {allocationItems.length ? (
-                          <table className="table">
-                            <thead>
-                              <tr>
-                                <th>Partida</th>
-                                <th>Categoría</th>
-                                <th>Monto</th>
-                                <th>Activo</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {allocationItems.map((a: any) => (
-                                <tr key={a.id}>
-                                  <td>
-                                    <span className="muted">{entityTypeLabel(a.entity?.type)}:</span> {a.entity?.name || '—'}
-                                  </td>
-                                  <td>{a.category?.name || '—'}</td>
-                                  <td style={{ fontWeight: 900 }}>{formatMoney(Number(a.monthlyLimit), currency)}</td>
-                                  <td className="muted">{a.isActive ? 'Sí' : 'No'}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        ) : (
-                          <div className="muted">Aún no has asignado montos.</div>
-                        )}
-                      </div>
-                    </section>
-                    ) : null}
-                  </details>
-                  */}
-                </>
+                  ) : null}
+                </div>
               ) : null}
 
               {view === 'transacciones' ? (
@@ -9476,7 +10598,7 @@ export default function UiPage() {
                                 </label>
                                 {receiptWizardAllocationsForMe.length === 0 ? (
                                   <p className="muted" style={{ margin: 0, fontSize: 12 }}>
-                                    No hay partida con tu nombre; aquí puedes asignar a Casa, Auto, etc. Para crear partidas propias:{' '}
+                                    No hay destino «tuyo»; aquí puedes asignar a Casa, Auto, etc. Para crear destinos y presupuesto:{' '}
                                     <button
                                       type="button"
                                       className="btn btnGhost btnSm"
@@ -9484,10 +10606,10 @@ export default function UiPage() {
                                       onClick={() => {
                                         setTxReceiptWizardOpen(false)
                                         setTxReceiptWizardStep('capture')
-                                        setBudgetModalOpen(true)
+                                        go('presupuesto')
                                       }}
                                     >
-                                      Crear partidas en Presupuesto
+                                      Ir a Presupuesto
                                     </button>
                                   </p>
                                 ) : null}
@@ -9666,7 +10788,7 @@ export default function UiPage() {
                         </select>
                       </label>
                       <label>
-                        Partida
+                        Destino
                         <select className="select" value={txFltEntityId} onChange={(e) => setTxFltEntityId(e.target.value)}>
                           <option value="all">Todos</option>
                           {entityItems
@@ -9768,11 +10890,27 @@ export default function UiPage() {
                       <div>
                         <h2 className="cardTitle" style={{ margin: 0, fontSize: 18 }}>Usuarios (familia activa)</h2>
                         <p className="cardDesc muted" style={{ marginTop: 4, fontSize: 12 }}>
-                          Solo Admin ve «Agregar / invitar». «Ver como» (solo Admin) abre la app como ese usuario; si es no-admin verás menú y permisos limitados. «Probar Twilio» envía prueba a WhatsApp.
+                          Solo Admin ve «Agregar / invitar». Para crear un usuario con tu autorización: genera un <b>enlace de invitación</b> y compártelo; la persona abre el enlace, se registra y se une. O agrega usuario directo (email + contraseña). «Ver como» (solo Admin) abre la app como ese usuario. La lista muestra solo miembros de la <b>familia activa</b>; si no aparece alguien, invítalo con el enlace o agrégalo abajo. Si <b>Probar Twilio</b> no entrega el mensaje: en modo sandbox de Twilio el contacto debe enviar primero el código de activación al número de WhatsApp de Twilio (consola Twilio → WhatsApp → Sandbox).
                         </p>
                       </div>
                     </div>
                   <div className="cardBody" style={{ padding: '12px 16px' }}>
+                    <div className="sectionRow" style={{ marginBottom: 12, alignItems: 'center', gap: 8 }}>
+                      <label className="muted" style={{ fontSize: 12 }}>Buscar en la lista</label>
+                      <input
+                        type="search"
+                        className="input"
+                        placeholder="Nombre, email o teléfono (sin acentos)"
+                        value={usuariosSearchQuery}
+                        onChange={(e) => setUsuariosSearchQuery(e.target.value)}
+                        style={{ maxWidth: 280 }}
+                      />
+                      {usuariosSearchQuery.trim() ? (
+                        <span className="muted" style={{ fontSize: 12 }}>
+                          {usuariosFilteredMembers.length} de {memberItems.length}
+                        </span>
+                      ) : null}
+                    </div>
                     <div className="grid grid2" style={{ gap: 16 }}>
                       {meOk.isFamilyAdmin ? (
                       <div className="cardSub usuariosAddCard">
@@ -9805,8 +10943,8 @@ export default function UiPage() {
                             <span className="muted" style={{ fontSize: 11 }}>Solo Admin.</span>
                           </div>
                         </div>
-                        <div className="subTitle" style={{ fontSize: 13, marginTop: 16, marginBottom: 8, fontWeight: 700 }}>Enlace de invitación</div>
-                        <p className="muted" style={{ fontSize: 12, marginBottom: 8 }}>Genera un enlace para que alguien se una a la familia sin que tengas que agregar su email aquí.</p>
+                        <div className="subTitle" style={{ fontSize: 13, marginTop: 16, marginBottom: 8, fontWeight: 700 }}>Enlace de invitación (recomendado)</div>
+                        <p className="muted" style={{ fontSize: 12, marginBottom: 8 }}>Genera un enlace y compártelo (WhatsApp, correo). La persona abre el enlace, crea su usuario (email y contraseña) y se une a la familia. El enlace es tu autorización; caduca en 7 días.</p>
                         <div className="sectionRow" style={{ gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                           <button type="button" className="btn btnGhost btnSm" onClick={createInviteLink} disabled={inviteLoading}>
                             {inviteLoading ? 'Generando…' : 'Generar enlace'}
@@ -9825,6 +10963,9 @@ export default function UiPage() {
                         <div className="subTitle" style={{ fontSize: 13, marginBottom: 8 }}>Lista</div>
                         {Array.isArray(members) ? (
                           members.length ? (
+                            usuariosFilteredMembers.length === 0 ? (
+                              <p className="muted" style={{ margin: 0 }}>Ningún usuario coincide con la búsqueda. Prueba con otro texto o borra el filtro. La lista solo incluye miembros de la familia activa.</p>
+                            ) : (
                             <div className="usuariosTableWrap">
                             <input
                               ref={avatarFileInputRef}
@@ -9850,7 +10991,7 @@ export default function UiPage() {
                                 </tr>
                               </thead>
                               <tbody>
-                                {members.map((m: any) => {
+                                {usuariosFilteredMembers.map((m: any) => {
                                   const isSelf = m.id === meOk.user.id
                                   const canEdit = meOk.isFamilyAdmin || isSelf
                                   const nameD = memberNameDraft[m.id] ?? String(m.name || '')
@@ -9990,6 +11131,7 @@ export default function UiPage() {
                               </tbody>
                             </table>
                             </div>
+                            )
                           ) : (
                             <div className="muted">Aún no hay usuarios.</div>
                           )
@@ -10004,11 +11146,92 @@ export default function UiPage() {
 
               {view === 'configuracion' ? (
                 <>
+                <section className="card configCardPrimary">
+                  <div className="cardHeader configCardHeaderWithIcon">
+                    <span className="configCardIcon" aria-hidden>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    </span>
+                    <div>
+                      <h2 className="cardTitle">Configuración de familia</h2>
+                      <p className="cardDesc">
+                        Aquí defines <strong>quién es la familia</strong> (integrantes, mascotas, vehículos, casa, inventario). Eso forma los <strong>destinos</strong> a los que luego asignas dinero en <strong>Presupuesto</strong>.
+                        Usa el asistente para el alta guiada o los accesos de abajo.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="cardBody" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    <div className="configActionRow">
+                      <button
+                        type="button"
+                        className="btn btnPrimary"
+                        onClick={() => router.push('/onboarding')}
+                        style={{ minHeight: 48, paddingLeft: 20, paddingRight: 20 }}
+                      >
+                        Abrir asistente de configuración
+                      </button>
+                      <span className="muted" style={{ fontSize: 13 }}>Wizard: integrantes, mascotas, vehículos, casa, electrodomésticos (fotos/videos), fondos y categorías.</span>
+                    </div>
+                    </div>
+                </section>
+
+                <section className="card configHubSection">
+                  <div className="cardHeader">
+                    <div>
+                      <h2 className="cardTitle">Todo lo que alimenta tu presupuesto</h2>
+                      <p className="cardDesc">
+                        Flujo sugerido: <strong>integrantes</strong> → <strong>destinos</strong> (personas, casa, auto, mascotas) → <strong>categorías</strong> de gasto → <strong>Mis cosas</strong> si quieres inventario. Después, en <strong>Presupuesto</strong> solo asignas montos, ciclos y revisas cuentas.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="cardBody" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                    <div className="configActionRow">
+                      <button type="button" className="btn btnPrimary" onClick={() => go('usuarios')}>
+                        Usuarios e integrantes
+                      </button>
+                      <span className="muted" style={{ fontSize: 13 }}>
+                        Altas, roles y quién puede administrar. Base para responsables y dueños de bienes.
+                      </span>
+                    </div>
+                    <div className="configActionRow">
+                      <button type="button" className="btn btnPrimary" onClick={() => openBudgetModal(undefined, 'objetos')}>
+                        Destinos del presupuesto
+                      </button>
+                      <span className="muted" style={{ fontSize: 13 }}>
+                        Personas, casa, vehículos, mascotas y fondos: a qué o a quién asignas dinero (pestaña Destinos en Presupuesto).
+                      </span>
+                    </div>
+                    <div className="configActionRow">
+                      <button type="button" className="btn btnPrimary" onClick={() => openBudgetModal(undefined, 'categorias')}>
+                        Categorías (partidas globales)
+                      </button>
+                      <span className="muted" style={{ fontSize: 13 }}>
+                        Tipos de gasto que cruzan la familia (supermercado, gasolina, salud…). Luego las combinas con cada destino.
+                      </span>
+                    </div>
+                    <div className="configActionRow">
+                      <button type="button" className="btn btnPrimary" onClick={() => go('cosas')}>
+                        Mis cosas
+                      </button>
+                      <span className="muted" style={{ fontSize: 13 }}>
+                        Bicis, autos, dispositivos: datos, mantenimiento y facturas. Complementa a los destinos de presupuesto.
+                      </span>
+                    </div>
+                    <div className="configActionRow">
+                      <button type="button" className="btn btnGhost" style={{ borderWidth: 2 }} onClick={() => openBudgetModal(undefined, 'montos')}>
+                        Ir a montos y asignaciones
+                      </button>
+                      <span className="muted" style={{ fontSize: 13 }}>
+                        Abre <strong>Presupuesto</strong> en la pestaña donde creas tope mensual por destino + categoría (cuentas).
+                      </span>
+                    </div>
+                  </div>
+                </section>
+
                 <section className="card">
                   <div className="cardHeader">
                     <div>
                       <h2 className="cardTitle">Editar familia</h2>
-                      <p className="cardDesc">Familias, sesión y estado del plan. Solo el Admin puede cambiar estos datos.</p>
+                      <p className="cardDesc">Nombre, moneda, día de corte y fechas. Solo el Admin puede cambiar estos datos.</p>
                     </div>
                   </div>
                   <div className="cardBody">
@@ -10172,7 +11395,7 @@ export default function UiPage() {
                               </div>
                               <div className="spacer8" />
                               <p className="muted">Solicitante: {mr.createdBy?.name ?? mr.createdBy?.email} • Monto: {formatMoney(Number(mr.amount), mr.currency || currency)} • Fecha: {mr.date ? new Date(mr.date).toLocaleDateString('es-MX') : '—'}</p>
-                              {mr.allocation ? <p className="muted">Partida: {mr.allocation.entity?.name} → {mr.allocation.category?.name}</p> : null}
+                              {mr.allocation ? <p className="muted">Cuenta: {mr.allocation.entity?.name} → {mr.allocation.category?.name}</p> : null}
                               <div className="spacer12" />
                               {meOk?.isFamilyAdmin && mr.status === 'PENDING' ? (
                                 <div className="sectionRow" style={{ gap: 8 }}>
@@ -10415,7 +11638,7 @@ export default function UiPage() {
                                   const firstToConfirm = toConfirmReceipts[0]
                                   const hasToConfirm = !!firstToConfirm
                                   const activeAllocations = allocationItems.filter((a: any) => a?.isActive !== false)
-                                  const hasPartidas = activeAllocations.length > 0
+                                  const hasBudgetAccount = activeAllocations.length > 0
                                   return hasToConfirm ? (
                                     <div className="chartBox txAssignConfirmBox">
                                       <h3 className="chartTitle">Asignar este gasto a quién / a qué categoría</h3>
@@ -10423,7 +11646,7 @@ export default function UiPage() {
                                         Elige la cuenta (entidad y categoría) y confirma. Así queda asignado el gasto.
                                       </p>
                                       <div className="spacer8" />
-                                      {hasPartidas ? (
+                                      {hasBudgetAccount ? (
                                         <label className="txAssignSelectLabel">
                                           Cuenta / categoría
                                           <select
@@ -10441,15 +11664,15 @@ export default function UiPage() {
                                         </label>
                                       ) : (
                                         <div className="muted" style={{ fontSize: 13 }}>
-                                          No hay partidas configuradas. Puedes confirmar el ticket igual (queda sin asignar a una cuenta) o crear partidas en Presupuesto y volver a asignar después.
+                                          No hay cuentas configuradas. Puedes confirmar el ticket igual (queda sin asignar) o crear destino + categoría + presupuesto en Presupuesto y volver a asignar después.
                                           <div className="spacer8" />
                                           <button
                                             type="button"
                                             className="btn btnGhost btnSm"
                                             style={{ fontWeight: 700 }}
-                                            onClick={() => setBudgetModalOpen(true)}
+                                            onClick={() => go('presupuesto')}
                                           >
-                                            Crear partidas en Presupuesto
+                                            Ir a Presupuesto
                                           </button>
                                         </div>
                                       )}
@@ -10459,9 +11682,9 @@ export default function UiPage() {
                                         className="btn btnAssignConfirm"
                                         onClick={() => confirmReceipt(String(firstToConfirm.id))}
                                         disabled={receiptConfirming}
-                                        aria-label={hasPartidas ? 'Asignar y confirmar recibo' : 'Confirmar recibo sin asignar'}
+                                        aria-label={hasBudgetAccount ? 'Asignar y confirmar recibo' : 'Confirmar recibo sin asignar'}
                                       >
-                                        {receiptConfirming ? 'Confirmando…' : hasPartidas ? 'Asignar y confirmar' : 'Confirmar (sin asignar)'}
+                                        {receiptConfirming ? 'Confirmando…' : hasBudgetAccount ? 'Asignar y confirmar' : 'Confirmar (sin asignar)'}
                                       </button>
                                     </div>
                                   ) : null
@@ -11238,6 +12461,14 @@ export default function UiPage() {
         </section>
       </div>
     </main>
+  )
+}
+
+export default function UiPage() {
+  return (
+    <Suspense fallback={<div className="sapLayout" style={{ padding: 24, textAlign: 'center' }}>Cargando…</div>}>
+      <UiPageContent />
+    </Suspense>
   )
 }
 

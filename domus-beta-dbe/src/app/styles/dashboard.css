@@ -208,6 +208,260 @@
   }
 }
 
+/* Vista Presupuesto — pulido consistente (Mac + iPhone) */
+.viewPresupuesto .chartBox {
+  border-radius: var(--sap-radius);
+  box-shadow: var(--sap-shadow-card);
+  border: 1px solid var(--sap-border);
+  padding: var(--space-24);
+  transition: box-shadow 0.2s ease;
+}
+.viewPresupuesto .chartBox:focus-within {
+  box-shadow: var(--sap-shadow-md);
+}
+.viewPresupuesto .chartTitle {
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+/* Tarjeta “Creación y configuración”: jerarquía tipográfica alineada al dashboard */
+.viewPresupuesto .presupuestoAccionesTitle {
+  margin: 0;
+  font-size: var(--font-section-title);
+  font-weight: 700;
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-tight);
+  color: var(--text);
+}
+.viewPresupuesto .presupuestoAccionesLead {
+  margin: 10px 0 0;
+  font-size: var(--font-body);
+  line-height: var(--line-height-body);
+  color: var(--sap-text-secondary);
+  max-width: 42em;
+}
+.viewPresupuesto .presupuestoStatusRow {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.viewPresupuesto .presupuestoStatusRow .pill {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 5px 10px;
+}
+
+/* Barra de acciones: dos filas (principal / secundaria), tipografía y padding uniformes */
+.viewPresupuesto .presupuestoConcentradoActions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-12);
+  margin-top: var(--space-16);
+  padding-top: var(--space-16);
+  border-top: 1px solid var(--sap-border);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.viewPresupuesto .presupuestoActionsRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-10);
+}
+
+.viewPresupuesto .presupuestoActionsRowPrimary {
+  padding-bottom: 2px;
+}
+
+.viewPresupuesto .presupuestoActionsRowSecondary {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--sap-border);
+  gap: var(--space-10);
+}
+
+.viewPresupuesto .presupuestoConcentradoActions .btn {
+  font-size: var(--font-label);
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: var(--letter-spacing-label);
+  border-radius: var(--sap-radius-sm);
+  min-height: 40px;
+  padding: 10px 14px;
+  box-sizing: border-box;
+}
+
+.viewPresupuesto .presupuestoConcentradoActions .btnSm {
+  /* Unifica con .btn en esta barra (btnSm sola no reduzca padding aquí) */
+  padding: 10px 14px;
+  font-size: var(--font-label);
+}
+
+.viewPresupuesto .presupuestoCtaPrincipal {
+  box-shadow: 0 1px 2px rgba(15, 61, 145, 0.12);
+}
+
+/* Agregar partida/categoría/monto: acento primario sin relleno sólido (menos “pared” de azul) */
+.viewPresupuesto .presupuestoBtnOutline {
+  background: var(--sap-card);
+  color: var(--sap-primary);
+  border: 1px solid rgba(0, 122, 255, 0.42);
+  font-weight: 600;
+}
+.viewPresupuesto .presupuestoBtnOutline:hover:not(:disabled) {
+  background: var(--sap-primary-light);
+  border-color: var(--sap-primary);
+  color: var(--sap-primary-hover);
+}
+
+/* Confirmar plan: mismo peso que CTA principal pero con variante visual suave */
+.viewPresupuesto .presupuestoCtaSecondary {
+  background: linear-gradient(180deg, #2b8dfc 0%, #007aff 100%);
+  border-color: transparent;
+  box-shadow: 0 1px 3px rgba(0, 122, 255, 0.22);
+}
+
+.viewPresupuesto .presupuestoConcentradoActions .btnGhost {
+  color: var(--sap-text-secondary);
+  border-color: var(--sap-border-strong);
+  background: var(--sap-card);
+}
+.viewPresupuesto .presupuestoConcentradoActions .btnGhost:hover:not(:disabled) {
+  color: var(--sap-text);
+  border-color: var(--sap-primary);
+  background: var(--sap-primary-light);
+}
+
+.viewPresupuesto .btnLinkInline {
+  display: inline;
+  padding: 0 2px;
+  margin: 0;
+  border: none;
+  background: none;
+  color: var(--sap-primary);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+.viewPresupuesto .btnLinkInline:hover:not(:disabled) {
+  color: var(--sap-primary-hover);
+}
+
+/* Pasos “Configura tu presupuesto”: botones legibles (contraste) */
+.viewPresupuesto .presupuestoSetupCard {
+  margin-bottom: var(--space-24);
+}
+.viewPresupuesto .presupuestoSetupActionBtn {
+  width: 100%;
+  justify-content: center;
+  margin-top: 4px;
+  min-height: 40px;
+  font-size: var(--font-label);
+  line-height: 1.3;
+  padding: 10px 14px;
+  font-weight: 600;
+  background: var(--sap-card);
+  color: var(--sap-primary);
+  border: 1px solid rgba(0, 122, 255, 0.4);
+  border-radius: var(--sap-radius-sm);
+}
+.viewPresupuesto .presupuestoSetupActionBtn:hover:not(:disabled) {
+  background: var(--sap-primary-light);
+  border-color: var(--sap-primary);
+}
+.viewPresupuesto .presupuestoSetupActionBtn:disabled {
+  opacity: 0.45;
+}
+@media (min-width: 921px) {
+  .viewPresupuesto .presupuestoSetupCard .cardSub .presupuestoSetupActionBtn {
+    width: auto;
+    min-width: 0;
+  }
+}
+
+.viewPresupuesto .presupuestoSetupLinkBtn {
+  font-size: var(--font-label);
+  line-height: 1.35;
+  font-weight: 600;
+  padding: 10px 14px;
+  min-height: 40px;
+  color: var(--sap-text-secondary);
+  background: transparent;
+  border: 1px dashed var(--sap-border-strong);
+  border-radius: var(--sap-radius-sm);
+}
+.viewPresupuesto .presupuestoSetupLinkBtn:hover:not(:disabled) {
+  color: var(--sap-primary);
+  border-color: var(--sap-primary);
+  background: var(--sap-primary-light);
+}
+.viewPresupuesto .kpiStrip {
+  gap: var(--space-20);
+}
+.viewPresupuesto .kpiCard {
+  border-radius: var(--sap-radius);
+  box-shadow: var(--sap-shadow-sm);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+.viewPresupuesto .kpiCard:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--sap-shadow);
+}
+.viewPresupuesto .pill {
+  border-radius: 999px;
+  font-weight: 600;
+  padding: var(--space-8) var(--space-14);
+}
+
+@media (max-width: 768px) {
+  .viewPresupuesto .chartBox {
+    padding: var(--space-16);
+    border-radius: var(--sap-radius-sm);
+  }
+  .viewPresupuesto .kpiStrip {
+    gap: var(--space-12);
+  }
+  .viewPresupuesto .kpiCard:hover {
+    transform: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .viewPresupuesto .chartBox {
+    padding: var(--space-12);
+    padding-bottom: max(var(--space-12), env(safe-area-inset-bottom, 0));
+  }
+  .viewPresupuesto .presupuestoConcentradoActions {
+    gap: var(--space-8);
+  }
+}
+
+/* Tabla Cuentas del presupuesto — scroll horizontal en móvil sin romper layout */
+.budgetAccountsTableWrap {
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--sap-radius-sm);
+}
+.viewPresupuesto .chartBox .budgetAccountsTableWrap .table {
+  min-width: 640px;
+}
+
+/* Filtros Cuentas del presupuesto — en móvil que no se salgan */
+@media (max-width: 768px) {
+  .viewPresupuesto .chartBox .fieldGrid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: var(--space-12);
+  }
+}
+@media (max-width: 520px) {
+  .viewPresupuesto .chartBox .fieldGrid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 /* Transacciones — Registrar gasto (estilo iPhone) */
 .txAddBlock {
   padding: var(--space-20);
