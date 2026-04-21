@@ -62,3 +62,6 @@ frontend/.env.local
 frontend/.env.local.backup
 backend/.env.bak
 .vercel
+
+# Backups comprimidos (GitHub rechaza >100 MB)
+*.tar.gz
