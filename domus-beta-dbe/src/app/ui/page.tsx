@@ -4273,8 +4273,8 @@ function UiPageContent() {
         return { title: 'Usuarios', subtitle: 'Administración de usuarios de la familia' }
       case 'configuracion':
         return {
-          title: 'Configuración',
-          subtitle: 'Integrantes, destinos, cosas y reglas de familia — luego Presupuesto para montos y cuentas',
+          title: 'Ajustes de familia',
+          subtitle: 'Nombre del hogar, reglas y bloques de configuración. Integrantes están en Usuarios; objetos en Entidades; dispositivos en Mis cosas.',
         }
       case 'solicitudes':
         return { title: 'Solicitudes de efectivo o pago', subtitle: 'Solicita efectivo o pago de servicios (colegiatura, cine, préstamo). Crear y gestionar aquí o por WhatsApp.' }
@@ -4610,7 +4610,7 @@ function UiPageContent() {
                     go('configuracion')
                   }}
                 >
-                  Configuración
+                  Ajustes de familia
                 </button>
               </div>
             ) : null}
@@ -4689,6 +4689,9 @@ function UiPageContent() {
                   <button className={`mobileNavItem ${view === 'dashboard' ? 'mobileNavItemActive' : ''}`} onClick={() => go('dashboard')}>
                     Dashboard
                   </button>
+                  <button className={`mobileNavItem ${view === 'presupuesto' ? 'mobileNavItemActive' : ''}`} onClick={() => go('presupuesto')}>
+                    Presupuesto
+                  </button>
                   <button className={`mobileNavItem ${view === 'transacciones' ? 'mobileNavItemActive' : ''}`} onClick={() => go('transacciones')}>
                     Transacciones
                   </button>
@@ -4709,14 +4712,20 @@ function UiPageContent() {
                   <button className={`mobileNavItem ${view === 'documentos' ? 'mobileNavItemActive' : ''}`} onClick={() => go('documentos')}>
                     Mis documentos
                   </button>
-                  <button className={`mobileNavItem ${view === 'cosas' ? 'mobileNavItemActive' : ''}`} onClick={() => go('cosas')}>
-                    Mis cosas
-                  </button>
                 </div>
               </div>
               <div className="mobileNavGroup">
-                <div className="mobileNavGroupTitle">Configuración</div>
+                <div className="mobileNavGroupTitle">Familia y hogar</div>
                 <div className="mobileNavGroupItems">
+                  <button className={`mobileNavItem ${view === 'usuarios' ? 'mobileNavItemActive' : ''}`} onClick={() => go('usuarios')}>
+                    Integrantes (usuarios)
+                  </button>
+                  <button className={`mobileNavItem ${view === 'configuracion' ? 'mobileNavItemActive' : ''}`} onClick={() => go('configuracion')}>
+                    Ajustes de familia
+                  </button>
+                  <button className={`mobileNavItem ${view === 'cosas' ? 'mobileNavItemActive' : ''}`} onClick={() => go('cosas')}>
+                    Mis cosas
+                  </button>
                   <button
                     className="mobileNavItem"
                     onClick={() => {
@@ -4724,18 +4733,7 @@ function UiPageContent() {
                       router.push('/setup/entities')
                     }}
                   >
-                    Entidades
-                  </button>
-                </div>
-              </div>
-              <div className="mobileNavGroup">
-                <div className="mobileNavGroupTitle">Familia</div>
-                <div className="mobileNavGroupItems">
-                  <button className={`mobileNavItem ${view === 'usuarios' ? 'mobileNavItemActive' : ''}`} onClick={() => go('usuarios')}>
-                    Usuarios
-                  </button>
-                  <button className={`mobileNavItem ${view === 'configuracion' ? 'mobileNavItemActive' : ''}`} onClick={() => go('configuracion')}>
-                    Configuración
+                    Entidades y presupuesto
                   </button>
                 </div>
               </div>
@@ -5134,7 +5132,7 @@ function UiPageContent() {
               className={`sapNavItem ${view === 'configuracion' ? 'sapNavItemActive' : ''}`}
               onClick={() => go('configuracion')}
             >
-              Configuración
+              Ajustes de familia
             </button>
             <button className={`sapNavItem ${view === 'solicitudes' ? 'sapNavItemActive' : ''}`} onClick={() => go('solicitudes')}>
               Solicitudes
@@ -5146,10 +5144,10 @@ function UiPageContent() {
               Mis cosas
             </button>
             <div className="muted" style={{ fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: 12, marginTop: 'var(--space-12)' }}>
-              Configuración
+              Presupuesto y estructura
             </div>
             <button className="sapNavItem" onClick={() => router.push('/setup/entities')}>
-              Entidades
+              Entidades y cuentas
             </button>
             <button className="sapNavItem" onClick={() => router.push('/ui/system-architecture')}>
               Arquitectura
@@ -5521,7 +5519,7 @@ function UiPageContent() {
                         <div className="spacer8" />
                         <div className="sectionRow">
                           <button className="btn btnPrimary btnSm" onClick={() => go('configuracion')}>
-                            Ir a Configuración
+                            Ir a ajustes de familia
                           </button>
                           <button className="btn btnGhost btnSm" onClick={() => go('presupuesto')}>
                             Ir a Presupuesto
@@ -6191,7 +6189,7 @@ function UiPageContent() {
                                               }}
                                               type="button"
                                             >
-                                              Configuración completa
+                                              Abrir en Presupuesto
                                             </button>
                                           </div>
                                         </>
@@ -6715,7 +6713,7 @@ function UiPageContent() {
                           <div className="sectionRow" style={{ justifyContent: 'space-between', flexWrap: 'wrap' }}>
                             <div style={{ maxWidth: 560 }}>
                               <p className="muted" style={{ margin: '0 0 4px 0', fontSize: 11, letterSpacing: '0.06em', textTransform: 'uppercase', fontWeight: 800 }}>
-                                Bloque 1 · Configuración
+                                Bloque 1 · Base
                               </p>
                               <h2 className="cardTitle" style={{ margin: 0 }}>
                                 Presupuesto familiar
@@ -6726,7 +6724,7 @@ function UiPageContent() {
                               <p className="muted" style={{ margin: '10px 0 0 0', fontSize: 13, lineHeight: 1.45, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
                                 <span>Orden sugerido: integrantes y destinos (y Mis cosas) desde</span>
                                 <button type="button" className="btn btnGhost btnSm" onClick={() => go('configuracion')}>
-                                  Configuración
+                                  Ajustes de familia
                                 </button>
                                 <span className="muted">; aquí solo montos y cuentas.</span>
                               </p>
@@ -11152,7 +11150,7 @@ function UiPageContent() {
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                     </span>
                     <div>
-                      <h2 className="cardTitle">Configuración de familia</h2>
+                      <h2 className="cardTitle">Ajustes del hogar</h2>
                       <p className="cardDesc">
                         Aquí defines <strong>quién es la familia</strong> (integrantes, mascotas, vehículos, casa, inventario). Eso forma los <strong>destinos</strong> a los que luego asignas dinero en <strong>Presupuesto</strong>.
                         Usa el asistente para el alta guiada o los accesos de abajo.
