@@ -4721,7 +4721,7 @@ function UiPageContent() {
                     className="mobileNavItem"
                     onClick={() => {
                       setMobileNavOpen(false)
-                      router.push('/setup/objects')
+                      router.push('/setup/entities')
                     }}
                   >
                     Entidades
@@ -5148,7 +5148,7 @@ function UiPageContent() {
             <div className="muted" style={{ fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: 12, marginTop: 'var(--space-12)' }}>
               Configuración
             </div>
-            <button className="sapNavItem" onClick={() => router.push('/setup/objects')}>
+            <button className="sapNavItem" onClick={() => router.push('/setup/entities')}>
               Entidades
             </button>
             <button className="sapNavItem" onClick={() => router.push('/ui/system-architecture')}>
