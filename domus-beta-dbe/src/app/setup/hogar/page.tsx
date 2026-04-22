@@ -408,6 +408,17 @@ export default function SetupHogarPage() {
               La entidad raíz <strong>Familia</strong> agrupa lo que es del hogar (ej. supermercado, eventos comunes). Cada persona puede ser
               su propio destino.
             </p>
+            <p className="hsMuted" style={{ marginTop: 10 }}>
+              Otras entradas al mismo modelo:{' '}
+              <Link href="/setup/entities" style={{ color: '#0d6efd', fontWeight: 700 }}>
+                Entidades (árbol)
+              </Link>
+              {' · '}
+              <Link href="/setup/objects" style={{ color: '#0d6efd', fontWeight: 700 }}>
+                Destinos (formulario)
+              </Link>
+              . No hace falta usarlas si completas este asistente.
+            </p>
             <div className="hsRow">
               <button type="button" className="hsBtn hsBtnPrimary" onClick={() => setStep(1)}>
                 Siguiente: integrantes

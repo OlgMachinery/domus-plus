@@ -433,10 +433,14 @@ export default function EntitiesConfigPage() {
         <div className="ecHelpPanel" style={{ marginBottom: 14 }}>
           <p className="ecHelpText">
             <strong>Tres columnas:</strong> (1) árbol de destinos bajo <strong>Familia</strong> — (2) datos de la entidad elegida — (3){' '}
-            <strong>servicios del catálogo</strong> (casillas; crean cuentas con límite 0 hasta que pongas montos en Presupuesto). Para un
+            <strong>servicios del catálogo</strong> (casillas; crean cuentas con límite 0 hasta que pongas montos en Presupuesto).             Para un
             recorrido guiado sin montos usa{' '}
             <Link href="/setup/hogar" className="ecLink">
               Configurar el hogar
+            </Link>
+            . Si solo quieres el formulario con tipos (Persona/Vehículo…):{' '}
+            <Link href="/setup/objects" className="ecLink">
+              Destinos (objetos)
             </Link>
             .
           </p>

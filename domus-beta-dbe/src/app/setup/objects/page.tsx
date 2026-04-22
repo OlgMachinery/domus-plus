@@ -296,13 +296,34 @@ export default function SetupObjectsPage() {
           <div className="spacer8" />
           <span className={`pill ${activeCount >= 1 ? 'pillOk' : 'pillWarn'}`}>Activos: {activeCount}</span>
           <div className="spacer24" />
-          <div className="setupSidebarActions">
+            <div className="setupSidebarActions">
             <button
               className="btn btnPrimary"
               style={{ width: '100%', justifyContent: 'center', minHeight: 44 }}
+              type="button"
+              onClick={() => router.push('/setup/hogar')}
+            >
+              Configurar el hogar (recomendado)
+            </button>
+            <p className="muted" style={{ fontSize: 12, marginTop: 6, marginBottom: 0 }}>
+              Pasos sin montos: integrantes, destinos, cosas, servicios.
+            </p>
+            <div className="spacer8" />
+            <button
+              className="btn btnGhost"
+              style={{ width: '100%', justifyContent: 'center', minHeight: 40 }}
+              type="button"
+              onClick={() => router.push('/setup/entities')}
+            >
+              Árbol y servicios (avanzado)
+            </button>
+            <div className="spacer8" />
+            <button
+              className="btn btnGhost"
+              style={{ width: '100%', justifyContent: 'center', minHeight: 44 }}
               onClick={() => router.push('/onboarding')}
             >
-              Asistente de configuración
+              Asistente multimedia (onboarding)
             </button>
             <p className="muted" style={{ fontSize: 12, marginTop: 6, marginBottom: 0 }}>
               Wizard: integrantes, mascotas, vehículos, electrodomésticos, categorías.
@@ -346,6 +367,44 @@ export default function SetupObjectsPage() {
               </button>
             </div>
           </div>
+
+          <div className="chartBox" style={{ borderColor: '#b8d4f0', background: '#f7fbff' }}>
+            <h3 className="chartTitle" style={{ fontSize: 15, marginBottom: 8 }}>
+              ¿Varias pantallas para “lo mismo”?
+            </h3>
+            <p className="muted" style={{ marginBottom: 10, lineHeight: 1.5 }}>
+              En el fondo es <strong>un solo modelo</strong>: destinos = <strong>entidades</strong> (Familia, personas, casa, auto…). Hay varias
+              <em> entradas</em> según cómo prefieras trabajar; no hace falta usarlas todas.
+            </p>
+            <ol style={{ margin: '0 0 12px', paddingLeft: 20, fontSize: 14, lineHeight: 1.55 }}>
+              <li>
+                <strong>Recomendado:</strong>{' '}
+                <Link href="/setup/hogar" className="setupBreadcrumbLink">
+                  Configurar el hogar
+                </Link>{' '}
+                — orden guiado, sin montos.
+              </li>
+              <li>
+                <strong>Árbol + servicios:</strong>{' '}
+                <Link href="/setup/entities" className="setupBreadcrumbLink">
+                  Entidades y cuentas
+                </Link>{' '}
+                — jerarquía y casillas del catálogo por destino.
+              </li>
+              <li>
+                <strong>Esta página:</strong> formulario rápido con <em>tipo</em> (Persona, Vehículo…) y tipos personalizados. Es la misma API
+                que el asistente; solo cambia la forma.
+              </li>
+            </ol>
+            <p className="muted" style={{ margin: 0, fontSize: 12, lineHeight: 1.45 }}>
+              Los <strong>montos</strong> y ciclos se configuran siempre en{' '}
+              <Link href="/ui" className="setupBreadcrumbLink">
+                /ui → Presupuesto
+              </Link>
+              .
+            </p>
+          </div>
+          <div className="spacer16" />
 
           {message ? <div className="alert">{message}</div> : null}
 
