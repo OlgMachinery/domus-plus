@@ -6,7 +6,7 @@ import { NextResponse } from 'next/server'
  * Si da 404 → el dominio no apunta a este proyecto.
  */
 /** Versión para confirmar que el deploy incluye los cambios (entorno usuario, avatar, sugerencias, ver como). */
-const BUILD_VERSION = '2026-04-21-setup-hogar'
+const BUILD_VERSION = '2026-04-21-entities-demo-seed'
 
 export async function GET() {
   return NextResponse.json({

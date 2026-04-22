@@ -150,6 +150,7 @@ export default function EntitiesConfigPage() {
   const [serviceItems, setServiceItems] = useState<ServiceItem[] | null>(null)
   const [servicesLoading, setServicesLoading] = useState(false)
   const [togglingServiceId, setTogglingServiceId] = useState<string | null>(null)
+  const [previewBusy, setPreviewBusy] = useState(false)
 
   const meOk = isMeOk(me) ? me : null
 
@@ -255,6 +256,27 @@ export default function EntitiesConfigPage() {
       return { ...e, [id]: !cur }
     })
   }, [])
+
+  async function loadDemoTree() {
+    if (!meOk?.isFamilyAdmin) return
+    setPreviewBusy(true)
+    setMessage('')
+    try {
+      const res = await fetch('/api/dev/seed-entities-preview', { method: 'POST', credentials: 'include' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error((data as { detail?: string }).detail || 'No se pudo cargar la vista previa')
+      setMessage(
+        `Demo: ${(data as { createdEntities?: number }).createdEntities ?? 0} entidades nuevas, ` +
+          `${(data as { skipped?: number }).skipped ?? 0} ya existían; ` +
+          `${(data as { linkedServices?: number }).linkedServices ?? 0} enlaces servicio/cuenta (límite 0). Recarga el árbol abajo.`,
+      )
+      await refreshEntities()
+    } catch (e: unknown) {
+      setMessage(e instanceof Error ? e.message : 'Error')
+    } finally {
+      setPreviewBusy(false)
+    }
+  }
 
   function startEdit() {
     if (!selected) return
@@ -406,6 +428,29 @@ export default function EntitiesConfigPage() {
           <Link href="/setup/objects" className="ecMuted" style={{ fontSize: 12 }}>
             Partidas y objetos
           </Link>
+        </div>
+
+        <div className="ecHelpPanel" style={{ marginBottom: 14 }}>
+          <p className="ecHelpText">
+            <strong>Tres columnas:</strong> (1) árbol de destinos bajo <strong>Familia</strong> — (2) datos de la entidad elegida — (3){' '}
+            <strong>servicios del catálogo</strong> (casillas; crean cuentas con límite 0 hasta que pongas montos en Presupuesto). Para un
+            recorrido guiado sin montos usa{' '}
+            <Link href="/setup/hogar" className="ecLink">
+              Configurar el hogar
+            </Link>
+            .
+          </p>
+          {meOk.isFamilyAdmin ? (
+            <div className="ecHelpActions">
+              <button type="button" className="ecBtn ecBtnPrimary" disabled={previewBusy} onClick={() => void loadDemoTree()}>
+                {previewBusy ? 'Cargando…' : 'Cargar árbol demo (DOMUS-demo ·…)'}
+              </button>
+              <span className="ecMuted" style={{ fontSize: 12, alignSelf: 'center' }}>
+                Añade personas, casa, supermercado, auto y mascota de ejemplo bajo Familia + servicios. No borra datos; nombres con prefijo
+                «DOMUS-demo ·».
+              </span>
+            </div>
+          ) : null}
         </div>
 
         {!meOk.isFamilyAdmin ? (
